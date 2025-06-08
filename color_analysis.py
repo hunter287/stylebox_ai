@@ -1,6 +1,5 @@
-from google.cloud import vision
 import os
-from config import GOOGLE_CLOUD_CREDENTIALS, OPENAI_API_KEY
+from config import OPENAI_API_KEY
 import colorsys
 from openai import OpenAI
 import json
@@ -13,8 +12,6 @@ import random
 
 class ColorAnalyzer:
     def __init__(self):
-        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = GOOGLE_CLOUD_CREDENTIALS
-        self.client = vision.ImageAnnotatorClient()
         self.openai_client = OpenAI(api_key=OPENAI_API_KEY)
         self.face_parser = FaceParser()
         
