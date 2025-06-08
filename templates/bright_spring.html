@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Яркая Весна — тестовая палитра</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --mdc-theme-primary: #6200ee;
+            --mdc-theme-secondary: #03dac6;
+            --mdc-theme-background: #fff;
+            --mdc-theme-surface: #fff;
+            --mdc-theme-error: #b00020;
+            --mdc-theme-on-primary: #fff;
+            --mdc-theme-on-secondary: #000;
+            --mdc-theme-on-surface: #000;
+            --mdc-theme-on-error: #fff;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Roboto, sans-serif;
+            background-color: #f5f5f5;
+        }
+        .main-content {
+            margin-top: 64px;
+            padding: 24px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .result-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-top: 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .analysis-block {
+            margin-bottom: 32px;
+        }
+        .analysis-title {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+        .analysis-row {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 12px;
+        }
+        .analysis-card {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 24px 24px 18px 24px;
+            flex: 1 1 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            min-width: 220px;
+            box-sizing: border-box;
+        }
+        .analysis-label {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+        .analysis-color {
+            width: 100%;
+            height: 70px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border: 1.5px solid #e0e0e0;
+        }
+        .analysis-name {
+            font-size: 1rem;
+            color: #444;
+            margin-bottom: 4px;
+        }
+        .analysis-temp {
+            font-size: 0.98rem;
+            color: #666;
+        }
+        .recommendations {
+            margin-top: 24px;
+        }
+        .color-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .color-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            border: 2px solid #eee;
+            box-sizing: border-box;
+        }
+        .color-combinations-flex {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            max-width: calc(60px * 6);
+        }
+        .color-combinations-flex svg {
+            width: 60px;
+            height: 220px;
+            margin-right: 18px;
+            margin-bottom: 8px;
+            vertical-align: bottom;
+        }
+        @media (max-width: 900px) {
+            .color-combinations-flex {
+                max-width: calc(60px * 4 + 18px * 3);
+                margin: 0 auto;
+            }
+        }
+        @media (max-width: 600px) {
+            .main-content {
+                padding: 16px;
+            }
+            .analysis-row {
+                flex-direction: column;
+                gap: 12px;
+            }
+            .color-combinations-flex {
+                max-width: calc(60px * 3 + 8px * 2);
+                margin: 0 auto;
+            }
+            .color-combinations-flex svg {
+                margin-right: 8px;
+                margin-bottom: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+<header class="mdc-top-app-bar mdc-top-app-bar--fixed">
+    <div class="mdc-top-app-bar__row">
+        <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-start">
+            <span class="material-icons mdc-top-app-bar__navigation-icon">palette</span>
+            <span class="mdc-top-app-bar__title">Яркая Весна — тестовая палитра</span>
+        </section>
+    </div>
+</header>
+<main class="main-content">
+    <div class="result-container">
+        <div class="analysis-block">
+            <div class="analysis-title">Результаты анализа</div>
+            <div class="analysis-row">
+                <div class="analysis-card">
+                    <div class="analysis-label">Кожа</div>
+                    <div class="analysis-color" style="background: #F7C6A3;"></div>
+                    <div class="analysis-name">персиковый</div>
+                    <div class="analysis-temp">Температура: тёплый</div>
+                </div>
+                <div class="analysis-card">
+                    <div class="analysis-label">Волосы</div>
+                    <div class="analysis-color" style="background: #6B4026;"></div>
+                    <div class="analysis-name">каштановый</div>
+                    <div class="analysis-temp">Температура: тёплый</div>
+                </div>
+                <div class="analysis-card">
+                    <div class="analysis-label">Глаза</div>
+                    <div class="analysis-color" style="background: #6BA48E;"></div>
+                    <div class="analysis-name">зелёный</div>
+                    <div class="analysis-temp">Температура: нейтральный</div>
+                </div>
+            </div>
+        </div>
+        <h2 class="mdc-typography--headline5">Цветотип: Яркая Весна</h2>
+        <p class="mdc-typography--body1">Тестовая страница для визуализации рекомендованных цветов и цветовых сочетаний для цветотипа "Яркая Весна".</p>
+        <div class="recommendations">
+            <h3 class="mdc-typography--headline6">Рекомендуемые цвета</h3>
+            <div style="margin-bottom: 8px; font-weight: 500;">Тёмные:</div>
+            <div class="color-list" id="recommended-colors-dark"></div>
+            <div style="margin-bottom: 8px; margin-top: 12px; font-weight: 500;">Яркие:</div>
+            <div class="color-list" id="recommended-colors-bright"></div>
+            <div style="margin-bottom: 8px; margin-top: 12px; font-weight: 500;">Светлые:</div>
+            <div class="color-list" id="recommended-colors-light"></div>
+        </div>
+        <div class="recommendations">
+            <h3 class="mdc-typography--headline6">Цветовые сочетания</h3>
+            <div class="color-combinations-flex" id="color-combinations"></div>
+        </div>
+    </div>
+</main>
+<script>
+// Цвета для Яркой Весны (HEX)
+const brightSpringColors = {
+    dark: [
+        '#636968', '#72665C', '#3E4343', '#232323', '#1B4062', '#B1463B',
+        '#25462C', '#317338', '#176973', '#3B326E', '#8A2B5A', '#D13C6B'
+    ],
+    bright: [
+        '#E94382', '#FF7CB5', '#E95CA0', '#D94C7A', '#D94C5C', '#F05C5C', '#FF7C6C', '#FF9C9C',
+        '#1878C2', '#6C4CA0', '#1C8C8C', '#4CA03C', '#A0C24C', '#F0B24C', '#FFD47C'
+    ],
+    light: [
+        '#E9DFC6', '#E7E3D5', '#C9DC7C', '#A7E3DD', '#B3E6F2', '#C2C6E7', '#F9CFC6',
+        '#EAE6B7', '#FFD07C', '#F7A9C2', '#F78BCB', '#4CD7DE', '#A07CD7', '#F7A9B2'
+    ]
+};
+// SVG-комбинации для цветовых сочетаний (примерно как в color_analysis.py)
+const brightSpringCombinations = [
+    [
+        {type: 'rect', color: '#D94C5C', x: 0, y: 0, width: 60, height: 110},
+        {type: 'rect', color: '#232323', x: 0, y: 110, width: 60, height: 110}
+    ],
+    [
+        {type: 'rect', color: '#F9CFC6', x: 0, y: 0, width: 60, height: 110},
+        {type: 'ellipse', color: '#1C8C8C', cx: 30, cy: 30, rx: 18, ry: 28, stroke: '#1C8C8C', strokeWidth: 3, fill: 'none'},
+        {type: 'rect', color: '#1B4062', x: 0, y: 110, width: 60, height: 110},
+        {type: 'rect', color: '#C2B8B5', x: 18, y: 90, width: 28, height: 28}
+    ],
+    [
+        {type: 'rect', color: '#A0C24C', x: 0, y: 0, width: 60, height: 110},
+        {type: 'rect', color: '#25462C', x: 0, y: 110, width: 60, height: 110},
+        {type: 'rect', color: '#72665C', x: 10, y: 200, width: 40, height: 18}
+    ],
+    [
+        {type: 'rect', color: '#FFD47C', x: 0, y: 0, width: 60, height: 110},
+        {type: 'rect', color: '#72665C', x: 0, y: 110, width: 60, height: 110},
+        {type: 'rect', color: '#3E4343', x: 0, y: 108, width: 60, height: 8},
+        {type: 'rect', color: '#1C8C8C', x: 16, y: 0, width: 28, height: 18}
+    ],
+    [
+        {type: 'rect', color: '#E95CA0', x: 0, y: 0, width: 60, height: 220},
+        {type: 'ellipse', color: '#C2C6E7', cx: 30, cy: 80, rx: 18, ry: 60, stroke: '#C2C6E7', strokeWidth: 3, fill: 'none'},
+        {type: 'rect', color: '#A07CD7', x: 10, y: 200, width: 40, height: 18}
+    ],
+    [
+        {type: 'rect', color: '#1878C2', x: 0, y: 0, width: 18, height: 110},
+        {type: 'rect', color: '#A7E3DD', x: 18, y: 0, width: 24, height: 110},
+        {type: 'rect', color: '#1878C2', x: 42, y: 0, width: 18, height: 110},
+        {type: 'rect', color: '#6C4CA0', x: 0, y: 110, width: 60, height: 110},
+        {type: 'rect', color: '#3E4343', x: 15, y: 108, width: 30, height: 4}
+    ]
+];
+function renderColorCircles(colors, containerId) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    colors.forEach(hex => {
+        if (hex && hex !== "#fff" && hex !== "#ffffff" && hex !== "#FFF" && hex !== "#FFFFFF") {
+            const circle = document.createElement('div');
+            circle.className = 'color-circle';
+            circle.style.background = hex;
+            circle.title = hex;
+            container.appendChild(circle);
+        }
+    });
+}
+function renderColorCombinations(combos, containerId) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    combos.forEach(combo => {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', 60);
+        svg.setAttribute('height', 220);
+        combo.forEach(el => {
+            const elem = document.createElementNS('http://www.w3.org/2000/svg', el.type);
+            for (const [key, value] of Object.entries(el)) {
+                if (key !== 'type') elem.setAttribute(key, value);
+            }
+            if (el.type === 'rect' || el.type === 'ellipse') {
+                elem.setAttribute('fill', el.fill || el.color);
+                if (el.stroke) elem.setAttribute('stroke', el.stroke);
+                if (el.strokeWidth) elem.setAttribute('stroke-width', el.strokeWidth);
+            }
+            svg.appendChild(elem);
+        });
+        container.appendChild(svg);
+    });
+}
+renderColorCircles(brightSpringColors.dark, 'recommended-colors-dark');
+renderColorCircles(brightSpringColors.bright, 'recommended-colors-bright');
+renderColorCircles(brightSpringColors.light, 'recommended-colors-light');
+renderColorCombinations(brightSpringCombinations, 'color-combinations');
+</script>
+</body>
+</html> 

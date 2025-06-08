@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Холодное Лето - Анализ цветотипа</title>
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Material Design Web Components -->
+    <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+    <link href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css" rel="stylesheet">
+    <!-- Custom styles -->
+    <style>
+        :root {
+            --mdc-theme-primary: #6200ee;
+            --mdc-theme-secondary: #03dac6;
+            --mdc-theme-background: #fff;
+            --mdc-theme-surface: #fff;
+            --mdc-theme-error: #b00020;
+            --mdc-theme-on-primary: #fff;
+            --mdc-theme-on-secondary: #000;
+            --mdc-theme-on-surface: #000;
+            --mdc-theme-on-error: #fff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Roboto, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        .mdc-top-app-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 100;
+        }
+
+        .main-content {
+            margin-top: 64px;
+            padding: 24px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .result-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-top: 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .color-card {
+            padding: 16px;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+        }
+
+        .color-preview {
+            width: 100%;
+            height: 100px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        .color-info {
+            margin-top: 8px;
+        }
+
+        .recommendations {
+            margin-top: 24px;
+        }
+
+        .color-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .color-chip {
+            padding: 4px 12px;
+            border-radius: 16px;
+            background-color: #e0e0e0;
+            font-size: 14px;
+        }
+
+        .color-combinations-flex {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            max-width: 264px * 6;
+        }
+
+        .color-combinations-flex svg {
+            width: 60px;
+            height: 220px;
+            margin-right: 18px;
+            margin-bottom: 8px;
+            vertical-align: bottom;
+        }
+
+        @media (max-width: 900px) {
+            .color-combinations-flex {
+                max-width: 60px * 4 + 18px * 3;
+                margin: 0 auto;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .color-combinations-flex {
+                max-width: 60px * 3 + 8px * 2;
+                margin: 0 auto;
+            }
+            .color-combinations-flex svg {
+                margin-right: 8px;
+                margin-bottom: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="mdc-top-app-bar mdc-top-app-bar--fixed">
+        <div class="mdc-top-app-bar__row">
+            <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-start">
+                <span class="material-icons mdc-top-app-bar__navigation-icon">palette</span>
+                <span class="mdc-top-app-bar__title">Холодное Лето</span>
+            </section>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="result-container">
+            <h2 class="mdc-typography--headline5">Ваш цветотип: Холодное Лето</h2>
+            <p class="mdc-typography--body1">Холодное Лето - это мягкий, приглушенный цветотип с холодным подтоном. Представители этого типа имеют нежный, прохладный оттенок кожи, часто с розоватым или голубоватым подтоном.</p>
+
+            <div class="recommendations">
+                <h3 class="mdc-typography--headline6">Рекомендуемые цвета</h3>
+                <div style="margin-bottom: 8px; font-weight: 500;">Тёмные:</div>
+                <div class="color-list" id="recommended-colors-dark"></div>
+                <div style="margin-bottom: 8px; margin-top: 12px; font-weight: 500;">Яркие:</div>
+                <div class="color-list" id="recommended-colors-bright"></div>
+                <div style="margin-bottom: 8px; margin-top: 12px; font-weight: 500;">Светлые:</div>
+                <div class="color-list" id="recommended-colors-light"></div>
+            </div>
+
+            <div class="recommendations">
+                <h3 class="mdc-typography--headline6">Цветовые сочетания</h3>
+                <div class="color-list" id="color-combinations"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Инициализация Material Components
+        mdc.ripple.MDCRipple.attachTo(document.querySelector('.mdc-button'));
+
+        // Цвета для Холодного Лета
+        const coldSummerColors = {
+            dark: [
+                '#2c3e50', // тёмно-синий
+                '#34495e', // тёмно-серый
+                '#2c3e50', // тёмно-синий
+                '#2c3e50', // тёмно-синий
+                '#34495e'  // тёмно-серый
+            ],
+            bright: [
+                '#3498db', // ярко-синий
+                '#9b59b6', // ярко-фиолетовый
+                '#1abc9c', // ярко-бирюзовый
+                '#3498db', // ярко-синий
+                '#9b59b6'  // ярко-фиолетовый
+            ],
+            light: [
+                '#b3e5fc', // светло-голубой
+                '#e1bee7', // светло-фиолетовый
+                '#b2dfdb', // светло-бирюзовый
+                '#b3e5fc', // светло-голубой
+                '#e1bee7'  // светло-фиолетовый
+            ]
+        };
+
+        // Функция для создания цветовых кругов
+        function createColorCircles(colors, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            colors.forEach(color => {
+                if (color && color !== "#fff" && color !== "#ffffff" && color !== "#FFF" && color !== "#FFFFFF") {
+                    const circle = document.createElement('div');
+                    circle.style.width = '40px';
+                    circle.style.height = '40px';
+                    circle.style.borderRadius = '50%';
+                    circle.style.background = color;
+                    circle.style.display = 'inline-block';
+                    circle.style.marginRight = '8px';
+                    circle.style.marginBottom = '8px';
+                    circle.style.border = '2px solid #eee';
+                    circle.title = color;
+                    container.appendChild(circle);
+                }
+            });
+        }
+
+        // Создаем цветовые круги при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            createColorCircles(coldSummerColors.dark, 'recommended-colors-dark');
+            createColorCircles(coldSummerColors.bright, 'recommended-colors-bright');
+            createColorCircles(coldSummerColors.light, 'recommended-colors-light');
+        });
+    </script>
+</body>
+</html> 

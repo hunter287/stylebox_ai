@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Холодное Лето — тестовая палитра</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --mdc-theme-primary: #6200ee;
+            --mdc-theme-secondary: #03dac6;
+            --mdc-theme-background: #fff;
+            --mdc-theme-surface: #fff;
+            --mdc-theme-error: #b00020;
+            --mdc-theme-on-primary: #fff;
+            --mdc-theme-on-secondary: #000;
+            --mdc-theme-on-surface: #000;
+            --mdc-theme-on-error: #fff;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Roboto, sans-serif;
+            background-color: #f5f5f5;
+        }
+        .mdc-top-app-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 100;
+        }
+        .main-content {
+            margin-top: 64px;
+            padding: 24px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .result-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-top: 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .recommendations {
+            margin-top: 24px;
+        }
+        .color-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .color-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            border: 2px solid #eee;
+            box-sizing: border-box;
+        }
+        .color-combinations-flex {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            max-width: 264px * 6;
+        }
+        .color-combinations-flex svg {
+            width: 60px;
+            height: 220px;
+            margin-right: 18px;
+            margin-bottom: 8px;
+            vertical-align: bottom;
+        }
+        @media (max-width: 900px) {
+            .color-combinations-flex {
+                max-width: 60px * 4 + 18px * 3;
+                margin: 0 auto;
+            }
+        }
+        @media (max-width: 600px) {
+            .main-content {
+                padding: 16px;
+            }
+            .color-combinations-flex {
+                max-width: 60px * 3 + 8px * 2;
+                margin: 0 auto;
+            }
+            .color-combinations-flex svg {
+                margin-right: 8px;
+                margin-bottom: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+<header class="mdc-top-app-bar mdc-top-app-bar--fixed">
+    <div class="mdc-top-app-bar__row">
+        <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-start">
+            <span class="material-icons mdc-top-app-bar__navigation-icon">palette</span>
+            <span class="mdc-top-app-bar__title">Холодное Лето — тестовая палитра</span>
+        </section>
+    </div>
+</header>
+<main class="main-content">
+    <div class="result-container">
+        <h2 class="mdc-typography--headline5">Цветотип: Холодное Лето</h2>
+        <p class="mdc-typography--body1">Тестовая страница для визуализации рекомендованных цветов и цветовых сочетаний для цветотипа "Холодное Лето".</p>
+        <div class="recommendations">
+            <h3 class="mdc-typography--headline6">Рекомендуемые цвета</h3>
+            <div style="margin-bottom: 8px; font-weight: 500;">Тёмные:</div>
+            <div class="color-list" id="recommended-colors-dark"></div>
+            <div style="margin-bottom: 8px; margin-top: 12px; font-weight: 500;">Яркие:</div>
+            <div class="color-list" id="recommended-colors-bright"></div>
+            <div style="margin-bottom: 8px; margin-top: 12px; font-weight: 500;">Светлые:</div>
+            <div class="color-list" id="recommended-colors-light"></div>
+        </div>
+        <div class="recommendations">
+            <h3 class="mdc-typography--headline6">Цветовые сочетания</h3>
+            <div class="color-combinations-flex" id="color-combinations"></div>
+        </div>
+    </div>
+</main>
+<script>
+// Цвета для Холодного Лета (HEX)
+const coolSummerColors = {
+    dark: [
+        '#635C56', '#72666C', '#564E52', '#6C5A5C', '#4C3A3C', '#43484C', '#23545C',
+        '#732C3C', '#8A2B5A', '#17696C', '#184C3C', '#23426C', '#4C4A6C', '#32324C'
+    ],
+    bright: [
+        '#B14663', '#D97B97', '#E05A6F', '#F07C8C', '#8A2B5A', '#B46A97', '#635C8C',
+        '#269999', '#2B7A6B', '#17696C', '#397A8C', '#3AC0CB', '#5A8CB7', '#8886B7'
+    ],
+    light: [
+        '#E3E2D6', '#A3A89A', '#EAE4A2', '#BFB7B7', '#97A7AD', '#A3BCBC', '#FFC1DA',
+        '#6FC7B7', '#5ED1C6', '#6BC7DE', '#5AC0CB', '#8CC3E6', '#A3B3D6', '#8886B7'
+    ]
+};
+// Цветовые сочетания (каждое — массив HEX)
+const coolSummerCombinations = [
+    ['#635C56', '#E8B7C8', '#F5E2B8'],
+    ['#72666C', '#B0C4DE', '#FFD1B3'],
+    ['#564E52', '#B3E5FC', '#B3E5FC'],
+    ['#6C5A5C', '#E1BEE7', '#E1BEE7'],
+    ['#4C3A3C', '#D1C4E9', '#F8EFD4'],
+    ['#43484C', '#A7C7E7', '#E1F5FE'],
+    ['#23545C', '#B7E7C7', '#FCE4EC'],
+    ['#732C3C', '#C7B7E7', '#EDE7F6'],
+    ['#8A2B5A', '#E7B7C7', '#FFF9C4'],
+    ['#17696C', '#B7E7E7', '#F0F4C3'],
+    ['#184C3C', '#B7C7E7', '#B2EBF2'],
+    ['#23426C', '#E7C7B7', '#F3E5F5']
+];
+function createColorCircles(colors, containerId) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    colors.forEach(color => {
+        if (color && color !== "#fff" && color !== "#ffffff" && color !== "#FFF" && color !== "#FFFFFF") {
+            const circle = document.createElement('div');
+            circle.style.width = '40px';
+            circle.style.height = '40px';
+            circle.style.borderRadius = '50%';
+            circle.style.background = color;
+            circle.style.display = 'inline-block';
+            circle.style.marginRight = '8px';
+            circle.style.marginBottom = '8px';
+            circle.style.border = '2px solid #eee';
+            circle.title = color;
+            container.appendChild(circle);
+        }
+    });
+}
+function renderColorCombinationsSVG(combos, containerId) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    combos.forEach(combo => {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', 60);
+        svg.setAttribute('height', 220);
+        svg.style.marginRight = '18px';
+        svg.style.marginBottom = '8px';
+        svg.style.verticalAlign = 'bottom';
+        combo.forEach(shape => {
+            if (shape.type === 'rect') {
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', shape.x);
+                rect.setAttribute('y', shape.y);
+                rect.setAttribute('width', shape.width);
+                rect.setAttribute('height', shape.height);
+                rect.setAttribute('fill', shape.color);
+                if (shape.rx) rect.setAttribute('rx', shape.rx);
+                if (shape.ry) rect.setAttribute('ry', shape.ry);
+                svg.appendChild(rect);
+            } else if (shape.type === 'ellipse') {
+                const ellipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+                ellipse.setAttribute('cx', shape.cx);
+                ellipse.setAttribute('cy', shape.cy);
+                ellipse.setAttribute('rx', shape.rx);
+                ellipse.setAttribute('ry', shape.ry);
+                ellipse.setAttribute('fill', shape.fill || 'none');
+                ellipse.setAttribute('stroke', shape.stroke || shape.color);
+                ellipse.setAttribute('stroke-width', shape.strokeWidth || 3);
+                svg.appendChild(ellipse);
+            }
+        });
+        container.appendChild(svg);
+    });
+}
+document.addEventListener('DOMContentLoaded', () => {
+    createColorCircles(coolSummerColors.dark, 'recommended-colors-dark');
+    createColorCircles(coolSummerColors.bright, 'recommended-colors-bright');
+    createColorCircles(coolSummerColors.light, 'recommended-colors-light');
+    // Получаем данные с backend (пример: window.result)
+    if (window.result && window.result.color_combinations_svg) {
+        renderColorCombinationsSVG(window.result.color_combinations_svg, 'color-combinations');
+    }
+});
+</script>
+</body>
+</html> 

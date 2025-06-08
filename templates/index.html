@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Type AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #7C3AED;
+            --primary-light: #EDE9FE;
+            --text-primary: #1F2937;
+            --text-secondary: #6B7280;
+            --background: #FFFFFF;
+            --surface: #FFFFFF;
+            --border: #E5E7EB;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background);
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .chat-container {
+            flex: 1;
+            background: var(--surface);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+        }
+
+        .message.ai {
+            background: #fff;
+            padding: 1rem;
+            border-radius: 1rem;
+            margin-left: 2rem;
+            margin-right: 2rem;
+            box-shadow: 0 2px 8px #0001;
+        }
+
+        .message.ai .typing {
+            display: inline-block;
+            width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            border-right: 2px solid var(--primary-color);
+            animation: typing 0.1s steps(1) infinite;
+        }
+
+        @keyframes typing {
+            50% { border-color: transparent; }
+        }
+
+        .message.ai .fade-in {
+            opacity: 0;
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+            margin-left: 2rem;
+            margin-right: 2rem;
+            background: #f9f9fb;
+            padding: 1rem;
+            border-radius: 1rem;
+            box-shadow: 0 2px 8px #0001;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .message-content {
+            flex: 1;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 1rem;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--surface);
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary-color);
+            background: var(--primary-light);
+        }
+
+        .upload-area.dragover {
+            border-color: var(--primary-color);
+            background: var(--primary-light);
+        }
+
+        .upload-icon {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .upload-text {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .upload-button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-button:hover {
+            opacity: 0.9;
+        }
+
+        .result-container {
+            display: none;
+            margin-top: 1rem;
+        }
+
+        .color-palette {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .color-chip {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--primary-light);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            display: none;
+            color: #DC2626;
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .message.ai {
+                margin-left: 1rem;
+                margin-right: 1rem;
+            }
+            .message.user {
+                margin-left: 1rem;
+                margin-right: 1rem;
+            }
+        }
+
+        .svg-combos-row {
+            column-gap: 4px;
+            row-gap: 20px;
+            justify-content: flex-start;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .svg-combo-item {
+            min-width: 72px;
+            max-width: 72px;
+            width: 72px;
+            min-height: 220px;
+            max-height: 220px;
+            height: 220px;
+            flex: 0 0 72px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            text-align: center;
+            padding: 0;
+        }
+        .combo-svg {
+            width: 72px;
+            min-width: 72px;
+            max-width: 72px;
+            height: 220px;
+            min-height: 220px;
+            max-height: 220px;
+            display: block;
+        }
+        @media (max-width: 600px) {
+            .svg-combos-row {
+                gap: 4px 8px;
+                justify-content: center;
+            }
+            .svg-combo-item {
+                min-width: 72px;
+                max-width: 72px;
+                width: 72px;
+                min-height: 220px;
+                max-height: 220px;
+                height: 220px;
+                flex: 0 0 72px;
+                display: flex;
+                align-items: flex-start;
+                justify-content: center;
+                margin-bottom: 0;
+            }
+            .svg-combo-item:nth-child(-n+3) {
+                margin-bottom: 20px;
+            }
+            .combo-svg {
+                width: 72px;
+                min-width: 72px;
+                max-width: 72px;
+                height: 220px;
+                min-height: 220px;
+                max-height: 220px;
+                display: block;
+            }
+        }
+
+        /* CSS для превью гайда */
+        .guide-preview-block {
+            margin: 22px 0 10px 0;
+            display: flex;
+            justify-content: center;
+        }
+        .guide-preview-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        .guide-preview-img {
+            width: 80px;
+            height: 110px;
+            object-fit: cover;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px #0002;
+            background: #fff;
+        }
+        @media (max-width: 600px) {
+            .guide-preview-img {
+                width: 60px;
+                height: 80px;
+            }
+        }
+        /* Стили для анимированного текста преимуществ */
+        .message-content br {
+            display: block;
+            margin-bottom: 7px;
+        }
+        /* Стили для анимированного списка преимуществ */
+        .message-content {
+            white-space: pre-line;
+        }
+        .guide-price-block {
+            margin-top: 18px;
+            text-align: center;
+        }
+        .guide-price-text {
+            font-size: 1.1rem;
+            color: #7C3AED;
+            margin-bottom: 12px;
+        }
+        .guide-buy-btn {
+            font-size: 1rem;
+            padding: 0.7rem 1.6rem;
+        }
+
+        /* Стили для модального окна оплаты гайда */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: auto;
+            background: rgba(31,41,55,0.25);
+            backdrop-filter: blur(2px);
+        }
+        .modal-content {
+            background: #fff;
+            margin: 7% auto;
+            padding: 2rem 2.2rem 1.5rem 2.2rem;
+            border-radius: 1.2rem;
+            max-width: 370px;
+            box-shadow: 0 8px 32px #0002;
+            position: relative;
+            text-align: center;
+        }
+        .close {
+            position: absolute;
+            right: 1.2rem;
+            top: 1.2rem;
+            font-size: 1.7rem;
+            color: #7C3AED;
+            cursor: pointer;
+        }
+        .modal-input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border-radius: 0.7rem;
+            border: 1.5px solid #E5E7EB;
+            font-size: 1rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.2rem;
+            outline: none;
+            transition: border 0.2s;
+        }
+        .modal-input:focus {
+            border: 1.5px solid #7C3AED;
+        }
+        @media (max-width: 600px) {
+            .modal-content {
+                padding: 1.2rem 0.7rem 1rem 0.7rem;
+                max-width: 98vw;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Color Type AI</h1>
+            <p>Загрузите фотографию для анализа вашего цветотипа</p>
+        </div>
+
+        <div class="chat-container">
+            <div class="chat-messages">
+                <!-- Приветствие будет добавлено скриптом -->
+            </div>
+
+            <div class="upload-area" id="dropZone">
+                <div class="upload-icon">📸</div>
+                <div class="upload-text">Перетащите фотографию сюда или нажмите для выбора</div>
+                <input type="file" id="fileInput" accept="image/*" style="display: none">
+                <button class="upload-button" onclick="document.getElementById('fileInput').click()">
+                    Выбрать файл
+                </button>
+            </div>
+
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p>Анализируем вашу фотографию...</p>
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+
+            <div class="result-container" id="resultContainer">
+                <!-- Результаты анализа будут добавлены здесь -->
+            </div>
+        </div>
+    </div>
+
+    <div id="guideModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close" id="closeGuideModal">&times;</span>
+            <h2>Получить персональный гайд</h2>
+            <div style="margin-bottom:1rem; color:#6B7280; font-size:1rem;">Введите ваш email, чтобы получить гайд после оплаты</div>
+            <input type="email" id="guideEmail" placeholder="Ваш email" class="modal-input" autocomplete="email" autofocus>
+            <div id="guideEmailError" style="color:#DC2626; font-size:0.95rem; margin:6px 0 0 0; display:none;"></div>
+            <button class="upload-button" id="guidePayBtn" style="margin-top:1.2rem; width:100%;">Купить</button>
+            <div id="guidePaySuccess" style="display:none; margin-top:1.2rem; color:#059669; font-weight:500;">Оплата прошла успешно!<br>Скачать гайд: <a id="guideDownloadLink" href="#" class="upload-button" style="display:inline-block; margin-top:10px;">Скачать PDF</a></div>
+        </div>
+    </div>
+
+    <script src="https://widget.cloudpayments.ru/bundles/cloudpayments.js"></script>
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const loading = document.querySelector('.loading');
+        const errorMessage = document.getElementById('errorMessage');
+        const resultContainer = document.getElementById('resultContainer');
+        const chatMessages = document.querySelector('.chat-messages');
+
+        // Обработка drag & drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropZone.classList.add('dragover');
+        }
+
+        function unhighlight(e) {
+            dropZone.classList.remove('dragover');
+        }
+
+        dropZone.addEventListener('drop', handleDrop, false);
+        fileInput.addEventListener('change', handleFiles, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles({ target: { files: files } });
+        }
+
+        function handleFiles(e) {
+            const file = e.target.files[0];
+            if (file) {
+                uploadFile(file);
+            }
+        }
+
+        function typeHTML(element, html, speed = 30, onDone) {
+            let i = 0;
+            const typingSpan = document.createElement('span');
+            typingSpan.className = 'typing';
+            
+            // Создаем временный элемент для хранения HTML
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+            const text = temp.textContent;
+            
+            // Создаем контейнер для текста
+            const textContainer = document.createElement('div');
+            textContainer.classList.add('fade-in');
+            element.appendChild(textContainer);
+            element.appendChild(typingSpan);
+            
+            function type() {
+                if (i < text.length) {
+                    // Находим позицию в HTML, соответствующую текущей позиции в тексте
+                    let htmlPos = 0;
+                    let textPos = 0;
+                    while (textPos < i && htmlPos < html.length) {
+                        if (html[htmlPos] === '<') {
+                            while (html[htmlPos] !== '>') htmlPos++;
+                            htmlPos++;
+                        } else {
+                            textPos++;
+                            htmlPos++;
+                        }
+                    }
+                    
+                    // Обновляем содержимое контейнера
+                    textContainer.innerHTML = html.substring(0, htmlPos);
+                    
+                    i++;
+                    setTimeout(type, speed);
+                } else {
+                    // Финальное состояние без курсора
+                    textContainer.innerHTML = html;
+                    typingSpan.remove();
+                    if (onDone) onDone();
+                }
+            }
+            type();
+        }
+
+        function typeText(element, text, speed = 30) {
+            let i = 0;
+            const typingSpan = document.createElement('span');
+            typingSpan.className = 'typing';
+            
+            // Создаем контейнер для текста
+            const textContainer = document.createElement('div');
+            textContainer.classList.add('fade-in');
+            element.appendChild(textContainer);
+            element.appendChild(typingSpan);
+            
+            function type() {
+                if (i < text.length) {
+                    textContainer.textContent = text.substring(0, i + 1);
+                    i++;
+                    setTimeout(type, speed);
+                } else {
+                    textContainer.textContent = text;
+                    typingSpan.remove();
+                }
+            }
+            type();
+        }
+
+        function createAIMessage(content) {
+            const aiMessage = document.createElement('div');
+            aiMessage.className = 'message ai';
+            aiMessage.innerHTML = `
+                <div class="avatar">AI</div>
+                <div class="message-content"></div>
+            `;
+            chatMessages.appendChild(aiMessage);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return aiMessage.querySelector('.message-content');
+        }
+
+        function addElementWithAnimation(container, html, delay = 0) {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    const element = document.createElement('div');
+                    element.innerHTML = html;
+                    element.classList.add('fade-in');
+                    container.appendChild(element);
+                    resolve();
+                }, delay);
+            });
+        }
+
+        function addColorPalette(container, title, colors, delay = 0) {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    const paletteContainer = document.createElement('div');
+                    paletteContainer.style.marginTop = '1rem';
+                    paletteContainer.classList.add('fade-in');
+                    
+                    const titleElement = document.createElement('div');
+                    titleElement.style.fontWeight = '500';
+                    titleElement.style.marginBottom = '0.3rem';
+                    titleElement.textContent = title;
+                    paletteContainer.appendChild(titleElement);
+                    
+                    const colorsContainer = document.createElement('div');
+                    colorsContainer.className = 'color-palette';
+                    paletteContainer.appendChild(colorsContainer);
+                    
+                    container.appendChild(paletteContainer);
+                    
+                    // Добавляем цвета по одному
+                    let colorIndex = 0;
+                    function addNextColor() {
+                        if (colorIndex < colors.length) {
+                            const colorChip = document.createElement('div');
+                            colorChip.className = 'color-chip';
+                            colorChip.style.backgroundColor = colors[colorIndex];
+                            colorChip.classList.add('fade-in');
+                            colorsContainer.appendChild(colorChip);
+                            colorIndex++;
+                            setTimeout(addNextColor, 100);
+                        } else {
+                            resolve();
+                        }
+                    }
+                    addNextColor();
+                }, delay);
+            });
+        }
+
+        function addColorCombinations(container, svgArr, delay = 0) {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    const combosContainer = document.createElement('div');
+                    combosContainer.style.marginTop = '30px';
+                    combosContainer.style.marginBottom = '30px';
+                    combosContainer.style.textAlign = 'left';
+                    combosContainer.classList.add('fade-in');
+                    
+                    const titleElement = document.createElement('div');
+                    titleElement.style.fontWeight = '500';
+                    titleElement.style.marginBottom = '30px';
+                    titleElement.textContent = 'Примеры сочетаний';
+                    combosContainer.appendChild(titleElement);
+                    
+                    const rowContainer = document.createElement('div');
+                    rowContainer.className = 'svg-combos-row';
+                    rowContainer.style.marginTop = '0';
+                    combosContainer.appendChild(rowContainer);
+                    
+                    container.appendChild(combosContainer);
+                    
+                    // Добавляем сочетания по одному
+                    let comboIndex = 0;
+                    function addNextCombo() {
+                        if (comboIndex < Math.min(6, svgArr.length)) {
+                            const svgData = svgArr[comboIndex];
+                            let isMobile = window.innerWidth <= 600;
+                            let svgW = 72;
+                            let svgH = isMobile ? 120 : 220;
+                            let svg = `<svg class='combo-svg' width='${svgW}' height='${svgH}' viewBox='0 0 72 220' style='background:#fff;'>`;
+                            svgData.forEach(shape => {
+                                if (shape.type === 'rect') {
+                                    svg += `<rect x='${shape.x}' y='${shape.y}' width='${shape.width}' height='${shape.height}' fill='${shape.color}'/>`;
+                                } else if (shape.type === 'ellipse') {
+                                    svg += `<ellipse cx='${shape.cx}' cy='${shape.cy}' rx='${shape.rx}' ry='${shape.ry}' fill='${shape.fill||'none'}' stroke='${shape.stroke||shape.color}' stroke-width='${shape.strokeWidth||2}'/>`;
+                                }
+                            });
+                            svg += `</svg>`;
+                            
+                            const comboItem = document.createElement('div');
+                            comboItem.className = 'svg-combo-item';
+                            comboItem.style.minWidth = '72px';
+                            comboItem.style.maxWidth = '72px';
+                            comboItem.innerHTML = svg;
+                            comboItem.classList.add('fade-in');
+                            rowContainer.appendChild(comboItem);
+                            
+                            comboIndex++;
+                            setTimeout(addNextCombo, 200);
+                        } else {
+                            resolve();
+                        }
+                    }
+                    addNextCombo();
+                }, delay);
+            });
+        }
+
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            // Показываем сообщение о загрузке
+            const userMessage = document.createElement('div');
+            userMessage.className = 'message user';
+            userMessage.innerHTML = `
+                <div class="avatar">U</div>
+                <div class="message-content">
+                    Загружаю фотографию...
+                </div>
+            `;
+            chatMessages.appendChild(userMessage);
+
+            // Показываем превью изображения
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                window._lastUploadedImage = e.target.result;
+            };
+            reader.readAsDataURL(file);
+
+            // Показываем индикатор загрузки
+            loading.style.display = 'block';
+            errorMessage.style.display = 'none';
+            resultContainer.style.display = 'none';
+
+            fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.style.display = 'none';
+                if (data.error) {
+                    errorMessage.textContent = data.error;
+                    errorMessage.style.display = 'block';
+                    return;
+                }
+
+                // Добавляем ответ AI с расширенным анализом
+                const messageContent = createAIMessage();
+                
+                // Создаем HTML для текстовой части анализа
+                const analysisHTML = `
+                    <p>Ваш цветотип: <strong>${data.color_type}</strong></p>
+                    <p>${data.explanation}</p>
+                `;
+
+                // Сначала показываем изображение
+                if (window._lastUploadedImage) {
+                    const imgElement = document.createElement('div');
+                    imgElement.innerHTML = `<img src="${window._lastUploadedImage}" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
+                    imgElement.classList.add('fade-in');
+                    messageContent.appendChild(imgElement);
+                }
+
+                // Затем анимируем текст
+                setTimeout(() => {
+                    // Сначала описание (тип + объяснение)
+                    typeHTML(messageContent, analysisHTML, 20, () => {
+                        // После окончания описания — палитры и сочетания по очереди
+                        let palettePromise = Promise.resolve();
+                        if (data.dark_colors_hex) {
+                            palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Тёмные цвета', data.dark_colors_hex));
+                        }
+                        if (data.bright_colors_hex) {
+                            palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Яркие цвета', data.bright_colors_hex));
+                        }
+                        if (data.light_colors_hex) {
+                            palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Светлые цвета', data.light_colors_hex));
+                        }
+                        if (data.color_combinations_svg) {
+                            palettePromise = palettePromise.then(() => addColorCombinations(messageContent, data.color_combinations_svg));
+                        }
+                        palettePromise.then(() => {
+                            setTimeout(addGuideOffer, 500);
+                        });
+                    });
+                }, 500);
+
+                // --- Персональный гайд: вариативное предложение ---
+                function getGuideOfferText() {
+                    const variants = [
+                        'У меня есть возможность сделать для вас персональный 10-страничный цветовой гайд с вашими цветами, 20+ цветовых сочетаний и примерами образов, как сочетать ваши цвета.',
+                        'Я могу подготовить для вас персональный гайд: 10 страниц с вашими палитрами, 20+ сочетаний и примерами стильных образов!',
+                        'Хотите получить персональный цветовой гайд? Это 10 страниц с вашими цветами, сочетаниями и примерами образов для вдохновения.',
+                        'Я могу сделать для вас подробный гайд: 10 страниц с вашими цветами, 20+ сочетаний и примерами, как их носить.',
+                        'Могу подготовить для вас персональный гайд: 10 страниц с вашими палитрами, сочетаниями и примерами образов.'
+                    ];
+                    return variants[Math.floor(Math.random() * variants.length)];
+                }
+
+                function addGuideOffer() {
+                    const messageContent = createAIMessage();
+                    const offerText = getGuideOfferText();
+                    
+                    setTimeout(() => {
+                        typeText(messageContent, offerText, 20);
+                        
+                        setTimeout(() => {
+                            messageContent.innerHTML += `
+                                <div style="margin-top:18px; display:flex; gap:12px;">
+                                    <button class="upload-button" id="guideMoreBtn">Расскажи подробнее</button>
+                                    <button class="upload-button" id="guideSkipBtn" style="background:#E5E7EB; color:#1F2937;">Пока не нужно</button>
+                                </div>
+                            `;
+                            // Назначаем обработчики только после появления кнопок
+                            setTimeout(() => {
+                                const moreBtn = messageContent.querySelector('#guideMoreBtn');
+                                const skipBtn = messageContent.querySelector('#guideSkipBtn');
+                                if (moreBtn) {
+                                    moreBtn.onclick = function() {
+                                        addGuidePrice();
+                                        messageContent.innerHTML += '<div style="margin-top:12px; color:#7C3AED;">Спасибо за интерес! 👇</div>';
+                                        moreBtn.disabled = true;
+                                        if (skipBtn) skipBtn.disabled = true;
+                                    };
+                                }
+                                if (skipBtn) {
+                                    skipBtn.onclick = function() {
+                                        messageContent.innerHTML += '<div style="margin-top:12px; color:#6B7280;">Ок, если что — обращайтесь!</div>';
+                                        skipBtn.disabled = true;
+                                        if (moreBtn) moreBtn.disabled = true;
+                                    };
+                                }
+                            }, 10);
+                        }, offerText.length * 20 + 500);
+                    }, 1000);
+                }
+
+                function addGuidePrice() {
+                    const messageContent = createAIMessage();
+                    const advantagesText = [
+                        '🎨 Гайд поможет понять, какие цвета подчеркивают вашу красоту',
+                        '💡 Готовые идеи, как сочетать цвета между собой',
+                        '📄 Гайд придет в PDF — удобно сохранить на телефон или email',
+                        '💄 Рекомендации по макияжу и цвету волос',
+                        '📚 10+ страниц персональных советов именно для вашего цветотипа'
+                    ].join('\n');
+                    setTimeout(() => {
+                        typeText(messageContent, advantagesText, 20);
+                        setTimeout(() => {
+                            let imgs = '';
+                            for (let i = 1; i <= 8; i++) {
+                                const num = i.toString().padStart(2, '0');
+                                imgs += `<img src="/static/color_guide_${num}.jpg" alt="color guide ${i}" class="guide-preview-img">`;
+                            }
+                            messageContent.innerHTML += `
+                                <div class="guide-preview-block">
+                                    <div class="guide-preview-row">
+                                        ${imgs}
+                                    </div>
+                                </div>
+                                <div class="guide-price-block">
+                                    <div class="guide-price-text">Персональный гайд — <b>700 руб.</b></div>
+                                    <button class="upload-button guide-buy-btn">Приобрести персональный гайд</button>
+                                </div>
+                            `;
+                        }, advantagesText.length * 20 + 500);
+                    }, 600);
+                }
+            })
+            .catch(error => {
+                loading.style.display = 'none';
+                errorMessage.textContent = 'Произошла ошибка при загрузке файла';
+                errorMessage.style.display = 'block';
+            });
+        }
+
+        function downloadPDF() {
+            window.location.href = '/analyze?pdf=1';
+        }
+
+        // Варианты приветствия
+        const greetingVariants = [
+            'Привет! Загрузите фотографию с хорошо освещённым лицом, желательно при естественном свете — я помогу определить ваш цветотип.',
+            'Здравствуйте! Для точного анализа загрузите фото, где ваше лицо хорошо видно и освещено, лучше всего при дневном свете.',
+            'Добро пожаловать! Пожалуйста, выберите фото с естественным освещением и чётко видимым лицом — так результат будет точнее.',
+            'Приветствую! Загрузите фотографию, где ваше лицо хорошо освещено, желательно при дневном или естественном свете.',
+            'Здравствуйте! Для лучшего результата выберите фото с хорошо освещённым лицом, желательно при естественном освещении.'
+        ];
+
+        // Анимированное приветствие при загрузке
+        window.addEventListener('DOMContentLoaded', () => {
+            const greeting = greetingVariants[Math.floor(Math.random() * greetingVariants.length)];
+            const aiMessage = document.createElement('div');
+            aiMessage.className = 'message ai';
+            aiMessage.innerHTML = `
+                <div class="avatar">AI</div>
+                <div class="message-content"></div>
+            `;
+            chatMessages.appendChild(aiMessage);
+            const messageContent = aiMessage.querySelector('.message-content');
+            typeText(messageContent, greeting, 20);
+        });
+
+        // --- Модальное окно для оплаты гайда ---
+        function showGuideModal() {
+            document.getElementById('guideModal').style.display = 'block';
+            setTimeout(() => {
+                const emailInput = document.getElementById('guideEmail');
+                if (emailInput) emailInput.focus();
+            }, 100);
+        }
+        function hideGuideModal() {
+            document.getElementById('guideModal').style.display = 'none';
+            document.getElementById('guideEmail').value = '';
+            document.getElementById('guideEmailError').style.display = 'none';
+            document.getElementById('guidePaySuccess').style.display = 'none';
+        }
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('guide-buy-btn')) {
+                showGuideModal();
+            }
+            if (e.target.id === 'closeGuideModal') {
+                hideGuideModal();
+            }
+        });
+        window.onclick = function(event) {
+            const modal = document.getElementById('guideModal');
+            if (event.target === modal) hideGuideModal();
+        };
+
+        // --- Оплата CloudPayments ---
+        document.getElementById('guidePayBtn').onclick = function() {
+            const email = document.getElementById('guideEmail').value.trim();
+            const errorDiv = document.getElementById('guideEmailError');
+            errorDiv.style.display = 'none';
+            if (!/^\S+@\S+\.\S+$/.test(email)) {
+                errorDiv.textContent = 'Пожалуйста, введите корректный email';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            // CloudPayments public_id (замените на свой!)
+            const publicId = 'pk_eaf7cf4a80305151d1138a90350d3';
+            const widget = new cp.CloudPayments();
+            widget.pay('charge', {
+                publicId: publicId,
+                description: 'Персональный цветовой гайд',
+                amount: 700,
+                currency: 'RUB',
+                skin: 'classic',
+                email: email,
+                data: { email: email }
+            }, {
+                onSuccess: function (options) {
+                    // Показываем ссылку на скачивание
+                    document.getElementById('guidePaySuccess').style.display = 'block';
+                    // Получаем ссылку на скачивание PDF (через backend)
+                    fetch('/get_guide_pdf?email=' + encodeURIComponent(email))
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data && data.download_url) {
+                                document.getElementById('guideDownloadLink').href = data.download_url;
+                                document.getElementById('guideDownloadLink').setAttribute('download', 'color_guide.pdf');
+                            }
+                        });
+                    // Отправляем гайд на email (через backend)
+                    fetch('/send_guide_email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: email })
+                    });
+                },
+                onFail: function (reason, options) {
+                    errorDiv.textContent = 'Оплата не завершена';
+                    errorDiv.style.display = 'block';
+                },
+                onComplete: function (paymentResult, options) {
+                    // Можно добавить логику по завершению
+                }
+            });
+        };
+    </script>
+</body>
+</html> 

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тёплая Весна - Цветотип</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Тёплая Весна</h1>
+        <p class="description">Тёплый и яркий цветотип с золотистым подтоном кожи. Характерны светлая кожа с теплым подтоном, часто с веснушками, глаза голубые, зеленые или янтарные, волосы светлые, рыжие или светло-русые.</p>
+
+        <div class="color-section">
+            <h2>Тёмные цвета</h2>
+            <div class="color-grid" id="darkColors">
+                <!-- Colors will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <div class="color-section">
+            <h2>Яркие цвета</h2>
+            <div class="color-grid" id="brightColors">
+                <!-- Colors will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <div class="color-section">
+            <h2>Светлые цвета</h2>
+            <div class="color-grid" id="lightColors">
+                <!-- Colors will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <div class="color-section">
+            <h2>Цветовые сочетания</h2>
+            <div class="combinations-grid" id="colorCombinations">
+                <!-- Combinations will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dark colors for Warm Spring
+        const darkColors = [
+            { name: "Тёмно-серый", hex: "#5F574E" },
+            { name: "Коричневый", hex: "#7A5C3A" },
+            { name: "Тёмно-коричневый", hex: "#4A362D" },
+            { name: "Красновато-коричневый", hex: "#8B4C3B" },
+            { name: "Тёплый коричневый", hex: "#875040" },
+            { name: "Тёмно-зелёный", hex: "#21753B" },
+            { name: "Зелёный", hex: "#1B7A5C" },
+            { name: "Бирюзовый", hex: "#1B9797" },
+            { name: "Тёмно-синий", hex: "#14416A" },
+            { name: "Фиолетовый", hex: "#6B418A" }
+        ];
+
+        // Bright colors for Warm Spring
+        const brightColors = [
+            { name: "Жёлтый", hex: "#E8BC4A" },
+            { name: "Светло-жёлтый", hex: "#EBC77A" },
+            { name: "Оранжевый", hex: "#E3B184" },
+            { name: "Жёлто-зелёный", hex: "#B7C44A" },
+            { name: "Зелёный", hex: "#3AAA49" },
+            { name: "Светло-зелёный", hex: "#6BCB4A" },
+            { name: "Бирюзовый", hex: "#44C97A" },
+            { name: "Коралловый", hex: "#F77C5A" },
+            { name: "Красный", hex: "#E84A4A" },
+            { name: "Бирюзовый", hex: "#1BAA8A" },
+            { name: "Синий", hex: "#24A7A7" },
+            { name: "Голубой", hex: "#5A7CE8" },
+            { name: "Фиолетовый", hex: "#A74AC9" }
+        ];
+
+        // Light colors for Warm Spring
+        const lightColors = [
+            { name: "Бежевый", hex: "#F6E3CF" },
+            { name: "Светло-бежевый", hex: "#F9D7B5" },
+            { name: "Светло-жёлтый", hex: "#E7D89B" },
+            { name: "Светло-оранжевый", hex: "#F6C1A1" },
+            { name: "Светло-жёлтый", hex: "#F6DF9B" },
+            { name: "Светло-зелёный", hex: "#CFE07A" },
+            { name: "Светло-зелёный", hex: "#7ED97A" },
+            { name: "Светло-серый", hex: "#C7C9BC" },
+            { name: "Светло-коричневый", hex: "#C9B18C" },
+            { name: "Светло-фиолетовый", hex: "#C99BD1" },
+            { name: "Светло-голубой", hex: "#A1B8E7" },
+            { name: "Светло-розовый", hex: "#F67C7A" },
+            { name: "Светло-оранжевый", hex: "#F6B1A1" },
+            { name: "Светло-бирюзовый", hex: "#44C9A7" }
+        ];
+
+        // Color combinations for Warm Spring
+        const colorCombinations = [
+            {
+                name: "Классическое сочетание",
+                colors: ["#E8BC4A", "#5F362D"],
+                svg: [
+                    { type: "rect", color: "#E8BC4A", x: 0, y: 0, width: 60, height: 110 },
+                    { type: "rect", color: "#5F362D", x: 0, y: 110, width: 60, height: 110 }
+                ]
+            },
+            {
+                name: "Тёплое сочетание",
+                colors: ["#F6C1A1", "#7A5C3A"],
+                svg: [
+                    { type: "rect", color: "#F6C1A1", x: 0, y: 0, width: 60, height: 110 },
+                    { type: "rect", color: "#7A5C3A", x: 0, y: 110, width: 60, height: 110 },
+                    { type: "ellipse", color: "#F9D7B5", cx: 30, cy: 35, rx: 18, ry: 28, stroke: "#F9D7B5", strokeWidth: 3, fill: "none" },
+                    { type: "rect", color: "#F77C5A", x: 32, y: 80, width: 28, height: 28 }
+                ]
+            },
+            {
+                name: "Природное сочетание",
+                colors: ["#A1B8E7", "#14416A"],
+                svg: [
+                    { type: "rect", color: "#A1B8E7", x: 0, y: 0, width: 60, height: 110 },
+                    { type: "rect", color: "#14416A", x: 0, y: 110, width: 60, height: 110 },
+                    { type: "rect", color: "#1B7AE7", x: 10, y: 200, width: 40, height: 18 }
+                ]
+            }
+        ];
+
+        // Function to create color circles
+        function createColorCircle(color) {
+            if (!color.hex || color.hex === "#fff" || color.hex === "#ffffff" || color.hex === "#FFF" || color.hex === "#FFFFFF") return null;
+            const div = document.createElement('div');
+            div.className = 'color-circle';
+            div.style.backgroundColor = color.hex;
+            div.title = `${color.name} (${color.hex})`;
+            return div;
+        }
+
+        // Function to create combination SVG
+        function createCombinationSVG(combination) {
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("viewBox", "0 0 60 220");
+            svg.setAttribute("width", "100%");
+            svg.setAttribute("height", "220");
+
+            combination.svg.forEach(element => {
+                const el = document.createElementNS("http://www.w3.org/2000/svg", element.type);
+                for (const [key, value] of Object.entries(element)) {
+                    if (key !== 'type') {
+                        el.setAttribute(key, value);
+                    }
+                }
+                svg.appendChild(el);
+            });
+
+            return svg;
+        }
+
+        // Populate colors and combinations
+        document.getElementById('darkColors').append(...darkColors.map(createColorCircle).filter(Boolean));
+        document.getElementById('brightColors').append(...brightColors.map(createColorCircle).filter(Boolean));
+        document.getElementById('lightColors').append(...lightColors.map(createColorCircle).filter(Boolean));
+
+        const combinationsContainer = document.getElementById('colorCombinations');
+        colorCombinations.forEach(combination => {
+            const div = document.createElement('div');
+            div.className = 'combination';
+            div.appendChild(createCombinationSVG(combination));
+            const name = document.createElement('p');
+            name.textContent = combination.name;
+            div.appendChild(name);
+            combinationsContainer.appendChild(div);
+        });
+    </script>
+</body>
+</html> 
