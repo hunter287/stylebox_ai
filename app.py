@@ -5,7 +5,8 @@ from color_analysis import ColorAnalyzer
 from pdf_report import generate_pdf_report
 import cv2
 import json
-from config import CLOUDPAYMENTS_PUBLIC_ID
+from config import CLOUDPAYMENTS_PUBLIC_ID, UNISENDER_API_KEY, UNISENDER_LIST_ID
+import requests
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max-limit
@@ -114,6 +115,89 @@ def analyze():
         print('ERROR in /analyze:', e)
         if 'filepath' in locals() and os.path.exists(filepath):
             pass
+        return jsonify({'error': str(e)}), 500
+
+def send_guide_email(email, pdf_path):
+    """Send the color guide PDF to the user's email using Unisender"""
+    try:
+        # Upload PDF to Unisender
+        with open(pdf_path, 'rb') as f:
+            files = {'file': f}
+            upload_response = requests.post(
+                'https://api.unisender.com/ru/api/uploadFile',
+                params={'api_key': UNISENDER_API_KEY},
+                files=files
+            )
+            upload_data = upload_response.json()
+            
+            if not upload_data.get('result'):
+                print(f"Error uploading file to Unisender: {upload_data}")
+                return False
+                
+            file_id = upload_data['result']['file_id']
+            
+        # Send email using Unisender
+        send_data = {
+            'api_key': UNISENDER_API_KEY,
+            'email': email,
+            'sender_name': 'Color Type AI',
+            'sender_email': 'noreply@stylist-ai.com',
+            'subject': 'Ваш персональный цветовой гайд',
+            'body': """
+            Здравствуйте!
+
+            Спасибо за приобретение персонального цветового гайда.
+            В приложении вы найдете PDF-файл с вашим гайдом.
+
+            С уважением,
+            Color Type AI
+            """,
+            'attachments': [file_id]
+        }
+        
+        send_response = requests.post(
+            'https://api.unisender.com/ru/api/sendEmail',
+            json=send_data
+        )
+        send_result = send_response.json()
+        
+        if not send_result.get('result'):
+            print(f"Error sending email via Unisender: {send_result}")
+            return False
+            
+        return True
+    except Exception as e:
+        print(f"Error sending email: {str(e)}")
+        return False
+
+@app.route('/send_guide_email', methods=['POST'])
+def send_guide():
+    """Endpoint to send the guide via email"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+
+        if 'last_analysis' not in session or 'last_image_path' not in session:
+            return jsonify({'error': 'No analysis found'}), 400
+
+        # Generate PDF
+        analysis = session['last_analysis']
+        image_path = session['last_image_path']
+        filename_wo_ext = os.path.splitext(os.path.basename(image_path))[0].lower()
+        pdf_path = os.path.join('static/reports', f'report_{filename_wo_ext}.pdf')
+        full_pdf_path = generate_pdf_report(analysis, image_path, output_path=pdf_path)
+
+        # Send email
+        if send_guide_email(email, full_pdf_path):
+            return jsonify({'success': True})
+        else:
+            return jsonify({'error': 'Failed to send email'}), 500
+
+    except Exception as e:
+        print(f"Error in send_guide: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
