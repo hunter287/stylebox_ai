@@ -5,6 +5,7 @@ from color_analysis import ColorAnalyzer
 from pdf_report import generate_pdf_report
 import cv2
 import json
+from config import CLOUDPAYMENTS_PUBLIC_ID
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max-limit
@@ -26,7 +27,7 @@ os.makedirs('static/reports', exist_ok=True)
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', config={'CLOUDPAYMENTS_PUBLIC_ID': CLOUDPAYMENTS_PUBLIC_ID})
 
 @app.route('/analyze', methods=['POST', 'GET'])
 def analyze():

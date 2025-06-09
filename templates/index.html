@@ -931,7 +931,7 @@
                 return;
             }
             // CloudPayments public_id (замените на свой!)
-            const publicId = 'pk_eaf7cf4a80305151d1138a90350d3';
+            const publicId = '{{ config.CLOUDPAYMENTS_PUBLIC_ID }}';
             const widget = new cp.CloudPayments();
             widget.pay('charge', {
                 publicId: publicId,
