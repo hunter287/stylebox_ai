@@ -930,6 +930,12 @@
                 errorDiv.style.display = 'block';
                 return;
             }
+            // СРАЗУ отправляем email для теста
+            fetch('/send_guide_email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email })
+            });
             // CloudPayments public_id (замените на свой!)
             const publicId = '{{ config.CLOUDPAYMENTS_PUBLIC_ID }}';
             const widget = new cp.CloudPayments();
@@ -954,12 +960,6 @@
                                 document.getElementById('guideDownloadLink').setAttribute('download', 'color_guide.pdf');
                             }
                         });
-                    // Отправляем гайд на email (через backend)
-                    fetch('/send_guide_email', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: email })
-                    });
                 },
                 onFail: function (reason, options) {
                     errorDiv.textContent = 'Оплата не завершена';
