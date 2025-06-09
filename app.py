@@ -145,19 +145,25 @@ def send_guide_email(email, pdf_path):
     msg['From'] = from_email
     msg['To'] = to_email
 
-    body = f"""Здравствуйте!
+    body_html = f"""
+    <html>
+      <body>
+        <p>Здравствуйте!<br><br>
+        Спасибо за приобретение персонального цветового гайда.<br>
+        Скачать ваш гайд можно во вложении.<br><br>
+        С уважением,<br>
+        Color Type AI<br><br>
+        <a href=\"https://noreply.stylebox.live/ru/go2_unsubscribe?hash=6i31rt3yyohfen8p3tw8p1r9c6c95qxrd4mwinqfuxzzfzb7uxo8akrm7ewxdk3rh43nexznanukfmjuqf9x51e5tmefnsis5cr8yy6tscwjfxgij96nc6wsadw1adft7emuhpyb53347ks6qgizfrezq3jfdj6gkuzfeqkhi7nmfg98btktcn4hzqbypz4cznrguqgjnxrgtjf6fnm3fff8p5bkhnjozu659tprfjm5atzcwgusriqardkrop6qtacfmaj6cg7drk7ams5xxwhhhyp8dmnb7hxdswxubydn9m4sysb3qftbmw519741a977pjzb3y4oxtpxopq7sgiwa99x3azx7osko644wd8t6zya3reppf1itgr4irbmk9u395kg8zrirseamz5meo3zn4uyg9ut48k3tp8h51w9aegtdpbgo\" style=\"color:#7C3AED;\">Отписаться от рассылки</a>
+        </p>
+      </body>
+    </html>
+    """
+    msg.attach(MIMEText(body_html, 'html', 'utf-8'))
 
-Спасибо за приобретение персонального цветового гайда.
-Скачать ваш гайд можно во вложении.
-
-С уважением,
-Color Type AI
-"""
-    msg.attach(MIMEText(body, 'plain', 'utf-8'))
-
-    with open(pdf_path, 'rb') as f:
+    abs_pdf_path = os.path.abspath(pdf_path)
+    with open(abs_pdf_path, 'rb') as f:
         part = MIMEApplication(f.read(), _subtype='pdf')
-        part.add_header('Content-Disposition', 'attachment', filename=pdf_path.split('/')[-1])
+        part.add_header('Content-Disposition', 'attachment', filename=os.path.basename(pdf_path))
         msg.attach(part)
 
     with smtplib.SMTP(smtp_host, smtp_port) as server:
@@ -183,15 +189,57 @@ def send_guide():
         pdf_path = os.path.join('static/reports', filename)
         analysis = session['last_analysis']
         image_path = session['last_image_path']
-        full_pdf_path = generate_pdf_report(analysis, image_path, output_path=pdf_path)
-        # Отправляем email с ссылкой
-        if send_guide_email(email, pdf_path):
-            return jsonify({'success': True})
+        # Пытаемся сгенерировать PDF до 10 раз
+        max_attempts = 10
+        for attempt in range(max_attempts):
+            full_pdf_path = generate_pdf_report(analysis, image_path, output_path=pdf_path)
+            print(f"PDF path (attempt {attempt+1}):", full_pdf_path)
+            print("PDF exists:", os.path.exists(full_pdf_path))
+            if os.path.exists(full_pdf_path):
+                break
+        if os.path.exists(full_pdf_path):
+            # Отправляем email с вложением
+            if send_guide_email(email, full_pdf_path):
+                return jsonify({'success': True})
+            else:
+                return jsonify({'error': 'Failed to send email'}), 500
         else:
-            return jsonify({'error': 'Failed to send email'}), 500
+            # Если не удалось — письмо с извинением
+            send_guide_email_apology(email)
+            return jsonify({'error': 'PDF not created after 10 attempts, apology email sent'}), 500
     except Exception as e:
         print(f"Error in send_guide: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+# Функция для отправки письма с извинением
+def send_guide_email_apology(email):
+    smtp_host = 'smtp.go2.unisender.ru'
+    smtp_port = 587
+    smtp_user = '7632090'
+    smtp_pass = UNISENDER_GO_API_KEY
+    from_email = 'info@stylebox.live'
+    to_email = email
+
+    msg = MIMEMultipart()
+    msg['Subject'] = 'Извинения: не удалось сформировать гайд'
+    msg['From'] = from_email
+    msg['To'] = to_email
+
+    body = f"""Здравствуйте!
+
+К сожалению, возникла техническая ошибка при формировании вашего PDF-отчёта.
+Пожалуйста, попробуйте повторить попытку или свяжитесь с поддержкой.
+
+С уважением,
+Color Type AI
+"""
+    msg.attach(MIMEText(body, 'plain', 'utf-8'))
+
+    with smtplib.SMTP(smtp_host, smtp_port) as server:
+        server.starttls()
+        server.login(smtp_user, smtp_pass)
+        server.sendmail(from_email, [to_email], msg.as_string())
+    print("Письмо с извинением отправлено!")
 
 @app.route('/get_guide_pdf')
 def get_guide_pdf():
