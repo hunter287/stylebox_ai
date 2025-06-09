@@ -27,6 +27,9 @@ EMAIL_FROM = os.getenv('SMTP_USERNAME')
 UNISENDER_API_KEY = os.getenv('UNISENDER_API_KEY')
 UNISENDER_LIST_ID = os.getenv('UNISENDER_LIST_ID')
 
+# Unisender Go API key
+UNISENDER_GO_API_KEY = os.getenv('UNISENDER_GO_API_KEY')
+
 # Database configuration
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///stylist_ai.db')
 
