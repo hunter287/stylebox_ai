@@ -200,5 +200,22 @@ def send_guide():
         print(f"Error in send_guide: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/get_guide_pdf')
+def get_guide_pdf():
+    email = request.args.get('email')
+    # Можно искать PDF по email или по сессии (как сейчас делается для анализа)
+    if 'last_analysis' in session and 'last_image_path' in session:
+        analysis = session['last_analysis']
+        image_path = session['last_image_path']
+        filename_wo_ext = os.path.splitext(os.path.basename(image_path))[0].lower()
+        pdf_path = os.path.join('static/reports', f'report_{filename_wo_ext}.pdf')
+        # Генерируем PDF, если его нет
+        full_pdf_path = generate_pdf_report(analysis, image_path, output_path=pdf_path)
+        if os.path.exists(full_pdf_path):
+            return jsonify({'download_url': '/' + full_pdf_path})
+        else:
+            return jsonify({'error': 'PDF not found'}), 404
+    return jsonify({'error': 'No analysis found'}), 400
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True) 
