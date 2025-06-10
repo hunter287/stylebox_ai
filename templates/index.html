@@ -960,7 +960,10 @@
             })
             .then(function (result) {
                 if (result && result.success) {
-                    document.getElementById('guidePaySuccess').style.display = 'block';
+                    console.log('Payment successful, showing success message');
+                    const successDiv = document.getElementById('guidePaySuccess');
+                    successDiv.style.display = 'block';
+                    console.log('Success message display style:', successDiv.style.display);
                 }
             })
             .catch(function (reason) {
