@@ -14,6 +14,8 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
+import re
+import shutil
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max-limit
@@ -118,6 +120,12 @@ def analyze():
                 as_attachment=True,
                 download_name=os.path.basename(full_pdf_path)
             )
+        email = request.form.get('email') or request.args.get('email')
+        if email:
+            norm_email = normalize_email(email)
+            with open(f'static/reports/last_analysis_{norm_email}.json', 'w') as f:
+                json.dump(result, f)
+            shutil.copyfile(filepath, f'static/reports/last_image_{norm_email}.jpg')
         return jsonify(result)
     except Exception as e:
         print('ERROR in /analyze:', e)
@@ -204,13 +212,13 @@ def send_guide():
     try:
         data = request.get_json()
         email = data.get('email')
-        transaction_id = data.get('transaction_id')
-        if not email or not transaction_id:
-            return jsonify({'error': 'Email and transaction_id are required'}), 400
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
         if 'last_analysis' not in session or 'last_image_path' not in session:
             return jsonify({'error': 'No analysis found'}), 400
-        # Генерируем имя PDF по transaction_id
-        pdf_path = os.path.join('static/reports', f'guide_{transaction_id}.pdf')
+        # Генерируем уникальное имя PDF
+        filename = make_report_filename(email)
+        pdf_path = os.path.join('static/reports', filename)
         analysis = session['last_analysis']
         image_path = session['last_image_path']
         # Пытаемся сгенерировать PDF до 10 раз
@@ -268,14 +276,46 @@ Color Type AI
 @app.route('/get_guide_pdf')
 def get_guide_pdf():
     email = request.args.get('email')
-    transaction_id = request.args.get('transaction_id')
-    if not email or not transaction_id:
-        return jsonify({'error': 'Email and transaction_id are required'}), 400
-    pdf_path = os.path.join('static/reports', f'guide_{transaction_id}.pdf')
-    if os.path.exists(pdf_path):
-        return jsonify({'download_url': '/' + pdf_path})
+    # Можно искать PDF по email или по сессии (как сейчас делается для анализа)
+    if 'last_analysis' in session and 'last_image_path' in session:
+        analysis = session['last_analysis']
+        image_path = session['last_image_path']
+        filename_wo_ext = os.path.splitext(os.path.basename(image_path))[0].lower()
+        pdf_path = os.path.join('static/reports', f'report_{filename_wo_ext}.pdf')
+        # Генерируем PDF, если его нет
+        full_pdf_path = generate_pdf_report(analysis, image_path, output_path=pdf_path)
+        if os.path.exists(full_pdf_path):
+            return jsonify({'download_url': '/' + full_pdf_path})
+        else:
+            return jsonify({'error': 'PDF not found'}), 404
+    return jsonify({'error': 'No analysis found'}), 400
+
+@app.route('/paid_callback', methods=['POST'])
+def paid_callback():
+    data = request.get_json() or request.form
+    print("CloudPayments webhook data:", data)
+
+    if str(data.get('Status', '')).lower() == 'completed':
+        email = data.get('Email')
+        if not email:
+            return jsonify({'code': 10, 'message': 'No email'}), 400
+        norm_email = normalize_email(email)
+        analysis_path = f'static/reports/last_analysis_{norm_email}.json'
+        image_path = f'static/reports/last_image_{norm_email}.jpg'
+        pdf_path = f'static/reports/report_{norm_email}.pdf'
+        if os.path.exists(analysis_path) and os.path.exists(image_path):
+            with open(analysis_path) as f:
+                analysis = json.load(f)
+            generate_pdf_report(analysis, image_path, output_path=pdf_path)
+            send_guide_email(email, pdf_path)
+            return jsonify({'code': 0})
+        else:
+            return jsonify({'code': 11, 'message': 'PDF or analysis not found'}), 404
     else:
-        return jsonify({'error': 'PDF not found'}), 404
+        return jsonify({'code': 13, 'message': 'Payment not completed'}), 200
+
+def normalize_email(email):
+    return ''.join(c for c in email if c.isalnum())
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True) 
