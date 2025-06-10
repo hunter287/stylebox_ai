@@ -953,8 +953,10 @@
                 currency: 'RUB',
                 skin: 'classic',
                 email: email,
-                data: { email: email },
-                customFields: { analysis_id: analysisId }
+                data: { 
+                    email: email,
+                    analysis_id: analysisId 
+                }
             })
             .then(function (result) {
                 if (result && result.success) {

@@ -293,15 +293,25 @@ def paid_callback():
     print("[paid_callback] after status extraction")
     email = data.get('Email')
     print("[paid_callback] after email extraction")
-    custom_fields = data.get('CustomFields')
-    print("[paid_callback] after custom_fields extraction")
-    custom_fields_dict = {}  # всегда определяем заранее
+    
+    # Получаем Data и парсим его как JSON
+    data_json = {}
+    if data.get('Data'):
+        try:
+            data_json = json.loads(data.get('Data'))
+        except:
+            data_json = {}
+    
     analysis_id = (
+        data_json.get('analysis_id') or
         data.get('analysis_id') or
         data.get('AnalysisId') or
         data.get('analysisId')
     )
     print("[paid_callback] after analysis_id extraction, value:", analysis_id)
+    custom_fields = data.get('CustomFields')
+    print("[paid_callback] after custom_fields extraction")
+    custom_fields_dict = {}  # всегда определяем заранее
     if not analysis_id and custom_fields:
         print("[paid_callback] inside custom_fields block")
         # Если custom_fields — строка, распарсить как JSON
