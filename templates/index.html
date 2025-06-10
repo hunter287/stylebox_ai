@@ -249,37 +249,24 @@
             }
         }
 
-        .svg-combos-row {
-            column-gap: 4px;
-            row-gap: 20px;
-            justify-content: flex-start !important;
-            display: flex;
-            flex-wrap: wrap;
-        }
-        .svg-combo-item {
-            min-width: 72px;
-            max-width: 72px;
-            width: 72px;
-            min-height: 220px;
-            max-height: 220px;
-            height: 220px;
-            flex: 0 0 72px;
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            text-align: center;
-            padding: 0;
-        }
-        .combo-svg {
-            width: 72px;
-            min-width: 72px;
-            max-width: 72px;
-            height: 220px;
-            min-height: 220px;
-            max-height: 220px;
-            display: block;
-        }
         @media (max-width: 600px) {
+            .container {
+                padding: 0.2rem;
+            }
+            .header {
+                margin-top: 0.5rem;
+                margin-bottom: 0.7rem;
+            }
+            .header h1 {
+                font-size: 1.2rem;
+            }
+            .header p {
+                font-size: 0.95rem;
+            }
+            .upload-area {
+                padding: 1rem;
+                margin-top: 0.2rem;
+            }
             .svg-combos-row {
                 gap: 4px 8px;
                 justify-content: flex-start !important;
