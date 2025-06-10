@@ -282,6 +282,20 @@
             display: block;
         }
         @media (max-width: 600px) {
+            .container {
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-end;
+                min-height: 100vh;
+                padding-bottom: 0;
+            }
+            .chat-container {
+                flex: 0 0 auto;
+            }
+            .upload-area {
+                margin-top: 0;
+                margin-bottom: 0;
+            }
             .svg-combos-row {
                 gap: 4px 8px;
                 justify-content: flex-start !important;
@@ -320,9 +334,6 @@
             }
             .color-palette {
                 gap: 0.2rem;
-            }
-            .upload-area {
-                margin-top: -200px;
             }
             .chat-messages {
                 max-height: calc(100vh - 150px);
