@@ -204,13 +204,13 @@ def send_guide():
     try:
         data = request.get_json()
         email = data.get('email')
-        if not email:
-            return jsonify({'error': 'Email is required'}), 400
+        transaction_id = data.get('transaction_id')
+        if not email or not transaction_id:
+            return jsonify({'error': 'Email and transaction_id are required'}), 400
         if 'last_analysis' not in session or 'last_image_path' not in session:
             return jsonify({'error': 'No analysis found'}), 400
-        # Генерируем уникальное имя PDF
-        filename = make_report_filename(email)
-        pdf_path = os.path.join('static/reports', filename)
+        # Генерируем имя PDF по transaction_id
+        pdf_path = os.path.join('static/reports', f'guide_{transaction_id}.pdf')
         analysis = session['last_analysis']
         image_path = session['last_image_path']
         # Пытаемся сгенерировать PDF до 10 раз
@@ -268,19 +268,14 @@ Color Type AI
 @app.route('/get_guide_pdf')
 def get_guide_pdf():
     email = request.args.get('email')
-    # Можно искать PDF по email или по сессии (как сейчас делается для анализа)
-    if 'last_analysis' in session and 'last_image_path' in session:
-        analysis = session['last_analysis']
-        image_path = session['last_image_path']
-        filename_wo_ext = os.path.splitext(os.path.basename(image_path))[0].lower()
-        pdf_path = os.path.join('static/reports', f'report_{filename_wo_ext}.pdf')
-        # Генерируем PDF, если его нет
-        full_pdf_path = generate_pdf_report(analysis, image_path, output_path=pdf_path)
-        if os.path.exists(full_pdf_path):
-            return jsonify({'download_url': '/' + full_pdf_path})
-        else:
-            return jsonify({'error': 'PDF not found'}), 404
-    return jsonify({'error': 'No analysis found'}), 400
+    transaction_id = request.args.get('transaction_id')
+    if not email or not transaction_id:
+        return jsonify({'error': 'Email and transaction_id are required'}), 400
+    pdf_path = os.path.join('static/reports', f'guide_{transaction_id}.pdf')
+    if os.path.exists(pdf_path):
+        return jsonify({'download_url': '/' + pdf_path})
+    else:
+        return jsonify({'error': 'PDF not found'}), 404
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True) 

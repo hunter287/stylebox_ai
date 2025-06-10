@@ -944,7 +944,14 @@
             .then(function (options) {
                 // Только после успешной оплаты!
                 document.getElementById('guidePaySuccess').style.display = 'block';
-                fetch('/get_guide_pdf?email=' + encodeURIComponent(email))
+                // Получаем TransactionId
+                const transactionId = options && options.TransactionId ? options.TransactionId : (options && options.transactionId ? options.transactionId : null);
+                if (!transactionId) {
+                    errorDiv.textContent = 'Ошибка: не получен TransactionId';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+                fetch('/get_guide_pdf?email=' + encodeURIComponent(email) + '&transaction_id=' + encodeURIComponent(transactionId))
                     .then(r => r.json())
                     .then(data => {
                         if (data && data.download_url) {
@@ -955,7 +962,7 @@
                 fetch('/send_guide_email', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: email })
+                    body: JSON.stringify({ email: email, transaction_id: transactionId })
                 });
             })
             .catch(function (reason) {
