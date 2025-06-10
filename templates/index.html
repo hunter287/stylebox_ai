@@ -73,6 +73,9 @@
             flex: 1;
             padding: 1.5rem;
             overflow-y: auto;
+            max-height: 30vh;
+            min-height: 40px;
+            transition: max-height 0.3s;
         }
 
         .message {
@@ -306,9 +309,10 @@
                 margin-top: -200px;
             }
             .chat-messages {
-                max-height: 70px;
+                max-height: 30vh;
                 min-height: 40px;
                 padding-bottom: 0.2rem;
+                transition: max-height 0.3s;
             }
         }
 
