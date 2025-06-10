@@ -449,7 +449,9 @@
             <input type="email" id="guideEmail" placeholder="Ваш email" class="modal-input" autocomplete="email" autofocus>
             <div id="guideEmailError" style="color:#DC2626; font-size:0.95rem; margin:6px 0 0 0; display:none;"></div>
             <button class="upload-button" id="guidePayBtn" style="margin-top:1.2rem; width:100%;">Купить</button>
-            <div id="guidePaySuccess" style="display:none; margin-top:1.2rem; color:#059669; font-weight:500;">Оплата прошла успешно!<br>Скачать гайд: <a id="guideDownloadLink" href="#" class="upload-button" style="display:inline-block; margin-top:10px;">Скачать PDF</a></div>
+            <div id="guidePaySuccess" style="display:none; margin-top:1.2rem; color:#059669; font-weight:500;">
+                Оплата прошла успешно!<br>Гайд будет выслан на ваш email.
+            </div>
         </div>
     </div>
 
@@ -941,29 +943,10 @@
                 email: email,
                 data: { email: email }
             })
-            .then(function (options) {
-                // Только после успешной оплаты!
-                document.getElementById('guidePaySuccess').style.display = 'block';
-                // Получаем TransactionId
-                const transactionId = options && options.TransactionId ? options.TransactionId : (options && options.transactionId ? options.transactionId : null);
-                if (!transactionId) {
-                    errorDiv.textContent = 'Ошибка: не получен TransactionId';
-                    errorDiv.style.display = 'block';
-                    return;
+            .then(function (result) {
+                if (result && result.success) {
+                    document.getElementById('guidePaySuccess').style.display = 'block';
                 }
-                fetch('/get_guide_pdf?email=' + encodeURIComponent(email) + '&transaction_id=' + encodeURIComponent(transactionId))
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data && data.download_url) {
-                            document.getElementById('guideDownloadLink').href = data.download_url;
-                            document.getElementById('guideDownloadLink').setAttribute('download', 'color_guide.pdf');
-                        }
-                    });
-                fetch('/send_guide_email', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: email, transaction_id: transactionId })
-                });
             })
             .catch(function (reason) {
                 errorDiv.textContent = 'Оплата не завершена';
