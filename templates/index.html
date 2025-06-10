@@ -3,11 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Color Type AI</title>
+    <title>Style Box AI</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
+        @font-face {
+            font-family: 'CirceRounded';
+            src: url('/static/fonts/CirceRounded-Regular.woff2') format('woff2'),
+                 url('/static/fonts/CirceRounded-Regular.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+
         :root {
-            --primary-color: #7C3AED;
+            --primary-color: #bb279b;
             --primary-light: #EDE9FE;
             --text-primary: #1F2937;
             --text-secondary: #6B7280;
@@ -23,7 +32,7 @@
         }
 
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'CirceRounded', Arial, sans-serif;
             background-color: var(--background);
             color: var(--text-primary);
             line-height: 1.5;
@@ -242,6 +251,9 @@
             .chat-messages {
                 padding: 0.575rem 0.23rem;
             }
+            .header {
+                margin-top: 2.5rem;
+            }
         }
 
         .svg-combos-row {
@@ -421,7 +433,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Color Type AI</h1>
+            <h1>Style Box AI</h1>
             <p>Загрузите фотографию для анализа вашего цветотипа</p>
         </div>
 
