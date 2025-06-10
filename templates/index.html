@@ -939,6 +939,7 @@
                 return;
             }
             const publicId = '{{ config.CLOUDPAYMENTS_PUBLIC_ID }}';
+            const analysisId = localStorage.getItem('lastAnalysisId');
             const widget = new cp.CloudPayments();
             widget.pay('charge', {
                 publicId: publicId,
@@ -947,7 +948,8 @@
                 currency: 'RUB',
                 skin: 'classic',
                 email: email,
-                data: { email: email }
+                data: { email: email },
+                customFields: { analysis_id: analysisId }
             })
             .then(function (result) {
                 if (result && result.success) {

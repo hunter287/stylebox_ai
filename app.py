@@ -292,7 +292,28 @@ def paid_callback():
     # Проверяем статус платежа (учитываем разные варианты написания)
     status = str(data.get('Status', '')).lower()
     email = data.get('Email')
-    analysis_id = data.get('analysis_id')
+    custom_fields = data.get('CustomFields')
+    if not email and custom_fields:
+        # Если custom_fields — строка, распарсить как JSON
+        if isinstance(custom_fields, str) and custom_fields:
+            try:
+                import json as _json
+                custom_fields_dict = _json.loads(custom_fields)
+            except Exception:
+                custom_fields_dict = {}
+        elif isinstance(custom_fields, dict):
+            custom_fields_dict = custom_fields
+        else:
+            custom_fields_dict = {}
+        email = custom_fields_dict.get('email')
+    analysis_id = (
+        data.get('analysis_id') or
+        data.get('AnalysisId') or
+        data.get('analysisId') or
+        custom_fields_dict.get('analysis_id') or
+        custom_fields_dict.get('AnalysisId') or
+        custom_fields_dict.get('analysisId')
+    )
     print("[paid_callback] Email:", email)
     print("[paid_callback] Analysis ID:", analysis_id)
     analysis_path = f'static/reports/last_analysis_{analysis_id}.json'
