@@ -288,18 +288,22 @@ def paid_callback():
     # Получаем данные из form-data или JSON
     data = request.form if request.form else request.get_json()
     print("[paid_callback] Webhook data:", dict(data))
-
-    # Проверяем статус платежа (учитываем разные варианты написания)
+    print("[paid_callback] after webhook data print")
     status = str(data.get('Status', '')).lower()
+    print("[paid_callback] after status extraction")
     email = data.get('Email')
+    print("[paid_callback] after email extraction")
     custom_fields = data.get('CustomFields')
+    print("[paid_callback] after custom_fields extraction")
     custom_fields_dict = {}  # всегда определяем заранее
     analysis_id = (
         data.get('analysis_id') or
         data.get('AnalysisId') or
         data.get('analysisId')
     )
+    print("[paid_callback] after analysis_id extraction, value:", analysis_id)
     if not analysis_id and custom_fields:
+        print("[paid_callback] inside custom_fields block")
         # Если custom_fields — строка, распарсить как JSON
         if isinstance(custom_fields, str) and custom_fields:
             try:
@@ -316,6 +320,7 @@ def paid_callback():
             custom_fields_dict.get('AnalysisId') or
             custom_fields_dict.get('analysisId')
         )
+        print("[paid_callback] after custom_fields_dict extraction, value:", analysis_id)
     print("[paid_callback] Email:", email)
     print("[paid_callback] Analysis ID:", analysis_id)
     analysis_path = f'static/reports/last_analysis_{analysis_id}.json'
