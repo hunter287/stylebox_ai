@@ -26,7 +26,8 @@ PRESET_COLOR_TYPES = [
     'яркая весна', 'тёплая весна', 'светлая весна',
     'яркое лето', 'холодное лето', 'мягкое лето',
     'яркая осень', 'тёплая осень', 'глубокая осень',
-    'soft_summer', 'deep_winter', 'warm_autumn'
+    'soft_summer', 'deep_winter', 'warm_autumn',
+    'cool_winter', 'cool winter', 'cold_winter', 'cold winter', 'холодная зима'
 ]
 
 # Создаем директорию для загрузок, если она не существует

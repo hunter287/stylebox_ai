@@ -930,13 +930,6 @@
                 errorDiv.style.display = 'block';
                 return;
             }
-            // СРАЗУ отправляем email для теста
-            fetch('/send_guide_email', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: email })
-            });
-            // CloudPayments public_id (замените на свой!)
             const publicId = '{{ config.CLOUDPAYMENTS_PUBLIC_ID }}';
             const widget = new cp.CloudPayments();
             widget.pay('charge', {
@@ -947,27 +940,27 @@
                 skin: 'classic',
                 email: email,
                 data: { email: email }
-            }, {
-                onSuccess: function (options) {
-                    // Показываем ссылку на скачивание
-                    document.getElementById('guidePaySuccess').style.display = 'block';
-                    // Получаем ссылку на скачивание PDF (через backend)
-                    fetch('/get_guide_pdf?email=' + encodeURIComponent(email))
-                        .then(r => r.json())
-                        .then(data => {
-                            if (data && data.download_url) {
-                                document.getElementById('guideDownloadLink').href = data.download_url;
-                                document.getElementById('guideDownloadLink').setAttribute('download', 'color_guide.pdf');
-                            }
-                        });
-                },
-                onFail: function (reason, options) {
-                    errorDiv.textContent = 'Оплата не завершена';
-                    errorDiv.style.display = 'block';
-                },
-                onComplete: function (paymentResult, options) {
-                    // Можно добавить логику по завершению
-                }
+            })
+            .then(function (options) {
+                // Только после успешной оплаты!
+                document.getElementById('guidePaySuccess').style.display = 'block';
+                fetch('/get_guide_pdf?email=' + encodeURIComponent(email))
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data && data.download_url) {
+                            document.getElementById('guideDownloadLink').href = data.download_url;
+                            document.getElementById('guideDownloadLink').setAttribute('download', 'color_guide.pdf');
+                        }
+                    });
+                fetch('/send_guide_email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email })
+                });
+            })
+            .catch(function (reason) {
+                errorDiv.textContent = 'Оплата не завершена';
+                errorDiv.style.display = 'block';
             });
         };
     </script>
