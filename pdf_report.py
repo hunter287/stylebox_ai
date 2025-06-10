@@ -89,8 +89,6 @@ def generate_pdf_report(
         # Создаем директорию для отчетов, если она не существует
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         
-        # Сразу создаем файл с суффиксом _full
-        output_path = output_path.replace('.pdf', '_full.pdf')
         c = canvas.Canvas(output_path, pagesize=(PDF_WIDTH, PDF_HEIGHT))
 
         # --- Первая страница ---
