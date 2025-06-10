@@ -73,9 +73,6 @@
             flex: 1;
             padding: 1.5rem;
             overflow-y: auto;
-            max-height: 30vh;
-            min-height: 40px;
-            transition: max-height 0.3s;
         }
 
         .message {
@@ -254,18 +251,37 @@
             }
         }
 
+        .svg-combos-row {
+            column-gap: 4px;
+            row-gap: 20px;
+            justify-content: flex-start !important;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .svg-combo-item {
+            min-width: 72px;
+            max-width: 72px;
+            width: 72px;
+            min-height: 220px;
+            max-height: 220px;
+            height: 220px;
+            flex: 0 0 72px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            text-align: center;
+            padding: 0;
+        }
+        .combo-svg {
+            width: 72px;
+            min-width: 72px;
+            max-width: 72px;
+            height: 220px;
+            min-height: 220px;
+            max-height: 220px;
+            display: block;
+        }
         @media (max-width: 600px) {
-            .header {
-                margin-bottom: 0.7rem;
-                margin-top: 1.2rem;
-            }
-            .header h1 {
-                font-size: 1.2rem;
-                margin-bottom: 0.2rem;
-            }
-            .header p {
-                font-size: 0.95rem;
-            }
             .svg-combos-row {
                 gap: 4px 8px;
                 justify-content: flex-start !important;
@@ -304,15 +320,6 @@
             }
             .color-palette {
                 gap: 0.2rem;
-            }
-            .upload-area {
-                margin-top: -200px;
-            }
-            .chat-messages {
-                max-height: 12vh;
-                min-height: 30px;
-                padding: 0.2rem 0.23rem 0.2rem 0.23rem;
-                transition: max-height 0.3s;
             }
         }
 
