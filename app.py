@@ -287,27 +287,26 @@ def get_guide_pdf():
 def paid_callback():
     # Получаем данные из form-data или JSON
     data = request.form if request.form else request.get_json()
-    print("CloudPayments webhook data:", dict(data))
+    print("[paid_callback] Webhook data:", dict(data))
 
     # Проверяем статус платежа (учитываем разные варианты написания)
     status = str(data.get('Status', '')).lower()
+    email = data.get('Email')
+    analysis_id = data.get('analysis_id')
+    print("[paid_callback] Email:", email)
+    print("[paid_callback] Analysis ID:", analysis_id)
+    analysis_path = f'static/reports/last_analysis_{analysis_id}.json'
+    image_path = f'static/reports/last_image_{analysis_id}.jpg'
+    pdf_path = f'static/reports/report_{normalize_email(email)}_{analysis_id}.pdf'
+    print("[paid_callback] Analysis path:", analysis_path, "Exists:", os.path.exists(analysis_path))
+    print("[paid_callback] Image path:", image_path, "Exists:", os.path.exists(image_path))
+    print("[paid_callback] PDF path:", pdf_path)
+    
     if status == 'completed':
         # Получаем email и analysis_id из данных
-        email = data.get('Email')
-        analysis_id = data.get('analysis_id')
-        
-        print(f"Processing payment for email: {email}, analysis_id: {analysis_id}")
-        
         if not email or not analysis_id:
             print("Missing required data:", {'email': email, 'analysis_id': analysis_id})
             return jsonify({'code': 10, 'message': 'No email or analysis_id'}), 400
-
-        # Формируем пути к файлам
-        analysis_path = f'static/reports/last_analysis_{analysis_id}.json'
-        image_path = f'static/reports/last_image_{analysis_id}.jpg'
-        pdf_path = f'static/reports/report_{normalize_email(email)}_{analysis_id}_full.pdf'
-
-        print(f"Looking for files:\n- Analysis: {analysis_path}\n- Image: {image_path}\n- PDF will be saved to: {pdf_path}")
 
         # Проверяем наличие файлов анализа и изображения
         if os.path.exists(analysis_path) and os.path.exists(image_path):
@@ -318,13 +317,13 @@ def paid_callback():
                 
                 # Генерируем PDF
                 print("Generating PDF report...")
-                generate_pdf_report(analysis, image_path, output_path=pdf_path)
+                full_pdf_path = generate_pdf_report(analysis, image_path, output_path=pdf_path)
                 
                 # Проверяем, что PDF создался
-                if os.path.exists(pdf_path):
+                if os.path.exists(full_pdf_path):
                     print("PDF generated successfully, sending email...")
                     # Отправляем email
-                    if send_guide_email(email, pdf_path):
+                    if send_guide_email(email, full_pdf_path):
                         print("Email sent successfully!")
                         return jsonify({'code': 0, 'message': 'Success'})
                     else:
