@@ -701,6 +701,11 @@
         function uploadFile(file) {
             const formData = new FormData();
             formData.append('image', file);
+            // Добавляем email, если он есть в localStorage
+            const lastEmail = localStorage.getItem('lastGuideEmail');
+            if (lastEmail) {
+                formData.append('email', lastEmail);
+            }
 
             // Показываем сообщение о загрузке
             const userMessage = document.createElement('div');
@@ -925,6 +930,7 @@
         // --- Оплата CloudPayments ---
         document.getElementById('guidePayBtn').onclick = function() {
             const email = document.getElementById('guideEmail').value.trim();
+            localStorage.setItem('lastGuideEmail', email);
             const errorDiv = document.getElementById('guideEmailError');
             errorDiv.style.display = 'none';
             if (!/^\S+@\S+\.\S+$/.test(email)) {
