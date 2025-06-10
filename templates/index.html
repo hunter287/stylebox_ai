@@ -4,8 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Style Box AI</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
+        @font-face {
+            font-family: 'CirceRounded';
+            src: url('/static/fonts/CirceRounded-Regular.woff2') format('woff2'),
+                 url('/static/fonts/CirceRounded-Regular.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'CirceRounded';
+            src: url('/static/fonts/CirceRounded-AltBold.woff2') format('woff2'),
+                 url('/static/fonts/CirceRounded-AltBold.woff') format('woff');
+            font-weight: bold;
+            font-style: normal;
+            font-display: swap;
+        }
+
         :root {
             --primary-color: #bb279b;
             --primary-light: #EDE9FE;
@@ -23,7 +40,7 @@
         }
 
         body {
-            font-family: 'Nunito', Arial, sans-serif !important;
+            font-family: 'CirceRounded', Arial, sans-serif !important;
             background-color: var(--background);
             color: var(--text-primary);
             line-height: 1.5;
@@ -48,13 +65,13 @@
             font-weight: 600;
             color: var(--primary-color);
             margin-bottom: 0.5rem;
-            font-family: 'Nunito', Arial, sans-serif;
+            font-family: 'CirceRounded', Arial, sans-serif;
         }
 
         .header p {
             color: var(--text-secondary);
             font-size: 1.1rem;
-            font-family: 'Nunito', Arial, sans-serif !important;
+            font-family: 'CirceRounded', Arial, sans-serif !important;
         }
 
         .chat-container {
@@ -249,30 +266,37 @@
             }
         }
 
+        .svg-combos-row {
+            column-gap: 4px;
+            row-gap: 20px;
+            justify-content: flex-start !important;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .svg-combo-item {
+            min-width: 72px;
+            max-width: 72px;
+            width: 72px;
+            min-height: 220px;
+            max-height: 220px;
+            height: 220px;
+            flex: 0 0 72px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            text-align: center;
+            padding: 0;
+        }
+        .combo-svg {
+            width: 72px;
+            min-width: 72px;
+            max-width: 72px;
+            height: 220px;
+            min-height: 220px;
+            max-height: 220px;
+            display: block;
+        }
         @media (max-width: 600px) {
-            .container {
-                padding: 0.35rem;
-            }
-            .header {
-                margin-top: 0.5rem;
-                margin-bottom: 0.7rem;
-            }
-            .header h1 {
-                font-size: 1.2rem;
-            }
-            .header p {
-                font-size: 0.95rem;
-            }
-            .chat-messages {
-                padding: 0.5rem 0.1rem 0.2rem 0.1rem;
-                min-height: 0;
-                max-height: 70px;
-                overflow: hidden;
-            }
-            .upload-area {
-                padding: 1rem;
-                margin-top: 1.2rem;
-            }
             .svg-combos-row {
                 gap: 4px 8px;
                 justify-content: flex-start !important;
@@ -416,12 +440,12 @@
         }
 
         p {
-            font-family: 'Nunito', Arial, sans-serif !important;
+            font-family: 'CirceRounded', Arial, sans-serif !important;
         }
     </style>
     <style>
     body, p, div, span, h1, h2, h3, h4, h5, h6, li, ul, ol, a, button, input, textarea, label, .message-content, .guide-price-text {
-        font-family: 'Nunito', Arial, sans-serif !important;
+        font-family: 'CirceRounded', Arial, sans-serif !important;
     }
     </style>
 </head>
