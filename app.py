@@ -305,7 +305,7 @@ def paid_callback():
         # Формируем пути к файлам
         analysis_path = f'static/reports/last_analysis_{analysis_id}.json'
         image_path = f'static/reports/last_image_{analysis_id}.jpg'
-        pdf_path = f'static/reports/report_{normalize_email(email)}_{analysis_id}.pdf'
+        pdf_path = f'static/reports/report_{normalize_email(email)}_{analysis_id}_full.pdf'
 
         print(f"Looking for files:\n- Analysis: {analysis_path}\n- Image: {image_path}\n- PDF will be saved to: {pdf_path}")
 
