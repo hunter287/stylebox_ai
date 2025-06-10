@@ -538,6 +538,15 @@ class ColorAnalyzer:
                                 color_type_data['color_type'] = 'Тёплая Осень'
                                 color_type_data['explanation'] += '\nПост-валидация: волосы не очень тёмные и кожа персиковая/медовая/бежево-золотистая — это характерно для Тёплой Осени, а не для Глубокой Осени.'
 
+                            # --- ДОБАВЛЕНО: если color_type определён, но массивы цветов пустые, заполняем их по color_type ---
+                            if color_type_data.get('color_type', '').lower() not in ['', 'не определено']:
+                                if not color_type_data.get('recommended_colors'):
+                                    color_type_data['recommended_colors'] = self.get_color_recommendations(color_type_data['color_type']).get('recommended_colors', [])
+                                if not color_type_data.get('avoid_colors'):
+                                    color_type_data['avoid_colors'] = self.get_color_recommendations(color_type_data['color_type']).get('avoid_colors', [])
+                                if not color_type_data.get('color_combinations'):
+                                    color_type_data['color_combinations'] = []
+
                             return color_type_data
 
                         except json.JSONDecodeError as e:
@@ -1254,6 +1263,56 @@ class ColorAnalyzer:
             # Добавляем основные палитры для совместимости с фронтом
             analysis["main_palette_hex"] = analysis.get("bright_colors_hex", [])[:9]
             analysis["additional_palette_hex"] = analysis.get("bright_colors_hex", [])
+
+            # --- ДОБАВЛЕНО: если определён color_type, но нет палитр, заполняем их по color_type ---
+            if color_type_normalized not in ["", "не определено"]:
+                preset = self.get_preset_analysis(analysis["color_type"])
+                for key in ["dark_colors_hex", "bright_colors_hex", "light_colors_hex"]:
+                    if key not in analysis or not analysis[key]:
+                        if key in preset:
+                            analysis[key] = preset[key]
+
+            # --- Фильтрация: убираем пустые и белые цвета из палитр ---
+            def filter_valid_colors(colors):
+                return [c for c in colors if c and c.lower() not in ['#fff', '#ffffff']]
+            analysis["dark_colors_hex"] = filter_valid_colors(analysis.get("dark_colors_hex", []))
+            analysis["bright_colors_hex"] = filter_valid_colors(analysis.get("bright_colors_hex", []))
+            analysis["light_colors_hex"] = filter_valid_colors(analysis.get("light_colors_hex", []))
+
+            # --- Если определён color_type и есть пресет, всегда подставлять палитру из пресета ---
+            color_type = analysis.get("color_type", "")
+            if color_type and color_type.lower() not in ["", "не определено"]:
+                preset = self.get_preset_analysis(color_type)
+                if preset:
+                    for key in ["dark_colors_hex", "bright_colors_hex", "light_colors_hex"]:
+                        if key in preset:
+                            analysis[key] = preset[key]
+
+            # --- Жёстко подставляем палитры и сочетания из пресета, если определён color_type и есть пресет ---
+            color_type = analysis.get("color_type", "")
+            if color_type and color_type.lower() not in ["", "не определено"]:
+                preset = self.get_preset_analysis(color_type)
+                if preset:
+                    for key in ["dark_colors_hex", "bright_colors_hex", "light_colors_hex", "color_combinations"]:
+                        if key in preset:
+                            analysis[key] = preset[key]
+
+            # --- Жёстко подставляем всё из пресета, если определён color_type и есть пресет ---
+            color_type = analysis.get("color_type", "")
+            if color_type and color_type.lower() not in ["", "не определено"]:
+                preset = self.get_preset_analysis(color_type)
+                if preset:
+                    print("[DEBUG] PRESET:", json.dumps(preset, ensure_ascii=False, indent=2))
+                    for key in [
+                        "recommended_colors", "avoid_colors", "explanation",
+                        "dark_colors_hex", "bright_colors_hex", "light_colors_hex"
+                    ]:
+                        if key in preset:
+                            analysis[key] = preset[key]
+                    if "color_combinations_svg" in preset:
+                        analysis["color_combinations"] = preset["color_combinations_svg"]
+                    print("[DEBUG] ANALYSIS AFTER PRESET:", json.dumps(analysis, ensure_ascii=False, indent=2))
+
             return analysis
 
         except Exception as e:
@@ -1764,19 +1823,35 @@ class ColorAnalyzer:
         aliases = {
             'cool_summer': 'Холодное лето',
             'cold_summer': 'Холодное лето',
+            'холодное лето': 'Холодное лето',
             'bright_spring': 'Яркая весна',
+            'яркая весна': 'Яркая весна',
             'warm_spring': 'Тёплая весна',
+            'теплая весна': 'Тёплая весна',
+            'тёплая весна': 'Тёплая весна',
             'light_spring': 'Светлая весна',
+            'светлая весна': 'Светлая весна',
             'warm_autumn': 'Тёплая осень',
             'теплая осень': 'Тёплая осень',
             'тёплая осень': 'Тёплая осень',
             'soft_autumn': 'Мягкая осень',
+            'мягкая осень': 'Мягкая осень',
             'deep_autumn': 'Глубокая осень',
+            'глубокая осень': 'Глубокая осень',
             'light_summer': 'Светлое лето',
+            'светлое лето': 'Светлое лето',
             'soft_summer': 'Мягкое лето',
+            'мягкое лето': 'Мягкое лето',
             'cool_winter': 'Холодная зима',
+            'cool winter': 'Холодная зима',
+            'coolwinter': 'Холодная зима',
+            'холодная зима': 'Холодная зима',
             'bright_winter': 'Яркая зима',
+            'яркая зима': 'Яркая зима',
             'deep_winter': 'Глубокая зима',
+            'deep winter': 'Глубокая зима',
+            'deepwinter': 'Глубокая зима',
+            'глубокая зима': 'Глубокая зима',
         }
         color_type_norm = aliases.get(color_type.lower(), None)
         print(f"color_type_norm: {color_type_norm!r}")
