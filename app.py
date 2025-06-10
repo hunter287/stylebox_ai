@@ -133,46 +133,69 @@ def make_report_filename(email):
     return f"{prefix}_{rand}_report_{date}.pdf"
 
 def send_guide_email(email, pdf_path):
-    smtp_host = 'smtp.go2.unisender.ru'
-    smtp_port = 587
-    smtp_user = '7632090'
-    smtp_pass = UNISENDER_GO_API_KEY  # используем API-ключ как пароль
+    # Используем Web API Unisender Go для транзакционных писем
+    api_key = UNISENDER_GO_API_KEY
+    api_url = "https://go2.unisender.ru/ru/transactional/api/v1/email/send.json"
     from_email = 'info@stylebox.live'
     to_email = email
 
-    msg = MIMEMultipart()
-    msg['Subject'] = 'Ваш персональный цветовой гайд'
-    msg['From'] = from_email
-    msg['To'] = to_email
+    # Формируем URL для скачивания PDF
+    pdf_url = request.host_url.rstrip('/') + '/' + pdf_path
 
-    body_html = f"""
-    <html>
-      <body>
-        <p>Здравствуйте!<br><br>
-        Спасибо за приобретение персонального цветового гайда.<br>
-        Скачать ваш гайд можно во вложении.<br><br>
-        С уважением,<br>
-        Color Type AI<br><br>
-        <a href=\"https://noreply.stylebox.live/ru/go2_unsubscribe?hash=6i31rt3yyohfen8p3tw8p1r9c6c95qxrd4mwinqfuxzzfzb7uxo8akrm7ewxdk3rh43nexznanukfmjuqf9x51e5tmefnsis5cr8yy6tscwjfxgij96nc6wsadw1adft7emuhpyb53347ks6qgizfrezq3jfdj6gkuzfeqkhi7nmfg98btktcn4hzqbypz4cznrguqgjnxrgtjf6fnm3fff8p5bkhnjozu659tprfjm5atzcwgusriqardkrop6qtacfmaj6cg7drk7ams5xxwhhhyp8dmnb7hxdswxubydn9m4sysb3qftbmw519741a977pjzb3y4oxtpxopq7sgiwa99x3azx7osko644wd8t6zya3reppf1itgr4irbmk9u395kg8zrirseamz5meo3zn4uyg9ut48k3tp8h51w9aegtdpbgo\" style=\"color:#7C3AED;\">Отписаться от рассылки</a>
-        </p>
-      </body>
-    </html>
-    """
-    msg.attach(MIMEText(body_html, 'html', 'utf-8'))
+    payload = {
+        "api_key": api_key,
+        "message": {
+            "recipients": [
+                {"email": to_email}
+            ],
+            "from_email": from_email,
+            "from_name": "Color Type AI",
+            "subject": "Ваш персональный цветовой гайд",
+            "body": {
+                "html": (
+                    "<html><body>"
+                    "<p>Здравствуйте!<br><br>"
+                    "Спасибо за приобретение персонального цветового гайда.<br>"
+                    f"Скачать ваш гайд можно по <a href=\"{pdf_url}\">ссылке</a>.<br><br>"
+                    "С уважением,<br>"
+                    "Color Type AI<br><br>"
+                    "<a href=\"https://noreply.stylebox.live/ru/go2_unsubscribe\" style=\"color:#7C3AED;\">Отписаться от рассылки</a>"
+                    "</p></body></html>"
+                ),
+                "plaintext": "Здравствуйте! Спасибо за приобретение персонального цветового гайда. Ссылка на ваш гайд: {pdf_url}".format(pdf_url=pdf_url)
+            }
+        }
+    }
 
-    abs_pdf_path = os.path.abspath(pdf_path)
-    with open(abs_pdf_path, 'rb') as f:
-        part = MIMEApplication(f.read(), _subtype='pdf')
-        part.add_header('Content-Disposition', 'attachment', filename=os.path.basename(pdf_path))
-        msg.attach(part)
+    print("Отправка письма через Unisender Go Transactional API...")
+    print(f"API URL: {api_url}")
+    print(f"From: {from_email}")
+    print(f"To: {to_email}")
+    print(f"PDF URL: {pdf_url}")
+    print(f"Payload: {json.dumps(payload, ensure_ascii=False, indent=2)}")
 
-    with smtplib.SMTP(smtp_host, smtp_port) as server:
-        server.starttls()
-        server.login(smtp_user, smtp_pass)
-        server.sendmail(from_email, [to_email], msg.as_string())
+    try:
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+        response = requests.post(api_url, json=payload, headers=headers, verify=False)
+        print(f"Response status: {response.status_code}")
+        print(f"Response headers: {response.headers}")
+        print(f"Response body: {response.text}")
 
-    print("Письмо отправлено через SMTP!")
-    return True
+        if response.status_code == 200:
+            print("Письмо отправлено через Unisender Go Transactional API!")
+            return True
+        else:
+            print(f"Ошибка отправки письма: {response.text}")
+            return False
+    except requests.exceptions.SSLError as e:
+        print(f"SSL ошибка: {str(e)}")
+        return False
+    except Exception as e:
+        print(f"Ошибка при отправке письма: {str(e)}")
+        return False
 
 @app.route('/send_guide_email', methods=['POST'])
 def send_guide():
