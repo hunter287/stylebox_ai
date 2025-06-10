@@ -958,11 +958,9 @@
                 data: { 
                     email: email,
                     analysis_id: analysisId 
-                }
-            })
-            .then(function (result) {
-                if (result && result.success) {
-                    console.log('Payment successful, showing success message');
+                },
+                onSuccess: function(options) {
+                    console.log('Payment successful, updating modal');
                     // Скрываем кнопку оплаты и поле ввода email
                     document.getElementById('guidePayBtn').style.display = 'none';
                     document.getElementById('guideEmail').style.display = 'none';
@@ -971,6 +969,9 @@
                     successDiv.style.display = 'block';
                     console.log('Success message display style:', successDiv.style.display);
                 }
+            })
+            .then(function (result) {
+                console.log('Payment widget closed');
             })
             .catch(function (reason) {
                 errorDiv.textContent = 'Оплата не завершена';
