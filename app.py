@@ -16,6 +16,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 import re
 import shutil
+import uuid
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max-limit
@@ -111,22 +112,14 @@ def analyze():
         print("\n=== ANALYZE RESULT ===\n" + json.dumps(result, ensure_ascii=False, indent=2))
         session['last_analysis'] = result
         session['last_image_path'] = filepath
-        if 'pdf' in request.form or request.args.get('pdf') == '1':
-            pdf_path = os.path.join('static/reports', f'report_{filename_wo_ext}.pdf')
-            full_pdf_path = generate_pdf_report(result, filepath, output_path=pdf_path)
-            return send_file(
-                full_pdf_path,
-                mimetype='application/pdf',
-                as_attachment=True,
-                download_name=os.path.basename(full_pdf_path)
-            )
-        email = request.form.get('email') or request.args.get('email')
-        if email:
-            norm_email = normalize_email(email)
-            with open(f'static/reports/last_analysis_{norm_email}.json', 'w') as f:
-                json.dump(result, f)
-            shutil.copyfile(filepath, f'static/reports/last_image_{norm_email}.jpg')
-        return jsonify(result)
+        # --- Генерируем analysis_id и сохраняем анализ/изображение по нему ---
+        analysis_id = str(uuid.uuid4())
+        result['analysis_id'] = analysis_id
+        with open(f'static/reports/last_analysis_{analysis_id}.json', 'w') as f:
+            json.dump(result, f)
+        shutil.copyfile(filepath, f'static/reports/last_image_{analysis_id}.jpg')
+        # Возвращаем analysis_id клиенту
+        return jsonify({**result, 'analysis_id': analysis_id})
     except Exception as e:
         print('ERROR in /analyze:', e)
         if 'filepath' in locals() and os.path.exists(filepath):
@@ -297,12 +290,12 @@ def paid_callback():
 
     if str(data.get('Status', '')).lower() == 'completed':
         email = data.get('Email')
-        if not email:
-            return jsonify({'code': 10, 'message': 'No email'}), 400
-        norm_email = normalize_email(email)
-        analysis_path = f'static/reports/last_analysis_{norm_email}.json'
-        image_path = f'static/reports/last_image_{norm_email}.jpg'
-        pdf_path = f'static/reports/report_{norm_email}.pdf'
+        analysis_id = data.get('analysis_id')
+        if not email or not analysis_id:
+            return jsonify({'code': 10, 'message': 'No email or analysis_id'}), 400
+        analysis_path = f'static/reports/last_analysis_{analysis_id}.json'
+        image_path = f'static/reports/last_image_{analysis_id}.jpg'
+        pdf_path = f'static/reports/report_{normalize_email(email)}_{analysis_id}.pdf'
         if os.path.exists(analysis_path) and os.path.exists(image_path):
             with open(analysis_path) as f:
                 analysis = json.load(f)
