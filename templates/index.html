@@ -958,14 +958,18 @@
                 data: { 
                     email: email,
                     analysis_id: analysisId 
-                },
+                }
+            }, {
                 onSuccess: function(options) {
                     console.log('Payment successful, redirecting to success page');
                     window.location.href = '/payment-success';
+                },
+                onFail: function(reason) {
+                    console.log('Payment failed:', reason);
                 }
             })
             .then(function (result) {
-                console.log('Payment widget closed');
+                console.log('Payment widget closed', result);
             })
             .catch(function (reason) {
                 console.log('Payment widget error:', reason);
