@@ -743,6 +743,11 @@
                     return;
                 }
 
+                // Сохраняем analysis_id для оплаты
+                if (data.analysis_id) {
+                    localStorage.setItem('lastAnalysisId', data.analysis_id);
+                }
+
                 // Добавляем ответ AI с расширенным анализом
                 const messageContent = createAIMessage();
                 
