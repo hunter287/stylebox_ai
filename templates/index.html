@@ -960,22 +960,15 @@
                     analysis_id: analysisId 
                 },
                 onSuccess: function(options) {
-                    console.log('Payment successful, updating modal');
-                    // Скрываем кнопку оплаты и поле ввода email
-                    document.getElementById('guidePayBtn').style.display = 'none';
-                    document.getElementById('guideEmail').style.display = 'none';
-                    // Показываем сообщение об успехе
-                    const successDiv = document.getElementById('guidePaySuccess');
-                    successDiv.style.display = 'block';
-                    console.log('Success message display style:', successDiv.style.display);
+                    console.log('Payment successful, redirecting to success page');
+                    window.location.href = '/payment-success';
                 }
             })
             .then(function (result) {
                 console.log('Payment widget closed');
             })
             .catch(function (reason) {
-                errorDiv.textContent = 'Оплата не завершена';
-                errorDiv.style.display = 'block';
+                console.log('Payment widget error:', reason);
             });
         };
     </script>
