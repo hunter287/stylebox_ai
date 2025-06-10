@@ -916,6 +916,8 @@
         function hideGuideModal() {
             document.getElementById('guideModal').style.display = 'none';
             document.getElementById('guideEmail').value = '';
+            document.getElementById('guideEmail').style.display = 'block';
+            document.getElementById('guidePayBtn').style.display = 'block';
             document.getElementById('guideEmailError').style.display = 'none';
             document.getElementById('guidePaySuccess').style.display = 'none';
         }
@@ -961,6 +963,10 @@
             .then(function (result) {
                 if (result && result.success) {
                     console.log('Payment successful, showing success message');
+                    // Скрываем кнопку оплаты и поле ввода email
+                    document.getElementById('guidePayBtn').style.display = 'none';
+                    document.getElementById('guideEmail').style.display = 'none';
+                    // Показываем сообщение об успехе
                     const successDiv = document.getElementById('guidePaySuccess');
                     successDiv.style.display = 'block';
                     console.log('Success message display style:', successDiv.style.display);
