@@ -285,26 +285,62 @@ def get_guide_pdf():
 
 @app.route('/paid_callback', methods=['POST'])
 def paid_callback():
-    data = request.get_json() or request.form
-    print("CloudPayments webhook data:", data)
+    # Получаем данные из form-data или JSON
+    data = request.form if request.form else request.get_json()
+    print("CloudPayments webhook data:", dict(data))
 
-    if str(data.get('Status', '')).lower() == 'completed':
+    # Проверяем статус платежа (учитываем разные варианты написания)
+    status = str(data.get('Status', '')).lower()
+    if status == 'completed':
+        # Получаем email и analysis_id из данных
         email = data.get('Email')
         analysis_id = data.get('analysis_id')
+        
+        print(f"Processing payment for email: {email}, analysis_id: {analysis_id}")
+        
         if not email or not analysis_id:
+            print("Missing required data:", {'email': email, 'analysis_id': analysis_id})
             return jsonify({'code': 10, 'message': 'No email or analysis_id'}), 400
+
+        # Формируем пути к файлам
         analysis_path = f'static/reports/last_analysis_{analysis_id}.json'
         image_path = f'static/reports/last_image_{analysis_id}.jpg'
         pdf_path = f'static/reports/report_{normalize_email(email)}_{analysis_id}.pdf'
+
+        print(f"Looking for files:\n- Analysis: {analysis_path}\n- Image: {image_path}\n- PDF will be saved to: {pdf_path}")
+
+        # Проверяем наличие файлов анализа и изображения
         if os.path.exists(analysis_path) and os.path.exists(image_path):
-            with open(analysis_path) as f:
-                analysis = json.load(f)
-            generate_pdf_report(analysis, image_path, output_path=pdf_path)
-            send_guide_email(email, pdf_path)
-            return jsonify({'code': 0})
+            try:
+                # Загружаем данные анализа
+                with open(analysis_path) as f:
+                    analysis = json.load(f)
+                
+                # Генерируем PDF
+                print("Generating PDF report...")
+                generate_pdf_report(analysis, image_path, output_path=pdf_path)
+                
+                # Проверяем, что PDF создался
+                if os.path.exists(pdf_path):
+                    print("PDF generated successfully, sending email...")
+                    # Отправляем email
+                    if send_guide_email(email, pdf_path):
+                        print("Email sent successfully!")
+                        return jsonify({'code': 0, 'message': 'Success'})
+                    else:
+                        print("Failed to send email")
+                        return jsonify({'code': 12, 'message': 'Failed to send email'}), 500
+                else:
+                    print("PDF was not generated")
+                    return jsonify({'code': 11, 'message': 'PDF generation failed'}), 500
+            except Exception as e:
+                print(f"Error processing payment: {str(e)}")
+                return jsonify({'code': 14, 'message': f'Processing error: {str(e)}'}), 500
         else:
-            return jsonify({'code': 11, 'message': 'PDF or analysis not found'}), 404
+            print(f"Files not found:\n- Analysis exists: {os.path.exists(analysis_path)}\n- Image exists: {os.path.exists(image_path)}")
+            return jsonify({'code': 11, 'message': 'Analysis or image not found'}), 404
     else:
+        print(f"Payment not completed, status: {status}")
         return jsonify({'code': 13, 'message': 'Payment not completed'}), 200
 
 def normalize_email(email):
