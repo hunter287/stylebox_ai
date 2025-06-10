@@ -207,12 +207,6 @@
 
         .loading {
             display: none;
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: 0;
-            margin: 0 auto;
-            z-index: 10;
             text-align: center;
             padding: 1rem 0 1.5rem 0;
         }
@@ -854,26 +848,16 @@
                             messageContent.innerHTML += `
                                 <div style="margin-top:18px; display:flex; gap:12px;">
                                     <button class="upload-button" id="guideMoreBtn">Расскажи подробнее</button>
-                                    <button class="upload-button" id="guideSkipBtn" style="background:#E5E7EB; color:#1F2937;">Пока не нужно</button>
                                 </div>
                             `;
                             // Назначаем обработчики только после появления кнопок
                             setTimeout(() => {
                                 const moreBtn = messageContent.querySelector('#guideMoreBtn');
-                                const skipBtn = messageContent.querySelector('#guideSkipBtn');
                                 if (moreBtn) {
                                     moreBtn.onclick = function() {
                                         addGuidePrice();
                                         messageContent.innerHTML += '<div style="margin-top:12px; color:#7C3AED;">Спасибо за интерес! 👇</div>';
                                         moreBtn.disabled = true;
-                                        if (skipBtn) skipBtn.disabled = true;
-                                    };
-                                }
-                                if (skipBtn) {
-                                    skipBtn.onclick = function() {
-                                        messageContent.innerHTML += '<div style="margin-top:12px; color:#6B7280;">Ок, если что — обращайтесь!</div>';
-                                        skipBtn.disabled = true;
-                                        if (moreBtn) moreBtn.disabled = true;
                                     };
                                 }
                             }, 10);
