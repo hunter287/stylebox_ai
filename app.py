@@ -41,6 +41,10 @@ os.makedirs('static/reports', exist_ok=True)
 def index():
     return render_template('index.html', config={'CLOUDPAYMENTS_PUBLIC_ID': CLOUDPAYMENTS_PUBLIC_ID})
 
+@app.route('/payment-success')
+def payment_success():
+    return render_template('payment_success.html')
+
 @app.route('/analyze', methods=['POST', 'GET'])
 def analyze():
     # Если это GET-запрос и запрошен PDF
