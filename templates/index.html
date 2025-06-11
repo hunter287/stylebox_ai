@@ -894,7 +894,7 @@
                                     </div>
                                 </div>
                                 <div class="guide-price-block">
-                                    <div class="guide-price-text">Персональный гайд — <b>500 руб.</b></div>
+                                    <div class="guide-price-text">Персональный гайд — <b>1 руб.</b></div>
                                     <button class="upload-button guide-buy-btn">Приобрести персональный гайд</button>
                                 </div>
                             `;
@@ -966,7 +966,7 @@
         };
 
         // --- Оплата CloudPayments ---
-        document.getElementById('guidePayBtn').onclick = function() {
+        document.getElementById('guidePayBtn').onclick = async function() {
             const email = document.getElementById('guideEmail').value.trim();
             localStorage.setItem('lastGuideEmail', email);
             const errorDiv = document.getElementById('guideEmailError');
@@ -976,6 +976,42 @@
                 errorDiv.style.display = 'block';
                 return;
             }
+            // 1. Проверяем email через backend
+            try {
+                const checkResp = await fetch('/check_email_in_sheet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const checkData = await checkResp.json();
+                if (checkData.found) {
+                    // Email найден — сразу отправляем гайд
+                    document.getElementById('guidePayBtn').style.display = 'none';
+                    document.getElementById('guideEmail').style.display = 'none';
+                    errorDiv.style.display = 'none';
+                    // Вызываем /send_guide_email
+                    const sendResp = await fetch('/send_guide_email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email })
+                    });
+                    const sendData = await sendResp.json();
+                    if (sendData.success) {
+                        document.getElementById('guidePaySuccess').style.display = 'block';
+                    } else {
+                        errorDiv.textContent = sendData.error || 'Ошибка при отправке гайда';
+                        errorDiv.style.display = 'block';
+                        document.getElementById('guidePayBtn').style.display = 'block';
+                        document.getElementById('guideEmail').style.display = 'block';
+                    }
+                    return;
+                }
+            } catch (e) {
+                errorDiv.textContent = 'Ошибка при проверке email: ' + (e.message || e);
+                errorDiv.style.display = 'block';
+                return;
+            }
+            // 2. Если не найден — запускаем CloudPayments
             const publicId = '{{ config.CLOUDPAYMENTS_PUBLIC_ID }}';
             const analysisId = localStorage.getItem('lastAnalysisId');
             const widget = new cp.CloudPayments();
