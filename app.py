@@ -20,6 +20,10 @@ import uuid
 import pillow_heif
 from PIL import Image, UnidentifiedImageError
 import logging
+import gspread
+from google.oauth2.service_account import Credentials
+import traceback
+import time
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -175,11 +179,11 @@ def analyze():
                 logger.info(f"Режим: {img.mode}")
         except UnidentifiedImageError:
             logger.error(f"Неподдерживаемый формат изображения: {filepath}")
-            cleanup_temp_files(filepath)
+            # cleanup_temp_files(filepath)
             return jsonify({'error': 'Неподдерживаемый формат изображения'}), 400
         except Exception as e:
             logger.error(f"Ошибка при открытии изображения: {str(e)}")
-            cleanup_temp_files(filepath)
+            # cleanup_temp_files(filepath)
             return jsonify({'error': 'Ошибка при обработке изображения'}), 400
 
         # Конвертируем в JPG если это не JPG
@@ -187,12 +191,12 @@ def analyze():
         if not filename.lower().endswith(('.jpg', '.jpeg')):
             try:
                 jpg_path = convert_to_jpg(filepath)
-                cleanup_temp_files(filepath)  # Удаляем оригинальный файл
+                # cleanup_temp_files(filepath)  # Удаляем оригинальный файл
                 filepath = jpg_path
                 logger.info(f"Изображение сконвертировано в JPG: {filepath}")
             except Exception as e:
                 logger.error(f"Ошибка при конвертации в JPG: {str(e)}")
-                cleanup_temp_files(filepath)
+                # cleanup_temp_files(filepath)
                 return jsonify({'error': 'Ошибка при конвертации изображения'}), 500
 
         # Изменяем размер изображения
@@ -221,7 +225,7 @@ def analyze():
         
         if not result:
             logger.error("Анализ вернул пустой результат")
-            cleanup_temp_files(filepath)
+            # cleanup_temp_files(filepath)
             return jsonify({'error': 'Не удалось проанализировать изображение'}), 500
 
         session['last_analysis'] = result
@@ -241,7 +245,7 @@ def analyze():
         shutil.copyfile(filepath, image_path)
         
         # Удаляем временный файл после успешного анализа
-        cleanup_temp_files(filepath)
+        # cleanup_temp_files(filepath)
         
         logger.info(f"Анализ сохранен с ID: {analysis_id}")
         return jsonify({**result, 'analysis_id': analysis_id})
@@ -249,7 +253,8 @@ def analyze():
     except Exception as e:
         logger.error(f"Ошибка в /analyze: {str(e)}")
         if 'filepath' in locals():
-            cleanup_temp_files(filepath)
+            # cleanup_temp_files(filepath)
+            pass
         return jsonify({'error': 'Произошла ошибка при обработке изображения'}), 500
 
 def make_report_filename(email):
@@ -325,6 +330,15 @@ def send_guide_email(email, pdf_path):
         print(f"Ошибка при отправке письма: {str(e)}")
         return False
 
+def wait_for_file_complete(filepath, min_size=10*1024, timeout=10):
+    """Ждёт, пока файл не появится и не станет больше min_size байт."""
+    start = time.time()
+    while time.time() - start < timeout:
+        if os.path.exists(filepath) and os.path.getsize(filepath) > min_size:
+            return True
+        time.sleep(0.2)
+    return False
+
 @app.route('/send_guide_email', methods=['POST'])
 def send_guide():
     """Endpoint to send the guide via email"""
@@ -346,13 +360,24 @@ def send_guide():
             full_pdf_path = generate_pdf_report(analysis, image_path, output_path=pdf_path)
             print(f"PDF path (attempt {attempt+1}):", full_pdf_path)
             print("PDF exists:", os.path.exists(full_pdf_path))
-            if os.path.exists(full_pdf_path):
+            # Ждём, пока файл полностью создастся
+            if wait_for_file_complete(full_pdf_path):
                 break
+            else:
+                print(f"PDF не был полностью создан (попытка {attempt+1})")
+        # Явная проверка после merge
         if os.path.exists(full_pdf_path):
+            file_size = os.path.getsize(full_pdf_path)
+            print(f"PDF готов к отправке, размер: {file_size} байт")
+        else:
+            print("PDF не найден после merge!")
+        if os.path.exists(full_pdf_path) and os.path.getsize(full_pdf_path) > 10*1024:
             # Отправляем email с вложением
             if send_guide_email(email, full_pdf_path):
+                print("Email отправлен после успешного merge PDF!")
                 return jsonify({'success': True})
             else:
+                print("Ошибка при отправке email после merge PDF!")
                 return jsonify({'error': 'Failed to send email'}), 500
         else:
             # Если не удалось — письмо с извинением
@@ -478,13 +503,22 @@ def paid_callback():
                 # Загружаем данные анализа
                 with open(analysis_path) as f:
                     analysis = json.load(f)
-                
                 # Генерируем PDF
                 print("Generating PDF report...")
                 full_pdf_path = generate_pdf_report(analysis, image_path, output_path=pdf_path)
-                
-                # Проверяем, что PDF создался
+                # Ждём, пока файл полностью создастся
+                if not wait_for_file_complete(full_pdf_path):
+                    print("PDF не был полностью создан вовремя!")
+                    send_guide_email_apology(email)
+                    return jsonify({'code': 11, 'message': 'PDF generation failed'}), 500
+                # Явная проверка после merge
                 if os.path.exists(full_pdf_path):
+                    file_size = os.path.getsize(full_pdf_path)
+                    print(f"PDF готов к отправке, размер: {file_size} байт")
+                else:
+                    print("PDF не найден после merge!")
+                # Проверяем, что PDF создался
+                if os.path.exists(full_pdf_path) and os.path.getsize(full_pdf_path) > 10*1024:
                     print("PDF generated successfully, sending email...")
                     # Отправляем email
                     if send_guide_email(email, full_pdf_path):
@@ -494,7 +528,7 @@ def paid_callback():
                         print("Failed to send email")
                         return jsonify({'code': 12, 'message': 'Failed to send email'}), 500
                 else:
-                    print("PDF was not generated")
+                    print("PDF was not generated or too small")
                     return jsonify({'code': 11, 'message': 'PDF generation failed'}), 500
             except Exception as e:
                 print(f"Error processing payment: {str(e)}")
@@ -508,6 +542,46 @@ def paid_callback():
 
 def normalize_email(email):
     return ''.join(c for c in email if c.isalnum())
+
+# --- Проверка email в Google Spreadsheet ---
+# Укажи GOOGLE_SHEET_ID в .env (ID таблицы из URL)
+GOOGLE_SHEET_ID = os.environ.get('GOOGLE_SHEET_ID')
+GOOGLE_SHEET_RANGE = os.environ.get('GOOGLE_SHEET_RANGE', 'A:A')  # Первый столбец
+GOOGLE_SHEET_WORKSHEET = os.environ.get('GOOGLE_SHEET_WORKSHEET', 'Лист1')  # Имя листа (Sheet1/Лист1)
+GOOGLE_SERVICE_ACCOUNT_FILE = os.environ.get('GOOGLE_SERVICE_ACCOUNT_FILE', 'google_service_account.json')
+
+@app.route('/check_email_in_sheet', methods=['POST'])
+def check_email_in_sheet():
+    data = request.get_json()
+    email = data.get('email', '').strip().lower()
+    print(f"[check_email_in_sheet] Запрошен email: {email}")
+    print(f"GOOGLE_SHEET_ID: {GOOGLE_SHEET_ID}")
+    print(f"GOOGLE_SERVICE_ACCOUNT_FILE: {GOOGLE_SERVICE_ACCOUNT_FILE}")
+    print(f"GOOGLE_SHEET_WORKSHEET: {GOOGLE_SHEET_WORKSHEET}")
+    try:
+        creds = Credentials.from_service_account_file(GOOGLE_SERVICE_ACCOUNT_FILE, scopes=[
+            'https://www.googleapis.com/auth/spreadsheets.readonly',
+            'https://www.googleapis.com/auth/drive.readonly',
+        ])
+        print("creds OK")
+        gc = gspread.authorize(creds)
+        print("gspread OK")
+        sh = gc.open_by_key(GOOGLE_SHEET_ID)
+        print("open_by_key OK")
+        worksheet = sh.worksheet(GOOGLE_SHEET_WORKSHEET)
+        print("worksheet OK")
+        emails = worksheet.col_values(1)
+        print("col_values OK")
+        emails = [e.strip().lower() for e in emails if e.strip()]
+        print(f"emails: {emails}")
+        found = email in emails
+        print(f"found: {found}")
+        return jsonify({'found': found})
+    except Exception as e:
+        print(f"[check_email_in_sheet] Ошибка: {str(e)}")
+        traceback.print_exc()
+        logger.error(f"Ошибка при проверке email в Google Sheets: {str(e)}")
+        return jsonify({'found': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True) 
