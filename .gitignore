@@ -28,3 +28,4 @@ static/reports/
 .DS_Store
 Thumbs.db 
 gunicorn_config.py
+google_service_account.json
