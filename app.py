@@ -18,7 +18,14 @@ import re
 import shutil
 import uuid
 import pillow_heif
+from PIL import Image, UnidentifiedImageError
+import logging
 
+# Настройка логирования
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Регистрация поддержки HEIF
 pillow_heif.register_heif_opener()
 
 app = Flask(__name__)
@@ -39,6 +46,68 @@ PRESET_COLOR_TYPES = [
 # Создаем директорию для загрузок, если она не существует
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs('static/reports', exist_ok=True)
+
+# Список поддерживаемых форматов изображений
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'heic', 'heif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def convert_to_jpg(image_path):
+    """Конвертирует изображение в JPG формат"""
+    try:
+        with Image.open(image_path) as img:
+            # Если изображение в формате RGBA, конвертируем в RGB
+            if img.mode in ('RGBA', 'LA'):
+                background = Image.new('RGB', img.size, (255, 255, 255))
+                background.paste(img, mask=img.split()[-1])
+                img = background
+            elif img.mode != 'RGB':
+                img = img.convert('RGB')
+            
+            # Сохраняем как JPG
+            jpg_path = os.path.splitext(image_path)[0] + '.jpg'
+            img.save(jpg_path, 'JPEG', quality=95)
+            return jpg_path
+    except Exception as e:
+        logger.error(f"Ошибка при конвертации изображения: {str(e)}")
+        raise
+
+def resize_image(image_path, max_size=800):
+    """Изменяет размер изображения, сохраняя пропорции.
+    max_size - максимальный размер по длинной стороне в пикселях"""
+    try:
+        with Image.open(image_path) as img:
+            # Получаем текущие размеры
+            width, height = img.size
+            
+            # Определяем, какая сторона длиннее
+            if width > height:
+                new_width = max_size
+                new_height = int(height * (max_size / width))
+            else:
+                new_height = max_size
+                new_width = int(width * (max_size / height))
+            
+            # Изменяем размер
+            resized_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            
+            # Сохраняем с тем же именем
+            resized_img.save(image_path, quality=95, optimize=True)
+            logger.info(f"Изображение изменено до размеров {new_width}x{new_height}")
+            return image_path
+    except Exception as e:
+        logger.error(f"Ошибка при изменении размера изображения: {str(e)}")
+        raise
+
+def cleanup_temp_files(filepath):
+    """Удаляет временные файлы после анализа"""
+    try:
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            logger.info(f"Временный файл удален: {filepath}")
+    except Exception as e:
+        logger.error(f"Ошибка при удалении временного файла {filepath}: {str(e)}")
 
 @app.route('/')
 def index():
@@ -86,52 +155,102 @@ def analyze():
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
     
+    if not allowed_file(file.filename):
+        return jsonify({'error': f'Неподдерживаемый формат файла. Поддерживаемые форматы: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
+    
     try:
         # Сохраняем файл
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
+        
+        logger.info(f"Файл сохранен: {filepath}")
+        logger.info(f"Размер файла: {os.path.getsize(filepath)} байт")
+
+        # Проверяем и конвертируем изображение если нужно
+        try:
+            with Image.open(filepath) as img:
+                logger.info(f"Формат изображения: {img.format}")
+                logger.info(f"Размер: {img.size}")
+                logger.info(f"Режим: {img.mode}")
+        except UnidentifiedImageError:
+            logger.error(f"Неподдерживаемый формат изображения: {filepath}")
+            cleanup_temp_files(filepath)
+            return jsonify({'error': 'Неподдерживаемый формат изображения'}), 400
+        except Exception as e:
+            logger.error(f"Ошибка при открытии изображения: {str(e)}")
+            cleanup_temp_files(filepath)
+            return jsonify({'error': 'Ошибка при обработке изображения'}), 400
+
+        # Конвертируем в JPG если это не JPG
+        original_filepath = filepath
+        if not filename.lower().endswith(('.jpg', '.jpeg')):
+            try:
+                jpg_path = convert_to_jpg(filepath)
+                cleanup_temp_files(filepath)  # Удаляем оригинальный файл
+                filepath = jpg_path
+                logger.info(f"Изображение сконвертировано в JPG: {filepath}")
+            except Exception as e:
+                logger.error(f"Ошибка при конвертации в JPG: {str(e)}")
+                cleanup_temp_files(filepath)
+                return jsonify({'error': 'Ошибка при конвертации изображения'}), 500
+
+        # Изменяем размер изображения
+        try:
+            filepath = resize_image(filepath, max_size=800)
+            logger.info(f"Размер изображения изменен: {filepath}")
+        except Exception as e:
+            logger.error(f"Ошибка при изменении размера: {str(e)}")
+            # Продолжаем работу с оригинальным размером
 
         # Проверяем имя файла: если это цветотип, возвращаем готовый результат
-        filename_wo_ext = os.path.splitext(file.filename)[0].lower()
+        filename_wo_ext = os.path.splitext(os.path.basename(filepath))[0].lower()
         analyzer = ColorAnalyzer()
         if filename_wo_ext in PRESET_COLOR_TYPES:
-            print("DEBUG: Using preset analysis for", filename_wo_ext)
+            logger.info(f"Используем пресет для: {filename_wo_ext}")
             preset_result = analyzer.get_preset_analysis(filename_wo_ext)
-            print("DEBUG: Preset result:", preset_result)
-            # Добавляем основные палитры для совместимости с фронтом
             preset_result["main_palette_hex"] = preset_result.get("bright_colors_hex", [])[:9]
             preset_result["additional_palette_hex"] = preset_result.get("bright_colors_hex", [])
             session['last_analysis'] = preset_result
             session['last_image_path'] = filepath
-            if 'pdf' in request.form or request.args.get('pdf') == '1':
-                pdf_path = os.path.join('static/reports', f'report_{filename_wo_ext}.pdf')
-                full_pdf_path = generate_pdf_report(preset_result, filepath, output_path=pdf_path)
-                return send_file(
-                    full_pdf_path,
-                    mimetype='application/pdf',
-                    as_attachment=True,
-                    download_name=os.path.basename(full_pdf_path)
-                )
             return jsonify(preset_result)
 
         # Обычный анализ изображения
         result = analyzer.analyze_image(filepath)
-        print("\n=== ANALYZE RESULT ===\n" + json.dumps(result, ensure_ascii=False, indent=2))
+        logger.info(f"Результат анализа: {json.dumps(result, ensure_ascii=False)}")
+        
+        if not result:
+            logger.error("Анализ вернул пустой результат")
+            cleanup_temp_files(filepath)
+            return jsonify({'error': 'Не удалось проанализировать изображение'}), 500
+
         session['last_analysis'] = result
         session['last_image_path'] = filepath
-        # --- Генерируем analysis_id и сохраняем анализ/изображение по нему ---
+        
+        # Генерируем analysis_id и сохраняем анализ/изображение
         analysis_id = str(uuid.uuid4())
         result['analysis_id'] = analysis_id
-        with open(f'static/reports/last_analysis_{analysis_id}.json', 'w') as f:
+        
+        # Сохраняем результаты анализа
+        analysis_path = f'static/reports/last_analysis_{analysis_id}.json'
+        with open(analysis_path, 'w') as f:
             json.dump(result, f)
-        shutil.copyfile(filepath, f'static/reports/last_image_{analysis_id}.jpg')
-        # Возвращаем analysis_id клиенту
+        
+        # Копируем изображение в reports
+        image_path = f'static/reports/last_image_{analysis_id}.jpg'
+        shutil.copyfile(filepath, image_path)
+        
+        # Удаляем временный файл после успешного анализа
+        cleanup_temp_files(filepath)
+        
+        logger.info(f"Анализ сохранен с ID: {analysis_id}")
         return jsonify({**result, 'analysis_id': analysis_id})
+        
     except Exception as e:
-        print('ERROR in /analyze:', e)
-        if 'filepath' in locals() and os.path.exists(filepath):
-            pass
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Ошибка в /analyze: {str(e)}")
+        if 'filepath' in locals():
+            cleanup_temp_files(filepath)
+        return jsonify({'error': 'Произошла ошибка при обработке изображения'}), 500
 
 def make_report_filename(email):
     # Берём только буквы/цифры до @

@@ -25,7 +25,7 @@
         }
 
         body {
-            font-family: 'Nunito', Arial, sans-serif !important;
+            font-family: 'CirceRounded', Arial, sans-serif !important;
             background-color: var(--background);
             color: var(--text-primary);
             line-height: 1.5;
@@ -56,7 +56,7 @@
         .header p {
             color: var(--text-secondary);
             font-size: 1.1rem;
-            font-family: 'Nunito', Arial, sans-serif !important;
+            font-family: 'CirceRounded', Arial, sans-serif !important;
         }
 
         .chat-container {
@@ -794,7 +794,12 @@
                 `;
 
                 // Сначала показываем изображение
-                if (window._lastUploadedImage) {
+                if (data.analysis_id) {
+                    const imgElement = document.createElement('div');
+                    imgElement.innerHTML = `<img src="/static/reports/last_image_${data.analysis_id}.jpg" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
+                    imgElement.classList.add('fade-in');
+                    messageContent.appendChild(imgElement);
+                } else if (window._lastUploadedImage) {
                     const imgElement = document.createElement('div');
                     imgElement.innerHTML = `<img src="${window._lastUploadedImage}" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
                     imgElement.classList.add('fade-in');
