@@ -17,6 +17,9 @@ from email.mime.application import MIMEApplication
 import re
 import shutil
 import uuid
+import pillow_heif
+
+pillow_heif.register_heif_opener()
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max-limit
