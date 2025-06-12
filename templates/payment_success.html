@@ -76,6 +76,23 @@
             opacity: 0.9;
         }
 
+        #subscriptionMessage {
+            display: none;
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: var(--primary-light);
+            border-radius: 1rem;
+            text-align: left;
+        }
+
+        #subscriptionMessage p {
+            margin-bottom: 1rem;
+        }
+
+        #subscriptionMessage p:last-child {
+            margin-bottom: 0;
+        }
+
         @media (max-width: 600px) {
             .container {
                 margin: 1rem;
@@ -88,9 +105,25 @@
     <div class="container">
         <div class="success-icon">✓</div>
         <h1>Спасибо за покупку!</h1>
+        <div id="subscriptionMessage">
+            <p style="font-size: 1.2rem; color: var(--primary-color); margin-bottom: 1rem;">Спасибо за предзаказ на ИИ-стилиста! 🤖</p>
+            <p>Ваш персональный ИИ-стилист появится 1 июля.</p>
+            <p>Мы пришлем всю информацию на ваш email, как только он будет готов.</p>
+        </div>
         <p>Ваш персональный гайд по цветотипу уже в пути и скоро появится в вашем email.</p>
         <p>Проверьте папку "Входящие" или "Спам".</p>
         <a href="/" class="back-button">Вернуться на главную</a>
     </div>
+
+    <script>
+        // Проверяем, была ли это покупка подписки
+        const urlParams = new URLSearchParams(window.location.search);
+        const type = urlParams.get('type');
+        
+        // Проверяем различные варианты написания
+        if (type === 'subscription' || type === 'subsciption' || type === 'sub') {
+            document.getElementById('subscriptionMessage').style.display = 'block';
+        }
+    </script>
 </body>
 </html> 
