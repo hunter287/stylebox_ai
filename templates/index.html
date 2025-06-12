@@ -710,12 +710,12 @@
             const advantagesText = [
                 '🤖 Персональный ИИ-стилист появится 1 июля',
                 '📅 12 месяцев доступа + 2 месяца в подарок',
-                '💰 Сейчас всего 1 руб/мес (12 руб/год)',
-                '💎 Потом будет стоить 9990 руб/год',
                 '🎨 Бесплатный персональный цветовой гайд',
                 '👗 Подбор вещей под ваш цветотип и фигуру',
                 '💡 Примеры стильных сочетаний одежды',
-                '💎 В 10-20 раз выгоднее услуг стилиста'
+                '💎 В 10-20 раз выгоднее услуг стилиста',
+                '💰 Сейчас всего 3990 руб/год',
+                '💎 Потом будет стоить 9990 руб/год'
             ].join('\n');
 
             setTimeout(() => {
@@ -796,7 +796,7 @@
                                     widget.pay('charge', {
                                         publicId: publicId,
                                         description: 'Предзаказ на ИИ-стилиста (годовая подписка)',
-                                        amount: 1.00,
+                                        amount: 3990.00,
                                         currency: 'RUB',
                                         skin: 'classic',
                                         email: email,
@@ -1065,9 +1065,6 @@
             document.getElementById('guidePaySuccess').style.display = 'none';
         }
         document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('guide-buy-btn')) {
-                showGuideModal();
-            }
             if (e.target.id === 'closeGuideModal') {
                 hideGuideModal();
             }
@@ -1132,10 +1129,10 @@
                     CustomerReceipt: {
                         Items: [
                             {
-                                Label: 'Предзаказ на ИИ-стилиста',
-                                Price: 1.00,
+                                Label: 'Персональный цветовой гайд',
+                                Price: 500.00,
                                 Quantity: 1.00,
-                                Amount: 1.00,
+                                Amount: 500.00,
                                 Vat: 0,
                                 Method: 0,
                                 Object: 0,
@@ -1144,15 +1141,15 @@
                         ],
                         calculationPlace: 'stylist-ai.ru',
                         amounts: {
-                            electronic: 1.00
+                            electronic: 500.00
                         }
                     }
                 }
             };
             widget.pay('charge', {
                 publicId: publicId,
-                description: 'Предзаказ на ИИ-стилиста (годовая подписка)',
-                amount: 1.00,
+                description: 'Персональный цветовой гайд',
+                amount: 500.00,
                 currency: 'RUB',
                 skin: 'classic',
                 email: email,
@@ -1259,7 +1256,7 @@
                     buttonsContainer.innerHTML = `
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                             <button class="upload-button guide-buy-btn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='rgba(187, 39, 155, 0.15)'; this.style.color='#8B1B6A'; this.style.borderColor='#8B1B6A';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#bb279b'; this.style.borderColor='#bb279b';">Приобрести персональный гайд</button>
-                            <button class="upload-button subscription-preorder-btn" style="background-color: #bb279b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#8B1B6A';" onmouseout="this.style.backgroundColor='#bb279b';">Предзаказ на ИИ-стилиста</button>
+                            <button class="upload-button subscription-preorder-btn" id="subscriptionPreorderBtn2" style="background-color: #bb279b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#8B1B6A';" onmouseout="this.style.backgroundColor='#bb279b';">Предзаказ на ИИ-стилиста</button>
                         </div>
                     `;
                     
@@ -1271,7 +1268,7 @@
 
                     // Добавляем обработчики для кнопок
                     const buyBtn = document.querySelector('.guide-buy-btn');
-                    const preorderBtn = document.querySelector('.subscription-preorder-btn');
+                    const preorderBtn = document.getElementById('subscriptionPreorderBtn2');
                     
                     if (buyBtn) {
                         buyBtn.onclick = function() {
