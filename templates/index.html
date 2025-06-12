@@ -542,6 +542,98 @@
             }
         }
 
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('image', file);
+            // Добавляем email, если он есть в localStorage
+            const lastEmail = localStorage.getItem('lastGuideEmail');
+            if (lastEmail) {
+                formData.append('email', lastEmail);
+            }
+
+            // Показываем превью изображения
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                window._lastUploadedImage = e.target.result;
+            };
+            reader.readAsDataURL(file);
+
+            // Показываем индикатор загрузки
+            loading.style.display = 'block';
+            errorMessage.style.display = 'none';
+            resultContainer.style.display = 'none';
+
+            fetch('/analyze', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.style.display = 'none';
+                if (data.error) {
+                    errorMessage.textContent = data.error;
+                    errorMessage.style.display = 'block';
+                    return;
+                }
+
+                // Сохраняем analysis_id для оплаты
+                if (data.analysis_id) {
+                    localStorage.setItem('lastAnalysisId', data.analysis_id);
+                }
+
+                // Добавляем ответ AI с расширенным анализом
+                const messageContent = createAIMessage();
+                
+                // Создаем HTML для текстовой части анализа
+                const analysisHTML = `
+                    <p>Ваш цветотип: <strong>${data.color_type}</strong></p>
+                    <p>${data.explanation}</p>
+                `;
+
+                // Сначала показываем изображение
+                if (data.analysis_id) {
+                    const imgElement = document.createElement('div');
+                    imgElement.innerHTML = `<img src="/static/reports/last_image_${data.analysis_id}.jpg" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
+                    imgElement.classList.add('fade-in');
+                    messageContent.appendChild(imgElement);
+                } else if (window._lastUploadedImage) {
+                    const imgElement = document.createElement('div');
+                    imgElement.innerHTML = `<img src="${window._lastUploadedImage}" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
+                    imgElement.classList.add('fade-in');
+                    messageContent.appendChild(imgElement);
+                }
+
+                // Затем анимируем текст
+                setTimeout(() => {
+                    // Сначала описание (тип + объяснение)
+                    typeHTML(messageContent, analysisHTML, 20, () => {
+                        // После окончания описания — палитры и сочетания по очереди
+                        let palettePromise = Promise.resolve();
+                        if (data.dark_colors_hex) {
+                            palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Тёмные цвета', data.dark_colors_hex));
+                        }
+                        if (data.bright_colors_hex) {
+                            palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Яркие цвета', data.bright_colors_hex));
+                        }
+                        if (data.light_colors_hex) {
+                            palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Светлые цвета', data.light_colors_hex));
+                        }
+                        if (data.color_combinations_svg) {
+                            palettePromise = palettePromise.then(() => addColorCombinations(messageContent, data.color_combinations_svg));
+                        }
+                        palettePromise.then(() => {
+                            setTimeout(addGuideOffer, 500);
+                        });
+                    });
+                }, 500);
+            })
+            .catch(error => {
+                loading.style.display = 'none';
+                errorMessage.textContent = 'Произошла ошибка при загрузке файла';
+                errorMessage.style.display = 'block';
+            });
+        }
+
         function typeHTML(element, html, speed = 30, onDone) {
             let i = 0;
             const typingSpan = document.createElement('span');
@@ -588,7 +680,7 @@
             type();
         }
 
-        function typeText(element, text, speed = 30) {
+        function typeText(element, text, speed = 30, onDone) {
             let i = 0;
             const typingSpan = document.createElement('span');
             typingSpan.className = 'typing';
@@ -607,9 +699,139 @@
                 } else {
                     textContainer.textContent = text;
                     typingSpan.remove();
+                    if (onDone) onDone();
                 }
             }
             type();
+        }
+
+        function addSubscriptionOffer() {
+            const messageContent = createAIMessage();
+            const advantagesText = [
+                '🤖 Персональный ИИ-стилист появится 1 июля',
+                '📅 12 месяцев доступа + 2 месяца в подарок',
+                '💰 Сейчас всего 1 руб/мес (12 руб/год)',
+                '💎 Потом будет стоить 9990 руб/год',
+                '🎨 Бесплатный персональный цветовой гайд',
+                '👗 Подбор вещей под ваш цветотип и фигуру',
+                '💡 Примеры стильных сочетаний одежды',
+                '💎 В 10-20 раз выгоднее услуг стилиста'
+            ].join('\n');
+
+            setTimeout(() => {
+                typeText(messageContent, advantagesText, 20);
+                setTimeout(() => {
+                    // Создаем новое сообщение пользователя
+                    const userMessage = document.createElement('div');
+                    userMessage.className = 'message user-message';
+                    userMessage.style.marginTop = '20px';
+                    
+                    // Создаем контейнер для кнопки
+                    const buttonsContainer = document.createElement('div');
+                    buttonsContainer.className = 'message-content';
+                    buttonsContainer.style.display = 'flex';
+                    buttonsContainer.style.gap = '10px';
+                    buttonsContainer.style.justifyContent = 'flex-end';
+                    buttonsContainer.innerHTML = `
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button class="upload-button subscription-preorder-btn" id="subscriptionPreorderBtn" style="background-color: #bb279b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#8B1B6A';" onmouseout="this.style.backgroundColor='#bb279b';">Оформить предзаказ</button>
+                        </div>
+                    `;
+                    
+                    // Добавляем контейнер с кнопкой в сообщение пользователя
+                    userMessage.appendChild(buttonsContainer);
+                    
+                    // Добавляем сообщение пользователя в чат
+                    chatMessages.appendChild(userMessage);
+
+                    // Добавляем обработчик для кнопки предзаказа
+                    const subBuyBtn = document.getElementById('subscriptionPreorderBtn');
+                    if (subBuyBtn) {
+                        subBuyBtn.onclick = function() {
+                            // Создаем модальное окно для подписки
+                            const modal = document.createElement('div');
+                            modal.id = 'subscriptionModal';
+                            modal.className = 'modal';
+                            modal.style.display = 'block';
+                            modal.innerHTML = `
+                                <div class="modal-content">
+                                    <span class="close" id="closeSubscriptionModal">&times;</span>
+                                    <h2>Оформить предзаказ</h2>
+                                    <div style="margin-bottom:1rem; color:#6B7280; font-size:1rem;">Введите ваш email для оформления предзаказа</div>
+                                    <input type="email" id="subscriptionEmail" placeholder="Ваш email" class="modal-input" autocomplete="email" autofocus>
+                                    <div id="subscriptionEmailError" style="color:#DC2626; font-size:0.95rem; margin:6px 0 0 0; display:none;"></div>
+                                    <button class="upload-button subscription-pay-btn" id="subscriptionPayBtn" style="margin-top:1.2rem; width:100%;">Оформить предзаказ</button>
+                                    <div id="subscriptionPaySuccess" style="display:none; margin-top:1.2rem; color:#059669; font-weight:500;">
+                                        Спасибо за предзаказ!<br>Мы свяжемся с вами 1 июля для активации подписки.<br>Проверьте папку "Входящие" или "Спам".
+                                    </div>
+                                </div>
+                            `;
+                            document.body.appendChild(modal);
+
+                            // Добавляем обработчики для модального окна
+                            const closeBtn = modal.querySelector('#closeSubscriptionModal');
+                            if (closeBtn) {
+                                closeBtn.onclick = function() {
+                                    modal.remove();
+                                };
+                            }
+
+                            const payBtn = modal.querySelector('#subscriptionPayBtn');
+                            if (payBtn) {
+                                payBtn.onclick = async function() {
+                                    const email = document.getElementById('subscriptionEmail').value.trim();
+                                    const errorDiv = document.getElementById('subscriptionEmailError');
+                                    errorDiv.style.display = 'none';
+                                    
+                                    if (!/^\S+@\S+\.\S+$/.test(email)) {
+                                        errorDiv.textContent = 'Пожалуйста, введите корректный email';
+                                        errorDiv.style.display = 'block';
+                                        return;
+                                    }
+
+                                    const publicId = '{{ config.CLOUDPAYMENTS_PUBLIC_ID }}';
+                                    const analysisId = localStorage.getItem('lastAnalysisId');
+                                    const widget = new cp.CloudPayments();
+                                    
+                                    widget.pay('charge', {
+                                        publicId: publicId,
+                                        description: 'Предзаказ на ИИ-стилиста (годовая подписка)',
+                                        amount: 1.00,
+                                        currency: 'RUB',
+                                        skin: 'classic',
+                                        email: email,
+                                        data: { 
+                                            email: email,
+                                            analysis_id: analysisId,
+                                            type: 'subscription'
+                                        }
+                                    }, {
+                                        onSuccess: function(options) {
+                                            console.log('Payment successful, redirecting to success page');
+                                            window.location.href = '/payment-success';
+                                        },
+                                        onFail: function(reason) {
+                                            console.log('Payment failed:', reason);
+                                        }
+                                    })
+                                    .then(function (result) {
+                                        console.log('Payment widget closed', result);
+                                    })
+                                    .catch(function (reason) {
+                                        console.log('Payment widget error:', reason);
+                                    });
+                                };
+                            }
+
+                            // Фокус на поле email
+                            setTimeout(() => {
+                                const emailInput = document.getElementById('subscriptionEmail');
+                                if (emailInput) emailInput.focus();
+                            }, 100);
+                        };
+                    }
+                }, advantagesText.length * 20 + 500);
+            }, 600);
         }
 
         function createAIMessage(content) {
@@ -734,196 +956,25 @@
             });
         }
 
-        function uploadFile(file) {
-            const formData = new FormData();
-            formData.append('image', file);
-            // Добавляем email, если он есть в localStorage
-            const lastEmail = localStorage.getItem('lastGuideEmail');
-            if (lastEmail) {
-                formData.append('email', lastEmail);
-            }
-
-            // Показываем сообщение о загрузке
-            const userMessage = document.createElement('div');
-            userMessage.className = 'message user';
-            userMessage.innerHTML = `
-                <div class="avatar">U</div>
-                <div class="message-content">
-                    Загружаю фотографию...
-                </div>
-            `;
-            chatMessages.appendChild(userMessage);
-
-            // Показываем превью изображения
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                window._lastUploadedImage = e.target.result;
-            };
-            reader.readAsDataURL(file);
-
-            // Показываем индикатор загрузки
-            loading.style.display = 'block';
-            errorMessage.style.display = 'none';
-            resultContainer.style.display = 'none';
-
-            fetch('/analyze', {
-                    method: 'POST',
-                    body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                loading.style.display = 'none';
-                if (data.error) {
-                    errorMessage.textContent = data.error;
-                    errorMessage.style.display = 'block';
-                    return;
-                }
-
-                // Сохраняем analysis_id для оплаты
-                if (data.analysis_id) {
-                    localStorage.setItem('lastAnalysisId', data.analysis_id);
-                }
-
-                // Добавляем ответ AI с расширенным анализом
-                const messageContent = createAIMessage();
-                
-                // Создаем HTML для текстовой части анализа
-                const analysisHTML = `
-                    <p>Ваш цветотип: <strong>${data.color_type}</strong></p>
-                    <p>${data.explanation}</p>
-                `;
-
-                // Сначала показываем изображение
-                if (data.analysis_id) {
-                    const imgElement = document.createElement('div');
-                    imgElement.innerHTML = `<img src="/static/reports/last_image_${data.analysis_id}.jpg" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
-                    imgElement.classList.add('fade-in');
-                    messageContent.appendChild(imgElement);
-                } else if (window._lastUploadedImage) {
-                    const imgElement = document.createElement('div');
-                    imgElement.innerHTML = `<img src="${window._lastUploadedImage}" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
-                    imgElement.classList.add('fade-in');
-                    messageContent.appendChild(imgElement);
-                }
-
-                // Затем анимируем текст
-                setTimeout(() => {
-                    // Сначала описание (тип + объяснение)
-                    typeHTML(messageContent, analysisHTML, 20, () => {
-                        // После окончания описания — палитры и сочетания по очереди
-                        let palettePromise = Promise.resolve();
-                        if (data.dark_colors_hex) {
-                            palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Тёмные цвета', data.dark_colors_hex));
-                        }
-                        if (data.bright_colors_hex) {
-                            palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Яркие цвета', data.bright_colors_hex));
-                        }
-                        if (data.light_colors_hex) {
-                            palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Светлые цвета', data.light_colors_hex));
-                        }
-                        if (data.color_combinations_svg) {
-                            palettePromise = palettePromise.then(() => addColorCombinations(messageContent, data.color_combinations_svg));
-                        }
-                        palettePromise.then(() => {
-                            setTimeout(addGuideOffer, 500);
-                        });
-                    });
-                }, 500);
-
-                // --- Персональный гайд: вариативное предложение ---
-                function getGuideOfferText() {
-                    const variants = [
-                        'У меня есть возможность сделать для вас персональный 10-страничный цветовой гайд с вашими цветами, 20+ цветовых сочетаний и примерами образов, как сочетать ваши цвета.',
-                        'Я могу подготовить для вас персональный гайд: 10 страниц с вашими палитрами, 20+ сочетаний и примерами стильных образов!',
-                        'Хотите получить персональный цветовой гайд? Это 10 страниц с вашими цветами, сочетаниями и примерами образов для вдохновения.',
-                        'Я могу сделать для вас подробный гайд: 10 страниц с вашими цветами, 20+ сочетаний и примерами, как их носить.',
-                        'Могу подготовить для вас персональный гайд: 10 страниц с вашими палитрами, сочетаниями и примерами образов.'
-                    ];
-                    return variants[Math.floor(Math.random() * variants.length)];
-                }
-
-                function addGuideOffer() {
-                    const messageContent = createAIMessage();
-                    const offerText = getGuideOfferText();
-                    
-                    setTimeout(() => {
-                        typeText(messageContent, offerText, 20);
-                        
-                        setTimeout(() => {
-                            messageContent.innerHTML += `
-                                <div style="margin-top:18px; display:flex; gap:12px;">
-                                    <button class="upload-button" id="guideMoreBtn">Расскажи подробнее</button>
-                                </div>
-                            `;
-                            // Назначаем обработчики только после появления кнопок
-                            setTimeout(() => {
-                                const moreBtn = messageContent.querySelector('#guideMoreBtn');
-                                if (moreBtn) {
-                                    moreBtn.onclick = function() {
-                                        addGuidePrice();
-                                        messageContent.innerHTML += '<div style="margin-top:12px; color:#7C3AED;">Спасибо за интерес! 👇</div>';
-                                        moreBtn.disabled = true;
-                                    };
-                                }
-                            }, 10);
-                        }, offerText.length * 20 + 500);
-                    }, 1000);
-                }
-
-                function addGuidePrice() {
-                    const messageContent = createAIMessage();
-                    const advantagesText = [
-                        '🎨 Гайд поможет понять, какие цвета подчеркивают вашу красоту',
-                        '💡 Готовые идеи, как сочетать цвета между собой',
-                        '📄 Гайд придет в PDF — удобно сохранить на телефон или email',
-                        '💄 Рекомендации по макияжу и цвету волос',
-                        '📚 10+ страниц персональных советов именно для вашего цветотипа'
-                    ].join('\n');
-                    setTimeout(() => {
-                        typeText(messageContent, advantagesText, 20);
-                        setTimeout(() => {
-                            let imgs = '';
-                            for (let i = 1; i <= 8; i++) {
-                                const num = i.toString().padStart(2, '0');
-                                imgs += `<img src="/static/color_guide_${num}.jpg" alt="color guide ${i}" class="guide-preview-img">`;
-                            }
-                            messageContent.innerHTML += `
-                                <div class="guide-preview-block">
-                                    <div class="guide-preview-row">
-                                        ${imgs}
-                                    </div>
-                                </div>
-                                <div class="guide-price-block">
-                                    <div class="guide-price-text">Персональный гайд — <b>500 руб.</b></div>
-                                    <button class="upload-button guide-buy-btn">Приобрести персональный гайд</button>
-                                </div>
-                            `;
-                        }, advantagesText.length * 20 + 500);
-                    }, 600);
-                }
-            })
-            .catch(error => {
-                loading.style.display = 'none';
-                errorMessage.textContent = 'Произошла ошибка при загрузке файла';
-                errorMessage.style.display = 'block';
-            });
-        }
-
         function downloadPDF() {
             window.location.href = '/analyze?pdf=1';
         }
 
         // Варианты приветствия
         const greetingVariants = [
-            'Привет! Загрузите фотографию с хорошо освещённым лицом, желательно при естественном свете — я помогу определить ваш цветотип.',
-            'Здравствуйте! Для точного анализа загрузите фото, где ваше лицо хорошо видно и освещено, лучше всего при дневном свете.',
-            'Добро пожаловать! Пожалуйста, выберите фото с естественным освещением и чётко видимым лицом — так результат будет точнее.',
-            'Приветствую! Загрузите фотографию, где ваше лицо хорошо освещено, желательно при дневном или естественном свете.',
-            'Здравствуйте! Для лучшего результата выберите фото с хорошо освещённым лицом, желательно при естественном освещении.'
+            'Привет! Я могу помочь вам определить ваш цветотип или оформить предзаказ на персонального ИИ-стилиста. Что вас интересует?',
+            'Здравствуйте! Выберите, что вас интересует: определение цветотипа или предзаказ на персонального ИИ-стилиста.',
+            'Добро пожаловать! Я могу определить ваш цветотип или рассказать о предзаказе на ИИ-стилиста. Что предпочитаете?',
+            'Приветствую! Выберите, что вас интересует: анализ цветотипа или предзаказ на персонального ИИ-стилиста.',
+            'Здравствуйте! Я могу помочь с определением цветотипа или рассказать о предзаказе на ИИ-стилиста. Что выберете?'
         ];
 
         // Анимированное приветствие при загрузке
         window.addEventListener('DOMContentLoaded', () => {
+            // Скрываем область загрузки при старте
+            const uploadArea = document.getElementById('dropZone');
+            uploadArea.style.display = 'none';
+
             const greeting = greetingVariants[Math.floor(Math.random() * greetingVariants.length)];
             const aiMessage = document.createElement('div');
             aiMessage.className = 'message ai';
@@ -933,7 +984,68 @@
             `;
             chatMessages.appendChild(aiMessage);
             const messageContent = aiMessage.querySelector('.message-content');
-            typeText(messageContent, greeting, 20);
+            
+            setTimeout(() => {
+                typeText(messageContent, greeting, 20, () => {
+                    // Создаем новое сообщение пользователя после завершения анимации текста
+                    const userMessage = document.createElement('div');
+                    userMessage.className = 'message user-message';
+                    userMessage.style.marginTop = '20px';
+                    
+                    // Создаем контейнер для кнопок
+                    const buttonsContainer = document.createElement('div');
+                    buttonsContainer.className = 'message-content';
+                    buttonsContainer.style.display = 'flex';
+                    buttonsContainer.style.gap = '10px';
+                    buttonsContainer.style.justifyContent = 'flex-end';
+                    buttonsContainer.innerHTML = `
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button class="upload-button" id="determineColorBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">Определить цветотип</button>
+                            <button class="upload-button" id="preorderBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">Предзаказ на ИИ-стилиста</button>
+                        </div>
+                    `;
+                    
+                    // Добавляем контейнер с кнопками в сообщение пользователя
+                    userMessage.appendChild(buttonsContainer);
+                    
+                    // Добавляем сообщение пользователя в чат
+                    chatMessages.appendChild(userMessage);
+
+                    // Добавляем обработчики для кнопок
+                    const determineColorBtn = document.getElementById('determineColorBtn');
+                    const preorderBtn = document.getElementById('preorderBtn');
+                    
+                    if (determineColorBtn) {
+                        determineColorBtn.onclick = function() {
+                            // Показываем зону загрузки
+                            const dropZone = document.getElementById('dropZone');
+                            if (dropZone) {
+                                dropZone.style.display = 'block';
+                            }
+                            
+                            // Создаем новое сообщение бота
+                            const aiMessage = document.createElement('div');
+                            aiMessage.className = 'message ai';
+                            aiMessage.innerHTML = `
+                                <div class="avatar">AI</div>
+                                <div class="message-content"></div>
+                            `;
+                            chatMessages.appendChild(aiMessage);
+                            const messageContent = aiMessage.querySelector('.message-content');
+                            
+                            // Печатаем сообщение
+                            typeText(messageContent, 'Загрузите фотографию с хорошо освещённым лицом, желательно при естественном свете 👇', 20);
+                        };
+                    }
+                    
+                    if (preorderBtn) {
+                        preorderBtn.onclick = function() {
+                            // Показываем информацию о подписке
+                            addSubscriptionOffer();
+                        };
+                    }
+                });
+            }, 600);
         });
 
         // --- Модальное окно для оплаты гайда ---
@@ -1015,17 +1127,36 @@
             const publicId = '{{ config.CLOUDPAYMENTS_PUBLIC_ID }}';
             const analysisId = localStorage.getItem('lastAnalysisId');
             const widget = new cp.CloudPayments();
+            const data = {
+                CloudPayments: {
+                    CustomerReceipt: {
+                        Items: [
+                            {
+                                Label: 'Предзаказ на ИИ-стилиста',
+                                Price: 1.00,
+                                Quantity: 1.00,
+                                Amount: 1.00,
+                                Vat: 0,
+                                Method: 0,
+                                Object: 0,
+                                MeasurementUnit: 'шт'
+                            }
+                        ],
+                        calculationPlace: 'stylist-ai.ru',
+                        amounts: {
+                            electronic: 1.00
+                        }
+                    }
+                }
+            };
             widget.pay('charge', {
                 publicId: publicId,
-                description: 'Персональный цветовой гайд',
-                amount: 500,
+                description: 'Предзаказ на ИИ-стилиста (годовая подписка)',
+                amount: 1.00,
                 currency: 'RUB',
                 skin: 'classic',
                 email: email,
-                data: { 
-                    email: email,
-                    analysis_id: analysisId 
-                }
+                data: data
             }, {
                 onSuccess: function(options) {
                     console.log('Payment successful, redirecting to success page');
@@ -1042,6 +1173,120 @@
                 console.log('Payment widget error:', reason);
             });
         };
+
+        // --- Персональный гайд: вариативное предложение ---
+        function addGuideOffer() {
+            const messageContent = createAIMessage();
+            const offerText = 'У меня есть возможность сделать для вас персональный 10-страничный цветовой гайд с вашими цветами, 20+ цветовых сочетаний и примерами образов, как сочетать ваши цвета.';
+            
+            setTimeout(() => {
+                typeText(messageContent, offerText, 20);
+                setTimeout(() => {
+                    // Создаем новое сообщение пользователя
+                    const userMessage = document.createElement('div');
+                    userMessage.className = 'message user-message';
+                    userMessage.style.marginTop = '20px';
+                    
+                    // Создаем контейнер для кнопки
+                    const buttonsContainer = document.createElement('div');
+                    buttonsContainer.className = 'message-content';
+                    buttonsContainer.style.display = 'flex';
+                    buttonsContainer.style.gap = '10px';
+                    buttonsContainer.style.justifyContent = 'flex-end';
+                    buttonsContainer.innerHTML = `
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button class="upload-button" id="guideMoreBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='rgba(187, 39, 155, 0.15)'; this.style.color='#8B1B6A'; this.style.borderColor='#8B1B6A';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#bb279b'; this.style.borderColor='#bb279b';">Расскажи подробнее</button>
+                        </div>
+                    `;
+                    
+                    // Добавляем контейнер с кнопкой в сообщение пользователя
+                    userMessage.appendChild(buttonsContainer);
+                    
+                    // Добавляем сообщение пользователя в чат
+                    chatMessages.appendChild(userMessage);
+
+                    // Добавляем обработчик для кнопки
+                    const moreBtn = document.getElementById('guideMoreBtn');
+                    if (moreBtn) {
+                        moreBtn.onclick = function() {
+                            addGuidePrice();
+                        };
+                    }
+                }, offerText.length * 20 + 500);
+            }, 1000);
+        }
+
+        function addGuidePrice() {
+            const messageContent = createAIMessage();
+            const advantagesText = [
+                '🎨 Гайд поможет понять, какие цвета подчеркивают вашу красоту',
+                '💡 Готовые идеи, как сочетать цвета между собой',
+                '📄 Гайд придет в PDF — удобно сохранить на телефон или email',
+                '💄 Рекомендации по макияжу и цвету волос',
+                '📚 10+ страниц персональных советов именно для вашего цветотипа'
+            ].join('\n');
+            setTimeout(() => {
+                typeText(messageContent, advantagesText, 20);
+                setTimeout(() => {
+                    let imgs = '';
+                    for (let i = 1; i <= 8; i++) {
+                        const num = i.toString().padStart(2, '0');
+                        imgs += `<img src="/static/color_guide_${num}.jpg" alt="color guide ${i}" class="guide-preview-img">`;
+                    }
+                    messageContent.innerHTML += `
+                        <div class="guide-preview-block">
+                            <div class="guide-preview-row">
+                                ${imgs}
+                            </div>
+                        </div>
+                        <div class="guide-price-text" style="margin-top: 1rem; font-size: 1.1rem; color: #bb279b; line-height: 1.2;">
+                            Персональный гайд — <b>500 руб.</b><br>
+                            <span style="font-size: 0.95rem;">или <b>бесплатно</b> при оформлении предзаказа на ИИ-стилиста</span>
+                        </div>
+                    `;
+
+                    // Создаем новое сообщение пользователя
+                    const userMessage = document.createElement('div');
+                    userMessage.className = 'message user-message';
+                    userMessage.style.marginTop = '20px';
+                    
+                    // Создаем контейнер для кнопок
+                    const buttonsContainer = document.createElement('div');
+                    buttonsContainer.className = 'message-content';
+                    buttonsContainer.style.display = 'flex';
+                    buttonsContainer.style.gap = '10px';
+                    buttonsContainer.style.justifyContent = 'flex-end';
+                    buttonsContainer.innerHTML = `
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button class="upload-button guide-buy-btn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='rgba(187, 39, 155, 0.15)'; this.style.color='#8B1B6A'; this.style.borderColor='#8B1B6A';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#bb279b'; this.style.borderColor='#bb279b';">Приобрести персональный гайд</button>
+                            <button class="upload-button subscription-preorder-btn" style="background-color: #bb279b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#8B1B6A';" onmouseout="this.style.backgroundColor='#bb279b';">Предзаказ на ИИ-стилиста</button>
+                        </div>
+                    `;
+                    
+                    // Добавляем контейнер с кнопками в сообщение пользователя
+                    userMessage.appendChild(buttonsContainer);
+                    
+                    // Добавляем сообщение пользователя в чат
+                    chatMessages.appendChild(userMessage);
+
+                    // Добавляем обработчики для кнопок
+                    const buyBtn = document.querySelector('.guide-buy-btn');
+                    const preorderBtn = document.querySelector('.subscription-preorder-btn');
+                    
+                    if (buyBtn) {
+                        buyBtn.onclick = function() {
+                            showGuideModal();
+                        };
+                    }
+                    
+                    if (preorderBtn) {
+                        preorderBtn.onclick = function() {
+                            addSubscriptionOffer();
+                        };
+                    }
+                }, advantagesText.length * 20 + 500);
+            }, 600);
+        }
     </script>
 </body>
 </html> 
