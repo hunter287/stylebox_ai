@@ -593,77 +593,6 @@
             }
         }
 
-        // Функция для исправления ориентации изображения с учетом EXIF (чтение из исходного файла ДО конвертации)
-        async function fixImageOrientation(file) {
-            // 1. Считываем ориентацию из исходного файла ДО конвертации
-            const originalOrientation = await new Promise((resolve) => {
-                EXIF.getData(file, function() {
-                    resolve(EXIF.getTag(this, 'Orientation') || 1);
-                });
-            });
-            console.log('EXIF orientation (original):', originalOrientation);
-
-            // 2. HEIC → JPEG (если нужно)
-            if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
-                try {
-                    const jpegBlob = await heic2any({
-                        blob: file,
-                        toType: 'image/jpeg',
-                        quality: 0.8
-                    });
-                    file = new File([jpegBlob], file.name.replace(/\.heic?$/i, '.jpg'), {
-                        type: 'image/jpeg',
-                        lastModified: Date.now()
-                    });
-                } catch (error) {
-                    throw new Error('Не удалось обработать HEIC файл');
-                }
-            }
-
-            // 3. Читаем картинку и рисуем на canvas с учетом orientation из исходного файла
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = new Image();
-                    img.onload = function() {
-                        let canvas = document.createElement('canvas');
-                        let ctx = canvas.getContext('2d');
-                        let width = img.width;
-                        let height = img.height;
-                        if (originalOrientation > 4) {
-                            canvas.width = height;
-                            canvas.height = width;
-                        } else {
-                            canvas.width = width;
-                            canvas.height = height;
-                        }
-                        switch (originalOrientation) {
-                            case 2: ctx.translate(width, 0); ctx.scale(-1, 1); break;
-                            case 3: ctx.translate(width, height); ctx.rotate(Math.PI); break;
-                            case 4: ctx.translate(0, height); ctx.scale(1, -1); break;
-                            case 5: ctx.rotate(0.5 * Math.PI); ctx.scale(1, -1); break;
-                            case 6: ctx.rotate(0.5 * Math.PI); ctx.translate(0, -height); break;
-                            case 7: ctx.rotate(0.5 * Math.PI); ctx.translate(width, -height); ctx.scale(-1, 1); break;
-                            case 8: ctx.rotate(-0.5 * Math.PI); ctx.translate(-width, 0); break;
-                            default: break;
-                        }
-                        ctx.drawImage(img, 0, 0);
-                        canvas.toBlob((blob) => {
-                            const fixedFile = new File([blob], file.name, {
-                                type: file.type,
-                                lastModified: Date.now()
-                            });
-                            resolve(fixedFile);
-                        }, file.type);
-                    };
-                    img.onerror = reject;
-                    img.src = e.target.result;
-                };
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
-
         // Обработка загрузки файла
         async function uploadFile(file) {
             console.log('uploadFile вызван с файлом:', file.name);
@@ -672,72 +601,50 @@
             if (loadingIndicator) {
                 loadingIndicator.style.display = 'flex';
             }
-            
-            // Сначала исправляем ориентацию изображения
             try {
-                const fixedFile = await fixImageOrientation(file);
-                console.log('Ориентация изображения исправлена');
                 const formData = new FormData();
-                formData.append('image', fixedFile);
-                
+                formData.append('image', file);
                 // Добавляем email, если он есть
                 const email = localStorage.getItem('lastGuideEmail');
                 if (email) {
                     formData.append('email', email);
                 }
-                
                 // Показываем индикатор загрузки
                 const loadingMessage = createAIMessage();
                 typeText(loadingMessage, 'Анализирую ваше фото...', 20);
-                
                 // Сохраняем превью изображения
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     window._lastUploadedImage = e.target.result;
                 };
-                reader.readAsDataURL(fixedFile);
-                
+                reader.readAsDataURL(file);
                 console.log('Отправка запроса на анализ...');
                 const response = await fetch('/analyze', {
                     method: 'POST',
                     body: formData,
-                    // Добавляем заголовки для предотвращения кэширования
                     headers: {
                         'Cache-Control': 'no-cache',
                         'Pragma': 'no-cache'
                     }
                 });
-                
                 console.log('Получен ответ от сервера:', response.status);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                
                 const data = await response.json();
                 console.log('Данные анализа:', data);
-                
                 if (data.error) {
                     throw new Error(data.error);
                 }
-                
-                // Сохраняем ID анализа
                 if (data.analysis_id) {
                     localStorage.setItem('lastAnalysisId', data.analysis_id);
                 }
-                
-                // Удаляем сообщение о загрузке
                 loadingMessage.parentElement.remove();
-                
-                // Показываем результат анализа
                 const messageContent = createAIMessage();
-                
-                // Создаем HTML для текстовой части анализа
                 const analysisHTML = `
                     <p>Ваш цветотип: <strong>${data.color_type}</strong></p>
                     <p>${data.explanation}</p>
                 `;
-                
-                // Сначала показываем фото
                 if (data.analysis_id) {
                     const imgElement = document.createElement('div');
                     imgElement.innerHTML = `<img src="/static/reports/last_image_${data.analysis_id}.jpg" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
@@ -749,12 +656,8 @@
                     imgElement.classList.add('fade-in');
                     messageContent.appendChild(imgElement);
                 }
-
-                // Затем анимируем текст
                 setTimeout(() => {
-                    // Сначала описание (тип + объяснение)
                     typeHTML(messageContent, analysisHTML, 20, () => {
-                        // После окончания описания — палитры и сочетания по очереди
                         let palettePromise = Promise.resolve();
                         if (data.dark_colors_hex) {
                             palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Тёмные цвета', data.dark_colors_hex));
@@ -768,19 +671,16 @@
                         if (data.color_combinations_svg) {
                             palettePromise = palettePromise.then(() => addColorCombinations(messageContent, data.color_combinations_svg));
                         }
-                        // Добавляем предложение гайда после всех палитр
                         palettePromise.then(() => {
                             setTimeout(addGuideOffer, 500);
                         });
                     });
                 }, 600);
-                
             } catch (error) {
                 console.error('Error:', error);
                 const errorMessage = createAIMessage();
                 typeText(errorMessage, `Произошла ошибка при анализе фото: ${error.message}. Пожалуйста, попробуйте еще раз.`, 20);
             } finally {
-                // Скрываем индикатор загрузки
                 if (loadingIndicator) {
                     loadingIndicator.style.display = 'none';
                 }
