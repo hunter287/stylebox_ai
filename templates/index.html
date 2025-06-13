@@ -207,22 +207,33 @@
 
         .loading {
             display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem 0;
             text-align: center;
-            padding: 1rem 0 1.5rem 0;
+            margin-bottom: 1rem;
         }
 
         .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid var(--primary-light);
-            border-top-color: var(--primary-color);
+            width: 30px;
+            height: 30px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #bb279b;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin: 0 auto;
+            margin-bottom: 0.5rem;
+        }
+
+        .loading p {
+            margin: 0;
+            color: #4B5563;
+            font-size: 0.95rem;
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .error-message {
@@ -493,197 +504,278 @@
 
     <script src="https://widget.cloudpayments.ru/bundles/cloudpayments.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
+    <script src="https://unpkg.com/heic2any"></script>
     <script>
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const loading = document.querySelector('.loading');
         const errorMessage = document.getElementById('errorMessage');
         const resultContainer = document.getElementById('resultContainer');
         const chatMessages = document.querySelector('.chat-messages');
+        const fileInput = document.querySelector('input[type="file"]');
+        const dropZone = document.querySelector('.drop-zone');
 
-        // Обработка drag & drop
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, preventDefaults, false);
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM загружен, инициализация...');
+            
+            // Инициализация input[type="file"]
+            if (fileInput) {
+                console.log('Найден input[type="file"]');
+                fileInput.addEventListener('change', function(e) {
+                    console.log('Событие change на input[type="file"]');
+                    handleFiles(e);
+                });
+            } else {
+                console.error('input[type="file"] не найден');
+            }
+
+            // Инициализация drag & drop
+            if (dropZone) {
+                console.log('Инициализация drag & drop');
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, preventDefaults, false);
+                });
+
+                function preventDefaults(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, highlight, false);
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, unhighlight, false);
+                });
+
+                function highlight(e) {
+                    dropZone.classList.add('highlight');
+                }
+
+                function unhighlight(e) {
+                    dropZone.classList.remove('highlight');
+                }
+
+                dropZone.addEventListener('drop', handleDrop, false);
+
+                function handleDrop(e) {
+                    console.log('Drop event triggered');
+                    const dt = e.dataTransfer;
+                    const files = dt.files;
+                    if (files.length > 0) {
+                        console.log('Файл перетащен:', files[0].name);
+                        handleFiles({ target: { files: files } });
+                    }
+                }
+            } else {
+                console.error('drop-zone не найден');
+            }
         });
 
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropZone.addEventListener(eventName, highlight, false);
-        });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, unhighlight, false);
-        });
-
-        function highlight(e) {
-            dropZone.classList.add('dragover');
-        }
-
-        function unhighlight(e) {
-            dropZone.classList.remove('dragover');
-        }
-
-        dropZone.addEventListener('drop', handleDrop, false);
-        fileInput.addEventListener('change', handleFiles, false);
-
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            handleFiles({ target: { files: files } });
-        }
-
+        // Обработка выбора файла
         function handleFiles(e) {
-            const file = e.target.files[0];
-            if (file) {
-                uploadFile(file);
+            console.log('handleFiles вызван');
+            const files = e.target.files;
+            if (files.length > 0) {
+                console.log('Файл выбран:', files[0].name);
+                const file = files[0];
+                // Создаем новый файл с уникальным именем
+                const uniqueFile = new File([file], `upload_${Date.now()}_${file.name}`, {
+                    type: file.type,
+                    lastModified: Date.now()
+                });
+                // Очищаем последнее загруженное изображение
+                window._lastUploadedImage = null;
+                // Очищаем поле ввода файла
+                if (fileInput) {
+                    fileInput.value = '';
+                }
+                uploadFile(uniqueFile);
             }
         }
 
-        function fixImageOrientation(file) {
-            return new Promise((resolve) => {
-                EXIF.getData(file, function() {
-                    const orientation = EXIF.getTag(this, 'Orientation');
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const img = new Image();
-                        img.onload = function() {
+        // Функция для исправления ориентации изображения
+        async function fixImageOrientation(file) {
+            // Если файл HEIC, сначала конвертируем его в JPEG
+            if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+                try {
+                    console.log('Конвертируем HEIC в JPEG...');
+                    const jpegBlob = await heic2any({
+                        blob: file,
+                        toType: 'image/jpeg',
+                        quality: 0.8
+                    });
+                    file = new File([jpegBlob], file.name.replace(/\.heic?$/i, '.jpg'), {
+                        type: 'image/jpeg',
+                        lastModified: Date.now()
+                    });
+                    console.log('Конвертация завершена');
+                } catch (error) {
+                    console.error('Ошибка при конвертации HEIC:', error);
+                    throw new Error('Не удалось обработать HEIC файл');
+                }
+            }
+
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        // Если изображение горизонтальное (ширина больше высоты)
+                        if (img.width > img.height) {
                             const canvas = document.createElement('canvas');
                             const ctx = canvas.getContext('2d');
                             
-                            // Устанавливаем размеры canvas в соответствии с ориентацией
-                            if (img.width > img.height) {
-                                canvas.width = img.height;
-                                canvas.height = img.width;
-                                ctx.translate(canvas.width/2, canvas.height/2);
-                                
-                                // Определяем направление поворота на основе EXIF
-                                if (orientation === 6) {
-                                    // Поворот по часовой стрелке
-                                    ctx.rotate(Math.PI/2);
-                                } else if (orientation === 8) {
-                                    // Поворот против часовой стрелки
-                                    ctx.rotate(-Math.PI/2);
-                                }
-                                
-                                ctx.drawImage(img, -img.height/2, -img.width/2);
-                            } else {
-                                canvas.width = img.width;
-                                canvas.height = img.height;
-                                ctx.drawImage(img, 0, 0);
-                            }
+                            // Устанавливаем размеры canvas для вертикального изображения
+                            canvas.width = img.height;
+                            canvas.height = img.width;
                             
-                            // Конвертируем canvas в Blob
+                            // Поворачиваем изображение на 90 градусов по часовой стрелке
+                            ctx.translate(canvas.width/2, canvas.height/2);
+                            ctx.rotate(Math.PI/2);
+                            ctx.drawImage(img, -img.width/2, -img.height/2);
+                            
+                            // Конвертируем canvas обратно в файл
                             canvas.toBlob((blob) => {
-                                resolve(new File([blob], file.name, {
+                                const fixedFile = new File([blob], file.name, {
                                     type: file.type,
-                                    lastModified: file.lastModified
-                                }));
+                                    lastModified: Date.now()
+                                });
+                                resolve(fixedFile);
                             }, file.type);
-                        };
-                        img.src = e.target.result;
+                        } else {
+                            // Если изображение уже вертикальное, возвращаем его как есть
+                            resolve(file);
+                        }
                     };
-                    reader.readAsDataURL(file);
-                });
+                    img.onerror = reject;
+                    img.src = e.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
             });
         }
 
-        function uploadFile(file) {
+        // Обработка загрузки файла
+        async function uploadFile(file) {
+            console.log('uploadFile вызван с файлом:', file.name);
+            // Показываем индикатор загрузки
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'flex';
+            }
+            
             // Сначала исправляем ориентацию изображения
-            fixImageOrientation(file).then(fixedFile => {
+            try {
+                const fixedFile = await fixImageOrientation(file);
+                console.log('Ориентация изображения исправлена');
                 const formData = new FormData();
                 formData.append('image', fixedFile);
-                // Добавляем email, если он есть в localStorage
-                const lastEmail = localStorage.getItem('lastGuideEmail');
-                if (lastEmail) {
-                    formData.append('email', lastEmail);
+                
+                // Добавляем email, если он есть
+                const email = localStorage.getItem('lastGuideEmail');
+                if (email) {
+                    formData.append('email', email);
                 }
-
-                // Показываем превью изображения
+                
+                // Показываем индикатор загрузки
+                const loadingMessage = createAIMessage();
+                typeText(loadingMessage, 'Анализирую ваше фото...', 20);
+                
+                // Сохраняем превью изображения
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     window._lastUploadedImage = e.target.result;
                 };
                 reader.readAsDataURL(fixedFile);
-
-                // Показываем индикатор загрузки
-                loading.style.display = 'block';
-                errorMessage.style.display = 'none';
-                resultContainer.style.display = 'none';
-
-                fetch('/analyze', {
+                
+                console.log('Отправка запроса на анализ...');
+                const response = await fetch('/analyze', {
                     method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    loading.style.display = 'none';
-                    if (data.error) {
-                        errorMessage.textContent = data.error;
-                        errorMessage.style.display = 'block';
-                        return;
+                    body: formData,
+                    // Добавляем заголовки для предотвращения кэширования
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
                     }
-
-                    // Сохраняем analysis_id для оплаты
-                    if (data.analysis_id) {
-                        localStorage.setItem('lastAnalysisId', data.analysis_id);
-                    }
-
-                    // Добавляем ответ AI с расширенным анализом
-                    const messageContent = createAIMessage();
-                    
-                    // Создаем HTML для текстовой части анализа
-                    const analysisHTML = `
-                        <p>Ваш цветотип: <strong>${data.color_type}</strong></p>
-                        <p>${data.explanation}</p>
-                    `;
-
-                    // Сначала показываем изображение
-                    if (data.analysis_id) {
-                        const imgElement = document.createElement('div');
-                        imgElement.innerHTML = `<img src="/static/reports/last_image_${data.analysis_id}.jpg" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
-                        imgElement.classList.add('fade-in');
-                        messageContent.appendChild(imgElement);
-                    } else if (window._lastUploadedImage) {
-                        const imgElement = document.createElement('div');
-                        imgElement.innerHTML = `<img src="${window._lastUploadedImage}" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
-                        imgElement.classList.add('fade-in');
-                        messageContent.appendChild(imgElement);
-                    }
-
-                    // Затем анимируем текст
-                    setTimeout(() => {
-                        // Сначала описание (тип + объяснение)
-                        typeHTML(messageContent, analysisHTML, 20, () => {
-                            // После окончания описания — палитры и сочетания по очереди
-                            let palettePromise = Promise.resolve();
-                            if (data.dark_colors_hex) {
-                                palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Тёмные цвета', data.dark_colors_hex));
-                            }
-                            if (data.bright_colors_hex) {
-                                palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Яркие цвета', data.bright_colors_hex));
-                            }
-                            if (data.light_colors_hex) {
-                                palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Светлые цвета', data.light_colors_hex));
-                            }
-                            if (data.color_combinations_svg) {
-                                palettePromise = palettePromise.then(() => addColorCombinations(messageContent, data.color_combinations_svg));
-                            }
-                            palettePromise.then(() => {
-                                setTimeout(addGuideOffer, 500);
-                            });
-                        });
-                    }, 500);
-                })
-                .catch(error => {
-                    loading.style.display = 'none';
-                    errorMessage.textContent = 'Произошла ошибка при загрузке файла';
-                    errorMessage.style.display = 'block';
                 });
-            });
+                
+                console.log('Получен ответ от сервера:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Данные анализа:', data);
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Сохраняем ID анализа
+                if (data.analysis_id) {
+                    localStorage.setItem('lastAnalysisId', data.analysis_id);
+                }
+                
+                // Удаляем сообщение о загрузке
+                loadingMessage.parentElement.remove();
+                
+                // Показываем результат анализа
+                const messageContent = createAIMessage();
+                
+                // Создаем HTML для текстовой части анализа
+                const analysisHTML = `
+                    <p>Ваш цветотип: <strong>${data.color_type}</strong></p>
+                    <p>${data.explanation}</p>
+                `;
+                
+                // Сначала показываем фото
+                if (data.analysis_id) {
+                    const imgElement = document.createElement('div');
+                    imgElement.innerHTML = `<img src="/static/reports/last_image_${data.analysis_id}.jpg" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
+                    imgElement.classList.add('fade-in');
+                    messageContent.appendChild(imgElement);
+                } else if (window._lastUploadedImage) {
+                    const imgElement = document.createElement('div');
+                    imgElement.innerHTML = `<img src="${window._lastUploadedImage}" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
+                    imgElement.classList.add('fade-in');
+                    messageContent.appendChild(imgElement);
+                }
+
+                // Затем анимируем текст
+                setTimeout(() => {
+                    // Сначала описание (тип + объяснение)
+                    typeHTML(messageContent, analysisHTML, 20, () => {
+                        // После окончания описания — палитры и сочетания по очереди
+                        let palettePromise = Promise.resolve();
+                        if (data.dark_colors_hex) {
+                            palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Тёмные цвета', data.dark_colors_hex));
+                        }
+                        if (data.bright_colors_hex) {
+                            palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Яркие цвета', data.bright_colors_hex));
+                        }
+                        if (data.light_colors_hex) {
+                            palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Светлые цвета', data.light_colors_hex));
+                        }
+                        if (data.color_combinations_svg) {
+                            palettePromise = palettePromise.then(() => addColorCombinations(messageContent, data.color_combinations_svg));
+                        }
+                        // Добавляем предложение гайда после всех палитр
+                        palettePromise.then(() => {
+                            setTimeout(addGuideOffer, 500);
+                        });
+                    });
+                }, 600);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                const errorMessage = createAIMessage();
+                typeText(errorMessage, `Произошла ошибка при анализе фото: ${error.message}. Пожалуйста, попробуйте еще раз.`, 20);
+            } finally {
+                // Скрываем индикатор загрузки
+                if (loadingIndicator) {
+                    loadingIndicator.style.display = 'none';
+                }
+            }
         }
 
         function typeHTML(element, html, speed = 30, onDone) {
@@ -784,9 +876,13 @@
                     buttonsContainer.style.display = 'flex';
                     buttonsContainer.style.gap = '10px';
                     buttonsContainer.style.justifyContent = 'flex-end';
+                    
+                    // Генерируем уникальный ID для кнопки
+                    const preorderButtonId = 'subscriptionPreorderBtn_' + Date.now();
+                    
                     buttonsContainer.innerHTML = `
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button class="upload-button subscription-preorder-btn" id="subscriptionPreorderBtn" style="background-color: #bb279b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#8B1B6A';" onmouseout="this.style.backgroundColor='#bb279b';">Оформить предзаказ</button>
+                            <button class="upload-button subscription-preorder-btn" id="${preorderButtonId}" style="background-color: #bb279b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#8B1B6A';" onmouseout="this.style.backgroundColor='#bb279b';">Оформить предзаказ</button>
                         </div>
                     `;
                     
@@ -796,90 +892,11 @@
                     // Добавляем сообщение пользователя в чат
                     chatMessages.appendChild(userMessage);
 
-                    // Добавляем обработчик для кнопки предзаказа
-                    const subBuyBtn = document.getElementById('subscriptionPreorderBtn');
-                    if (subBuyBtn) {
-                        subBuyBtn.onclick = function() {
-                            // Создаем модальное окно для подписки
-                            const modal = document.createElement('div');
-                            modal.id = 'subscriptionModal';
-                            modal.className = 'modal';
-                            modal.style.display = 'block';
-                            modal.innerHTML = `
-                                <div class="modal-content">
-                                    <span class="close" id="closeSubscriptionModal">&times;</span>
-                                    <h2>Оформить предзаказ</h2>
-                                    <div style="margin-bottom:1rem; color:#6B7280; font-size:1rem;">Введите ваш email для оформления предзаказа</div>
-                                    <input type="email" id="subscriptionEmail" placeholder="Ваш email" class="modal-input" autocomplete="email" autofocus>
-                                    <div id="subscriptionEmailError" style="color:#DC2626; font-size:0.95rem; margin:6px 0 0 0; display:none;"></div>
-                                    <button class="upload-button subscription-pay-btn" id="subscriptionPayBtn" style="margin-top:1.2rem; width:100%;">Оформить предзаказ</button>
-                                    <div id="subscriptionPaySuccess" style="display:none; margin-top:1.2rem; color:#059669; font-weight:500;">
-                                        Спасибо за предзаказ!<br>Мы свяжемся с вами 1 июля для активации подписки.<br>Проверьте папку "Входящие" или "Спам".
-                                    </div>
-                                </div>
-                            `;
-                            document.body.appendChild(modal);
-
-                            // Добавляем обработчики для модального окна
-                            const closeBtn = modal.querySelector('#closeSubscriptionModal');
-                            if (closeBtn) {
-                                closeBtn.onclick = function() {
-                                    modal.remove();
-                                };
-                            }
-
-                            const payBtn = modal.querySelector('#subscriptionPayBtn');
-                            if (payBtn) {
-                                payBtn.onclick = async function() {
-                                    const email = document.getElementById('subscriptionEmail').value.trim();
-                                    const errorDiv = document.getElementById('subscriptionEmailError');
-                                    errorDiv.style.display = 'none';
-                                    
-                                    if (!/^\S+@\S+\.\S+$/.test(email)) {
-                                        errorDiv.textContent = 'Пожалуйста, введите корректный email';
-                                        errorDiv.style.display = 'block';
-                                        return;
-                                    }
-
-                                    const publicId = '{{ config.CLOUDPAYMENTS_PUBLIC_ID }}';
-                                    const analysisId = localStorage.getItem('lastAnalysisId');
-                                    const widget = new cp.CloudPayments();
-                                    
-                                    widget.pay('charge', {
-                                        publicId: publicId,
-                                        description: 'Предзаказ на ИИ-стилиста (годовая подписка)',
-                                        amount: 3990.00,
-                                        currency: 'RUB',
-                                        skin: 'classic',
-                                        email: email,
-                                        data: { 
-                                            email: email,
-                                            analysis_id: analysisId,
-                                            type: 'subscription'
-                                        }
-                                    }, {
-                                        onSuccess: function(options) {
-                                            console.log('Payment successful, redirecting to success page');
-                                            window.location.href = '/payment-success';
-                                        },
-                                        onFail: function(reason) {
-                                            console.log('Payment failed:', reason);
-                                        }
-                                    })
-                                    .then(function (result) {
-                                        console.log('Payment widget closed', result);
-                                    })
-                                    .catch(function (reason) {
-                                        console.log('Payment widget error:', reason);
-                                    });
-                                };
-                            }
-
-                            // Фокус на поле email
-                            setTimeout(() => {
-                                const emailInput = document.getElementById('subscriptionEmail');
-                                if (emailInput) emailInput.focus();
-                            }, 100);
+                    // Добавляем обработчик для кнопки
+                    const preorderBtn = document.getElementById(preorderButtonId);
+                    if (preorderBtn) {
+                        preorderBtn.onclick = function() {
+                            showSubscriptionModal();
                         };
                     }
                 }, advantagesText.length * 20 + 500);
@@ -1040,7 +1057,7 @@
             setTimeout(() => {
                 typeText(messageContent, greeting, 20, () => {
                     // Создаем новое сообщение пользователя после завершения анимации текста
-                    const userMessage = document.createElement('div');
+            const userMessage = document.createElement('div');
                     userMessage.className = 'message user-message';
                     userMessage.style.marginTop = '20px';
                     
@@ -1054,8 +1071,8 @@
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                             <button class="upload-button" id="determineColorBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">Определить цветотип</button>
                             <button class="upload-button" id="preorderBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">Предзаказ на ИИ-стилиста</button>
-                        </div>
-                    `;
+                </div>
+            `;
                     
                     // Добавляем контейнер с кнопками в сообщение пользователя
                     userMessage.appendChild(buttonsContainer);
@@ -1108,6 +1125,91 @@
                 if (emailInput) emailInput.focus();
             }, 100);
         }
+
+        // --- Модальное окно для предзаказа на ИИ-стилиста ---
+        function showSubscriptionModal() {
+            // Создаем модальное окно для подписки
+            const modal = document.createElement('div');
+            modal.id = 'subscriptionModal';
+            modal.className = 'modal';
+            modal.style.display = 'block';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <span class="close" id="closeSubscriptionModal">&times;</span>
+                    <h2>Оформить предзаказ</h2>
+                    <div style="margin-bottom:1rem; color:#6B7280; font-size:1rem;">Введите ваш email для оформления предзаказа</div>
+                    <input type="email" id="subscriptionEmail" placeholder="Ваш email" class="modal-input" autocomplete="email" autofocus>
+                    <div id="subscriptionEmailError" style="color:#DC2626; font-size:0.95rem; margin:6px 0 0 0; display:none;"></div>
+                    <button class="upload-button subscription-pay-btn" id="subscriptionPayBtn" style="margin-top:1.2rem; width:100%;">Оформить предзаказ</button>
+                    <div id="subscriptionPaySuccess" style="display:none; margin-top:1.2rem; color:#059669; font-weight:500;">
+                        Спасибо за предзаказ!<br>Мы свяжемся с вами 1 июля для активации подписки.<br>Проверьте папку "Входящие" или "Спам".
+                    </div>
+                                </div>
+                            `;
+            document.body.appendChild(modal);
+
+            // Добавляем обработчики для модального окна
+            const closeBtn = modal.querySelector('#closeSubscriptionModal');
+            if (closeBtn) {
+                closeBtn.onclick = function() {
+                    modal.remove();
+                };
+            }
+
+            const payBtn = modal.querySelector('#subscriptionPayBtn');
+            if (payBtn) {
+                payBtn.onclick = async function() {
+                    const email = document.getElementById('subscriptionEmail').value.trim();
+                    const errorDiv = document.getElementById('subscriptionEmailError');
+                    errorDiv.style.display = 'none';
+                    
+                    if (!/^\S+@\S+\.\S+$/.test(email)) {
+                        errorDiv.textContent = 'Пожалуйста, введите корректный email';
+                        errorDiv.style.display = 'block';
+                        return;
+                    }
+
+                    const publicId = '{{ config.CLOUDPAYMENTS_PUBLIC_ID }}';
+                    const analysisId = localStorage.getItem('lastAnalysisId');
+                    const widget = new cp.CloudPayments();
+                    
+                    widget.pay('charge', {
+                        publicId: publicId,
+                        description: 'Предзаказ на ИИ-стилиста (годовая подписка)',
+                        amount: 3990.00,
+                        currency: 'RUB',
+                        skin: 'classic',
+                        email: email,
+                        data: { 
+                            email: email,
+                            analysis_id: analysisId,
+                            type: 'subscription'
+                        }
+                    }, {
+                        onSuccess: function(options) {
+                            console.log('Payment successful, redirecting to success page');
+                            window.location.href = '/payment-success?type=subscription';
+                        },
+                        onFail: function(reason) {
+                            console.log('Payment failed:', reason);
+                        }
+                    })
+                    .then(function (result) {
+                        console.log('Payment widget closed', result);
+                    })
+                    .catch(function (reason) {
+                        console.log('Payment widget error:', reason);
+                    });
+                };
+            }
+
+            // Фокус на поле email
+            setTimeout(() => {
+                const emailInput = document.getElementById('subscriptionEmail');
+                if (emailInput) emailInput.focus();
+            }, 100);
+        }
+
         function hideGuideModal() {
             document.getElementById('guideModal').style.display = 'none';
             document.getElementById('guideEmail').value = '';
@@ -1216,7 +1318,7 @@
                 }
             })
             .then(function (result) {
-                console.log('Payment widget closed', result);
+                console.log('Payment widget closed', result);рабо
             })
             .catch(function (reason) {
                 console.log('Payment widget error:', reason);
@@ -1236,26 +1338,31 @@
                     userMessage.className = 'message user-message';
                     userMessage.style.marginTop = '20px';
                     
-                    // Создаем контейнер для кнопки
+                    // Создаем контейнер для кнопок
                     const buttonsContainer = document.createElement('div');
                     buttonsContainer.className = 'message-content';
                     buttonsContainer.style.display = 'flex';
                     buttonsContainer.style.gap = '10px';
                     buttonsContainer.style.justifyContent = 'flex-end';
+                    
+                    // Генерируем уникальные ID для кнопок
+                    const buyButtonId = 'guideBuyBtn_' + Date.now();
+                    const preorderButtonId = 'subscriptionPreorderBtn_' + Date.now();
+                    
                     buttonsContainer.innerHTML = `
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button class="upload-button" id="guideMoreBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='rgba(187, 39, 155, 0.15)'; this.style.color='#8B1B6A'; this.style.borderColor='#8B1B6A';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#bb279b'; this.style.borderColor='#bb279b';">Расскажи подробнее</button>
+                            <button class="upload-button guide-buy-btn" id="${buyButtonId}" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='rgba(187, 39, 155, 0.15)'; this.style.color='#8B1B6A'; this.style.borderColor='#8B1B6A';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#bb279b'; this.style.borderColor='#bb279b';">Расскажи подробнее</button>
                         </div>
                     `;
                     
-                    // Добавляем контейнер с кнопкой в сообщение пользователя
+                    // Добавляем контейнер с кнопками в сообщение пользователя
                     userMessage.appendChild(buttonsContainer);
                     
                     // Добавляем сообщение пользователя в чат
                     chatMessages.appendChild(userMessage);
 
-                    // Добавляем обработчик для кнопки
-                    const moreBtn = document.getElementById('guideMoreBtn');
+                    // Добавляем обработчики для кнопок
+                    const moreBtn = document.getElementById(buyButtonId);
                     if (moreBtn) {
                         moreBtn.onclick = function() {
                             addGuidePrice();
@@ -1305,10 +1412,15 @@
                     buttonsContainer.style.display = 'flex';
                     buttonsContainer.style.gap = '10px';
                     buttonsContainer.style.justifyContent = 'flex-end';
+                    
+                    // Генерируем уникальные ID для кнопок
+                    const buyButtonId = 'guideBuyBtn_' + Date.now();
+                    const preorderButtonId = 'subscriptionPreorderBtn_' + Date.now();
+                    
                     buttonsContainer.innerHTML = `
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button class="upload-button guide-buy-btn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='rgba(187, 39, 155, 0.15)'; this.style.color='#8B1B6A'; this.style.borderColor='#8B1B6A';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#bb279b'; this.style.borderColor='#bb279b';">Приобрести персональный гайд</button>
-                            <button class="upload-button subscription-preorder-btn" id="subscriptionPreorderBtn2" style="background-color: #bb279b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#8B1B6A';" onmouseout="this.style.backgroundColor='#bb279b';">Предзаказ на ИИ-стилиста</button>
+                            <button class="upload-button guide-buy-btn" id="${buyButtonId}" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='rgba(187, 39, 155, 0.15)'; this.style.color='#8B1B6A'; this.style.borderColor='#8B1B6A';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#bb279b'; this.style.borderColor='#bb279b';">Приобрести персональный гайд</button>
+                            <button class="upload-button subscription-preorder-btn" id="${preorderButtonId}" style="background-color: #bb279b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#8B1B6A';" onmouseout="this.style.backgroundColor='#bb279b';">Предзаказ на ИИ-стилиста</button>
                         </div>
                     `;
                     
@@ -1319,8 +1431,8 @@
                     chatMessages.appendChild(userMessage);
 
                     // Добавляем обработчики для кнопок
-                    const buyBtn = document.querySelector('.guide-buy-btn');
-                    const preorderBtn = document.getElementById('subscriptionPreorderBtn2');
+                    const buyBtn = document.getElementById(buyButtonId);
+                    const preorderBtn = document.getElementById(preorderButtonId);
                     
                     if (buyBtn) {
                         buyBtn.onclick = function() {
