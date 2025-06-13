@@ -207,33 +207,22 @@
 
         .loading {
             display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem 0;
             text-align: center;
-            margin-bottom: 1rem;
+            padding: 1rem 0 1.5rem 0;
         }
 
         .loading-spinner {
-            width: 30px;
-            height: 30px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #bb279b;
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--primary-light);
+            border-top-color: var(--primary-color);
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-bottom: 0.5rem;
-        }
-
-        .loading p {
-            margin: 0;
-            color: #4B5563;
-            font-size: 0.95rem;
+            margin: 0 auto;
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            to { transform: rotate(360deg); }
         }
 
         .error-message {
@@ -504,32 +493,15 @@
 
     <script src="https://widget.cloudpayments.ru/bundles/cloudpayments.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
-    <script src="https://unpkg.com/heic2any"></script>
     <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const loading = document.querySelector('.loading');
         const errorMessage = document.getElementById('errorMessage');
         const resultContainer = document.getElementById('resultContainer');
         const chatMessages = document.querySelector('.chat-messages');
-        const fileInput = document.querySelector('input[type="file"]');
-        const dropZone = document.querySelector('.drop-zone');
 
-        // Инициализация при загрузке страницы
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM загружен, инициализация...');
-            
-            // Инициализация input[type="file"]
-            if (fileInput) {
-                console.log('Найден input[type="file"]');
-                fileInput.addEventListener('change', function(e) {
-                    console.log('Событие change на input[type="file"]');
-                    handleFiles(e);
-                });
-            } else {
-                console.error('input[type="file"] не найден');
-            }
-
-            // Инициализация drag & drop
-            if (dropZone) {
-                console.log('Инициализация drag & drop');
+        // Обработка drag & drop
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             dropZone.addEventListener(eventName, preventDefaults, false);
         });
@@ -548,158 +520,170 @@
         });
 
         function highlight(e) {
-                    dropZone.classList.add('highlight');
+            dropZone.classList.add('dragover');
         }
 
         function unhighlight(e) {
-                    dropZone.classList.remove('highlight');
+            dropZone.classList.remove('dragover');
         }
 
         dropZone.addEventListener('drop', handleDrop, false);
+        fileInput.addEventListener('change', handleFiles, false);
 
         function handleDrop(e) {
-                    console.log('Drop event triggered');
             const dt = e.dataTransfer;
             const files = dt.files;
-                    if (files.length > 0) {
-                        console.log('Файл перетащен:', files[0].name);
             handleFiles({ target: { files: files } });
         }
-                }
-            } else {
-                console.error('drop-zone не найден');
-            }
-        });
 
-        // Обработка выбора файла
         function handleFiles(e) {
-            console.log('handleFiles вызван');
-            const files = e.target.files;
-            if (files.length > 0) {
-                console.log('Файл выбран:', files[0].name);
-                const file = files[0];
-                // Создаем новый файл с уникальным именем
-                const uniqueFile = new File([file], `upload_${Date.now()}_${file.name}`, {
-                    type: file.type,
-                    lastModified: Date.now()
-                });
-                // Очищаем последнее загруженное изображение
-                window._lastUploadedImage = null;
-                // Очищаем поле ввода файла
-                if (fileInput) {
-                    fileInput.value = '';
-                }
-                uploadFile(uniqueFile);
+            const file = e.target.files[0];
+            if (file) {
+                uploadFile(file);
             }
         }
 
-        // Обработка загрузки файла
-        async function uploadFile(file) {
-            console.log('uploadFile вызван с файлом:', file.name);
-            // Показываем индикатор загрузки
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            if (loadingIndicator) {
-                loadingIndicator.style.display = 'flex';
-            }
-            try {
+        function fixImageOrientation(file) {
+            return new Promise((resolve) => {
+                EXIF.getData(file, function() {
+                    const orientation = EXIF.getTag(this, 'Orientation');
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = new Image();
+                        img.onload = function() {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            
+                            // Устанавливаем размеры canvas в соответствии с ориентацией
+                            if (img.width > img.height) {
+                                canvas.width = img.height;
+                                canvas.height = img.width;
+                                ctx.translate(canvas.width/2, canvas.height/2);
+                                
+                                // Определяем направление поворота на основе EXIF
+                                if (orientation === 6) {
+                                    // Поворот по часовой стрелке
+                                    ctx.rotate(Math.PI/2);
+                                } else if (orientation === 8) {
+                                    // Поворот против часовой стрелки
+                                    ctx.rotate(-Math.PI/2);
+                                }
+                                
+                                ctx.drawImage(img, -img.height/2, -img.width/2);
+                            } else {
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+                                ctx.drawImage(img, 0, 0);
+                            }
+                            
+                            // Конвертируем canvas в Blob
+                            canvas.toBlob((blob) => {
+                                resolve(new File([blob], file.name, {
+                                    type: file.type,
+                                    lastModified: file.lastModified
+                                }));
+                            }, file.type);
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+        }
+
+        function uploadFile(file) {
+            // Сначала исправляем ориентацию изображения
+            fixImageOrientation(file).then(fixedFile => {
                 const formData = new FormData();
-                formData.append('image', file);
-                // Добавляем email, если он есть
-                const email = localStorage.getItem('lastGuideEmail');
-                if (email) {
-                    formData.append('email', email);
+                formData.append('image', fixedFile);
+                // Добавляем email, если он есть в localStorage
+                const lastEmail = localStorage.getItem('lastGuideEmail');
+                if (lastEmail) {
+                    formData.append('email', lastEmail);
                 }
-                // Показываем индикатор загрузки
-                const loadingMessage = createAIMessage();
-                typeText(loadingMessage, 'Анализирую ваше фото...', 20);
-                // Сохраняем превью изображения
+
+                // Показываем превью изображения
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     window._lastUploadedImage = e.target.result;
                 };
-                reader.readAsDataURL(file);
-                console.log('Отправка запроса на анализ...');
-                const response = await fetch('/analyze', {
+                reader.readAsDataURL(fixedFile);
+
+                // Показываем индикатор загрузки
+                loading.style.display = 'block';
+                errorMessage.style.display = 'none';
+                resultContainer.style.display = 'none';
+
+                fetch('/analyze', {
                     method: 'POST',
-                    body: formData,
-                    headers: {
-                        'Cache-Control': 'no-cache',
-                        'Pragma': 'no-cache'
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    loading.style.display = 'none';
+                    if (data.error) {
+                        errorMessage.textContent = data.error;
+                        errorMessage.style.display = 'block';
+                        return;
                     }
-                });
-                console.log('Получен ответ от сервера:', response.status);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
-                console.log('Данные анализа:', data);
-                // Выводим debug_log, если есть
-                if (data.debug_log) {
-                    const debugBlock = document.createElement('div');
-                    debugBlock.style.background = '#f3f4f6';
-                    debugBlock.style.color = '#374151';
-                    debugBlock.style.fontFamily = 'monospace';
-                    debugBlock.style.fontSize = '0.95em';
-                    debugBlock.style.padding = '10px 16px';
-                    debugBlock.style.margin = '16px 0 0 0';
-                    debugBlock.style.borderRadius = '8px';
-                    debugBlock.style.whiteSpace = 'pre-line';
-                    debugBlock.innerText = 'DEBUG LOG:\n' + data.debug_log.join('\n');
-                    chatMessages.appendChild(debugBlock);
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                }
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                if (data.analysis_id) {
-                    localStorage.setItem('lastAnalysisId', data.analysis_id);
-                }
-                loadingMessage.parentElement.remove();
-                const messageContent = createAIMessage();
-                const analysisHTML = `
-                    <p>Ваш цветотип: <strong>${data.color_type}</strong></p>
-                    <p>${data.explanation}</p>
-                `;
-                if (data.analysis_id) {
-                    const imgElement = document.createElement('div');
-                    imgElement.innerHTML = `<img src="/static/reports/last_image_${data.analysis_id}.jpg" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
-                    imgElement.classList.add('fade-in');
-                    messageContent.appendChild(imgElement);
-                } else if (window._lastUploadedImage) {
-                    const imgElement = document.createElement('div');
-                    imgElement.innerHTML = `<img src="${window._lastUploadedImage}" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
-                    imgElement.classList.add('fade-in');
-                    messageContent.appendChild(imgElement);
-                }
-                setTimeout(() => {
-                    typeHTML(messageContent, analysisHTML, 20, () => {
-                        let palettePromise = Promise.resolve();
-                        if (data.dark_colors_hex) {
-                            palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Тёмные цвета', data.dark_colors_hex));
-                        }
-                        if (data.bright_colors_hex) {
-                            palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Яркие цвета', data.bright_colors_hex));
-                        }
-                        if (data.light_colors_hex) {
-                            palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Светлые цвета', data.light_colors_hex));
-                        }
-                        if (data.color_combinations_svg) {
-                            palettePromise = palettePromise.then(() => addColorCombinations(messageContent, data.color_combinations_svg));
-                        }
-                        palettePromise.then(() => {
-                            setTimeout(addGuideOffer, 500);
+
+                    // Сохраняем analysis_id для оплаты
+                    if (data.analysis_id) {
+                        localStorage.setItem('lastAnalysisId', data.analysis_id);
+                    }
+
+                    // Добавляем ответ AI с расширенным анализом
+                    const messageContent = createAIMessage();
+                    
+                    // Создаем HTML для текстовой части анализа
+                    const analysisHTML = `
+                        <p>Ваш цветотип: <strong>${data.color_type}</strong></p>
+                        <p>${data.explanation}</p>
+                    `;
+
+                    // Сначала показываем изображение
+                    if (data.analysis_id) {
+                        const imgElement = document.createElement('div');
+                        imgElement.innerHTML = `<img src="/static/reports/last_image_${data.analysis_id}.jpg" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
+                        imgElement.classList.add('fade-in');
+                        messageContent.appendChild(imgElement);
+                    } else if (window._lastUploadedImage) {
+                        const imgElement = document.createElement('div');
+                        imgElement.innerHTML = `<img src="${window._lastUploadedImage}" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
+                        imgElement.classList.add('fade-in');
+                        messageContent.appendChild(imgElement);
+                    }
+
+                    // Затем анимируем текст
+                    setTimeout(() => {
+                        // Сначала описание (тип + объяснение)
+                        typeHTML(messageContent, analysisHTML, 20, () => {
+                            // После окончания описания — палитры и сочетания по очереди
+                            let palettePromise = Promise.resolve();
+                            if (data.dark_colors_hex) {
+                                palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Тёмные цвета', data.dark_colors_hex));
+                            }
+                            if (data.bright_colors_hex) {
+                                palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Яркие цвета', data.bright_colors_hex));
+                            }
+                            if (data.light_colors_hex) {
+                                palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Светлые цвета', data.light_colors_hex));
+                            }
+                            if (data.color_combinations_svg) {
+                                palettePromise = palettePromise.then(() => addColorCombinations(messageContent, data.color_combinations_svg));
+                            }
+                            palettePromise.then(() => {
+                                setTimeout(addGuideOffer, 500);
+                            });
                         });
-                    });
-                }, 600);
-            } catch (error) {
-                console.error('Error:', error);
-                const errorMessage = createAIMessage();
-                typeText(errorMessage, `Произошла ошибка при анализе фото: ${error.message}. Пожалуйста, попробуйте еще раз.`, 20);
-            } finally {
-                if (loadingIndicator) {
-                    loadingIndicator.style.display = 'none';
-                }
-            }
+                    }, 500);
+                })
+                .catch(error => {
+                    loading.style.display = 'none';
+                    errorMessage.textContent = 'Произошла ошибка при загрузке файла';
+                    errorMessage.style.display = 'block';
+                });
+            });
         }
 
         function typeHTML(element, html, speed = 30, onDone) {
@@ -1000,7 +984,7 @@
                     
                     // Добавляем контейнер с кнопками в сообщение пользователя
                     userMessage.appendChild(buttonsContainer);
-
+                    
                     // Добавляем сообщение пользователя в чат
                     chatMessages.appendChild(userMessage);
 
@@ -1078,7 +1062,7 @@
                 closeBtn.onclick = function() {
                     modal.remove();
                 };
-                }
+            }
 
             const payBtn = modal.querySelector('#subscriptionPayBtn');
             if (payBtn) {
@@ -1091,7 +1075,7 @@
                         errorDiv.textContent = 'Пожалуйста, введите корректный email';
                         errorDiv.style.display = 'block';
                         return;
-        }
+                    }
 
                     const publicId = '{{ config.CLOUDPAYMENTS_PUBLIC_ID }}';
                     const analysisId = localStorage.getItem('lastAnalysisId');
@@ -1123,7 +1107,7 @@
                     })
                     .catch(function (reason) {
                         console.log('Payment widget error:', reason);
-        });
+                    });
                 };
             }
 
