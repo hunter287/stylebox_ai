@@ -492,6 +492,7 @@
     </div>
 
     <script src="https://widget.cloudpayments.ru/bundles/cloudpayments.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
     <script>
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
@@ -542,95 +543,146 @@
             }
         }
 
+        function fixImageOrientation(file) {
+            return new Promise((resolve) => {
+                EXIF.getData(file, function() {
+                    const orientation = EXIF.getTag(this, 'Orientation');
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = new Image();
+                        img.onload = function() {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            
+                            // Устанавливаем размеры canvas в соответствии с ориентацией
+                            if (img.width > img.height) {
+                                canvas.width = img.height;
+                                canvas.height = img.width;
+                                ctx.translate(canvas.width/2, canvas.height/2);
+                                
+                                // Определяем направление поворота на основе EXIF
+                                if (orientation === 6) {
+                                    // Поворот по часовой стрелке
+                                    ctx.rotate(Math.PI/2);
+                                } else if (orientation === 8) {
+                                    // Поворот против часовой стрелки
+                                    ctx.rotate(-Math.PI/2);
+                                }
+                                
+                                ctx.drawImage(img, -img.height/2, -img.width/2);
+                            } else {
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+                                ctx.drawImage(img, 0, 0);
+                            }
+                            
+                            // Конвертируем canvas в Blob
+                            canvas.toBlob((blob) => {
+                                resolve(new File([blob], file.name, {
+                                    type: file.type,
+                                    lastModified: file.lastModified
+                                }));
+                            }, file.type);
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+        }
+
         function uploadFile(file) {
-            const formData = new FormData();
-            formData.append('image', file);
-            // Добавляем email, если он есть в localStorage
-            const lastEmail = localStorage.getItem('lastGuideEmail');
-            if (lastEmail) {
-                formData.append('email', lastEmail);
-            }
-
-            // Показываем превью изображения
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                window._lastUploadedImage = e.target.result;
-            };
-            reader.readAsDataURL(file);
-
-            // Показываем индикатор загрузки
-            loading.style.display = 'block';
-            errorMessage.style.display = 'none';
-            resultContainer.style.display = 'none';
-
-            fetch('/analyze', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                loading.style.display = 'none';
-                if (data.error) {
-                    errorMessage.textContent = data.error;
-                    errorMessage.style.display = 'block';
-                    return;
+            // Сначала исправляем ориентацию изображения
+            fixImageOrientation(file).then(fixedFile => {
+                const formData = new FormData();
+                formData.append('image', fixedFile);
+                // Добавляем email, если он есть в localStorage
+                const lastEmail = localStorage.getItem('lastGuideEmail');
+                if (lastEmail) {
+                    formData.append('email', lastEmail);
                 }
 
-                // Сохраняем analysis_id для оплаты
-                if (data.analysis_id) {
-                    localStorage.setItem('lastAnalysisId', data.analysis_id);
-                }
+                // Показываем превью изображения
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    window._lastUploadedImage = e.target.result;
+                };
+                reader.readAsDataURL(fixedFile);
 
-                // Добавляем ответ AI с расширенным анализом
-                const messageContent = createAIMessage();
-                
-                // Создаем HTML для текстовой части анализа
-                const analysisHTML = `
-                    <p>Ваш цветотип: <strong>${data.color_type}</strong></p>
-                    <p>${data.explanation}</p>
-                `;
+                // Показываем индикатор загрузки
+                loading.style.display = 'block';
+                errorMessage.style.display = 'none';
+                resultContainer.style.display = 'none';
 
-                // Сначала показываем изображение
-                if (data.analysis_id) {
-                    const imgElement = document.createElement('div');
-                    imgElement.innerHTML = `<img src="/static/reports/last_image_${data.analysis_id}.jpg" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
-                    imgElement.classList.add('fade-in');
-                    messageContent.appendChild(imgElement);
-                } else if (window._lastUploadedImage) {
-                    const imgElement = document.createElement('div');
-                    imgElement.innerHTML = `<img src="${window._lastUploadedImage}" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
-                    imgElement.classList.add('fade-in');
-                    messageContent.appendChild(imgElement);
-                }
+                fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    loading.style.display = 'none';
+                    if (data.error) {
+                        errorMessage.textContent = data.error;
+                        errorMessage.style.display = 'block';
+                        return;
+                    }
 
-                // Затем анимируем текст
-                setTimeout(() => {
-                    // Сначала описание (тип + объяснение)
-                    typeHTML(messageContent, analysisHTML, 20, () => {
-                        // После окончания описания — палитры и сочетания по очереди
-                        let palettePromise = Promise.resolve();
-                        if (data.dark_colors_hex) {
-                            palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Тёмные цвета', data.dark_colors_hex));
-                        }
-                        if (data.bright_colors_hex) {
-                            palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Яркие цвета', data.bright_colors_hex));
-                        }
-                        if (data.light_colors_hex) {
-                            palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Светлые цвета', data.light_colors_hex));
-                        }
-                        if (data.color_combinations_svg) {
-                            palettePromise = palettePromise.then(() => addColorCombinations(messageContent, data.color_combinations_svg));
-                        }
-                        palettePromise.then(() => {
-                            setTimeout(addGuideOffer, 500);
+                    // Сохраняем analysis_id для оплаты
+                    if (data.analysis_id) {
+                        localStorage.setItem('lastAnalysisId', data.analysis_id);
+                    }
+
+                    // Добавляем ответ AI с расширенным анализом
+                    const messageContent = createAIMessage();
+                    
+                    // Создаем HTML для текстовой части анализа
+                    const analysisHTML = `
+                        <p>Ваш цветотип: <strong>${data.color_type}</strong></p>
+                        <p>${data.explanation}</p>
+                    `;
+
+                    // Сначала показываем изображение
+                    if (data.analysis_id) {
+                        const imgElement = document.createElement('div');
+                        imgElement.innerHTML = `<img src="/static/reports/last_image_${data.analysis_id}.jpg" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
+                        imgElement.classList.add('fade-in');
+                        messageContent.appendChild(imgElement);
+                    } else if (window._lastUploadedImage) {
+                        const imgElement = document.createElement('div');
+                        imgElement.innerHTML = `<img src="${window._lastUploadedImage}" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
+                        imgElement.classList.add('fade-in');
+                        messageContent.appendChild(imgElement);
+                    }
+
+                    // Затем анимируем текст
+                    setTimeout(() => {
+                        // Сначала описание (тип + объяснение)
+                        typeHTML(messageContent, analysisHTML, 20, () => {
+                            // После окончания описания — палитры и сочетания по очереди
+                            let palettePromise = Promise.resolve();
+                            if (data.dark_colors_hex) {
+                                palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Тёмные цвета', data.dark_colors_hex));
+                            }
+                            if (data.bright_colors_hex) {
+                                palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Яркие цвета', data.bright_colors_hex));
+                            }
+                            if (data.light_colors_hex) {
+                                palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Светлые цвета', data.light_colors_hex));
+                            }
+                            if (data.color_combinations_svg) {
+                                palettePromise = palettePromise.then(() => addColorCombinations(messageContent, data.color_combinations_svg));
+                            }
+                            palettePromise.then(() => {
+                                setTimeout(addGuideOffer, 500);
+                            });
                         });
-                    });
-                }, 500);
-            })
-            .catch(error => {
-                loading.style.display = 'none';
-                errorMessage.textContent = 'Произошла ошибка при загрузке файла';
-                errorMessage.style.display = 'block';
+                    }, 500);
+                })
+                .catch(error => {
+                    loading.style.display = 'none';
+                    errorMessage.textContent = 'Произошла ошибка при загрузке файла';
+                    errorMessage.style.display = 'block';
+                });
             });
         }
 
