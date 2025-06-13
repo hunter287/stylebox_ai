@@ -593,12 +593,11 @@
             }
         }
 
-        // Функция для исправления ориентации изображения с учетом EXIF
+        // Функция для исправления ориентации изображения с учетом EXIF (чтение из файла)
         async function fixImageOrientation(file) {
-            // Если файл HEIC, сначала конвертируем его в JPEG
+            // HEIC → JPEG
             if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
                 try {
-                    console.log('Конвертируем HEIC в JPEG...');
                     const jpegBlob = await heic2any({
                         blob: file,
                         toType: 'image/jpeg',
@@ -608,77 +607,53 @@
                         type: 'image/jpeg',
                         lastModified: Date.now()
                     });
-                    console.log('Конвертация завершена');
                 } catch (error) {
-                    console.error('Ошибка при конвертации HEIC:', error);
                     throw new Error('Не удалось обработать HEIC файл');
                 }
             }
 
+            // 1. Считываем ориентацию из исходного файла
+            const orientation = await new Promise((resolve) => {
+                EXIF.getData(file, function() {
+                    resolve(EXIF.getTag(this, 'Orientation') || 1);
+                });
+            });
+
+            // 2. Читаем картинку и рисуем на canvas с учетом ориентации
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const img = new Image();
                     img.onload = function() {
-                        // Читаем EXIF-Orientation
-                        EXIF.getData(img, function() {
-                            let orientation = EXIF.getTag(this, 'Orientation') || 1;
-                            let canvas = document.createElement('canvas');
-                            let ctx = canvas.getContext('2d');
-                            let width = img.width;
-                            let height = img.height;
-                            // Определяем размеры canvas и трансформацию
-                            if (orientation > 4) {
-                                canvas.width = height;
-                                canvas.height = width;
-                            } else {
-                                canvas.width = width;
-                                canvas.height = height;
-                            }
-                            // Трансформация по ориентации
-                            switch (orientation) {
-                                case 2: // horizontal flip
-                                    ctx.translate(width, 0);
-                                    ctx.scale(-1, 1);
-                                    break;
-                                case 3: // 180°
-                                    ctx.translate(width, height);
-                                    ctx.rotate(Math.PI);
-                                    break;
-                                case 4: // vertical flip
-                                    ctx.translate(0, height);
-                                    ctx.scale(1, -1);
-                                    break;
-                                case 5: // vertical flip + 90°
-                                    ctx.rotate(0.5 * Math.PI);
-                                    ctx.scale(1, -1);
-                                    break;
-                                case 6: // 90°
-                                    ctx.rotate(0.5 * Math.PI);
-                                    ctx.translate(0, -height);
-                                    break;
-                                case 7: // horizontal flip + 90°
-                                    ctx.rotate(0.5 * Math.PI);
-                                    ctx.translate(width, -height);
-                                    ctx.scale(-1, 1);
-                                    break;
-                                case 8: // -90°
-                                    ctx.rotate(-0.5 * Math.PI);
-                                    ctx.translate(-width, 0);
-                                    break;
-                                default:
-                                    // orientation == 1: ничего не делаем
-                                    break;
-                            }
-                            ctx.drawImage(img, 0, 0);
-                            canvas.toBlob((blob) => {
-                                const fixedFile = new File([blob], file.name, {
-                                    type: file.type,
-                                    lastModified: Date.now()
-                                });
-                                resolve(fixedFile);
-                            }, file.type);
-                        });
+                        let canvas = document.createElement('canvas');
+                        let ctx = canvas.getContext('2d');
+                        let width = img.width;
+                        let height = img.height;
+                        if (orientation > 4) {
+                            canvas.width = height;
+                            canvas.height = width;
+                        } else {
+                            canvas.width = width;
+                            canvas.height = height;
+                        }
+                        switch (orientation) {
+                            case 2: ctx.translate(width, 0); ctx.scale(-1, 1); break;
+                            case 3: ctx.translate(width, height); ctx.rotate(Math.PI); break;
+                            case 4: ctx.translate(0, height); ctx.scale(1, -1); break;
+                            case 5: ctx.rotate(0.5 * Math.PI); ctx.scale(1, -1); break;
+                            case 6: ctx.rotate(0.5 * Math.PI); ctx.translate(0, -height); break;
+                            case 7: ctx.rotate(0.5 * Math.PI); ctx.translate(width, -height); ctx.scale(-1, 1); break;
+                            case 8: ctx.rotate(-0.5 * Math.PI); ctx.translate(-width, 0); break;
+                            default: break;
+                        }
+                        ctx.drawImage(img, 0, 0);
+                        canvas.toBlob((blob) => {
+                            const fixedFile = new File([blob], file.name, {
+                                type: file.type,
+                                lastModified: Date.now()
+                            });
+                            resolve(fixedFile);
+                        }, file.type);
                     };
                     img.onerror = reject;
                     img.src = e.target.result;
