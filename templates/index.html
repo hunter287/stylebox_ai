@@ -633,6 +633,21 @@
                 }
                 const data = await response.json();
                 console.log('Данные анализа:', data);
+                // Выводим debug_log, если есть
+                if (data.debug_log) {
+                    const debugBlock = document.createElement('div');
+                    debugBlock.style.background = '#f3f4f6';
+                    debugBlock.style.color = '#374151';
+                    debugBlock.style.fontFamily = 'monospace';
+                    debugBlock.style.fontSize = '0.95em';
+                    debugBlock.style.padding = '10px 16px';
+                    debugBlock.style.margin = '16px 0 0 0';
+                    debugBlock.style.borderRadius = '8px';
+                    debugBlock.style.whiteSpace = 'pre-line';
+                    debugBlock.innerText = 'DEBUG LOG:\n' + data.debug_log.join('\n');
+                    chatMessages.appendChild(debugBlock);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
                 if (data.error) {
                     throw new Error(data.error);
                 }
