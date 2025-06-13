@@ -131,6 +131,13 @@ def fix_orientation_pillow(image):
         print('EXIF orientation error:', e)
     return image
 
+def force_vertical(image):
+    w, h = image.size
+    if w > h:
+        # Повернуть на 90 градусов по часовой стрелке
+        image = image.rotate(270, expand=True)
+    return image
+
 @app.route('/')
 def index():
     return render_template('index.html', config={'CLOUDPAYMENTS_PUBLIC_ID': CLOUDPAYMENTS_PUBLIC_ID})
@@ -196,6 +203,7 @@ def analyze():
                 logger.info(f"Размер: {img.size}")
                 logger.info(f"Режим: {img.mode}")
                 img = fix_orientation_pillow(img)
+                img = force_vertical(img)
                 img.save(filepath)
         except UnidentifiedImageError:
             logger.error(f"Неподдерживаемый формат изображения: {filepath}")
