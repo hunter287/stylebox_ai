@@ -593,9 +593,17 @@
             }
         }
 
-        // Функция для исправления ориентации изображения с учетом EXIF (чтение из файла)
+        // Функция для исправления ориентации изображения с учетом EXIF (чтение из исходного файла ДО конвертации)
         async function fixImageOrientation(file) {
-            // HEIC → JPEG
+            // 1. Считываем ориентацию из исходного файла ДО конвертации
+            const originalOrientation = await new Promise((resolve) => {
+                EXIF.getData(file, function() {
+                    resolve(EXIF.getTag(this, 'Orientation') || 1);
+                });
+            });
+            console.log('EXIF orientation (original):', originalOrientation);
+
+            // 2. HEIC → JPEG (если нужно)
             if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
                 try {
                     const jpegBlob = await heic2any({
@@ -612,14 +620,7 @@
                 }
             }
 
-            // 1. Считываем ориентацию из исходного файла
-            const orientation = await new Promise((resolve) => {
-                EXIF.getData(file, function() {
-                    resolve(EXIF.getTag(this, 'Orientation') || 1);
-                });
-            });
-
-            // 2. Читаем картинку и рисуем на canvas с учетом ориентации
+            // 3. Читаем картинку и рисуем на canvas с учетом orientation из исходного файла
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = function(e) {
@@ -629,14 +630,14 @@
                         let ctx = canvas.getContext('2d');
                         let width = img.width;
                         let height = img.height;
-                        if (orientation > 4) {
+                        if (originalOrientation > 4) {
                             canvas.width = height;
                             canvas.height = width;
                         } else {
                             canvas.width = width;
                             canvas.height = height;
                         }
-                        switch (orientation) {
+                        switch (originalOrientation) {
                             case 2: ctx.translate(width, 0); ctx.scale(-1, 1); break;
                             case 3: ctx.translate(width, height); ctx.rotate(Math.PI); break;
                             case 4: ctx.translate(0, height); ctx.scale(1, -1); break;
