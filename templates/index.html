@@ -819,7 +819,10 @@
                 <div class="message-content"></div>
             `;
             chatMessages.appendChild(aiMessage);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Плавная прокрутка к новому сообщению
+            aiMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
             return aiMessage.querySelector('.message-content');
         }
 
@@ -984,7 +987,7 @@
                     
                     // Добавляем контейнер с кнопками в сообщение пользователя
                     userMessage.appendChild(buttonsContainer);
-                    
+
                     // Добавляем сообщение пользователя в чат
                     chatMessages.appendChild(userMessage);
 
@@ -998,6 +1001,8 @@
                             const dropZone = document.getElementById('dropZone');
                             if (dropZone) {
                                 dropZone.style.display = 'block';
+                                // Плавная прокрутка к зоне загрузки
+                                dropZone.scrollIntoView({ behavior: 'smooth', block: 'start' });
                             }
                             
                             // Создаем новое сообщение бота
@@ -1009,6 +1014,9 @@
                             `;
                             chatMessages.appendChild(aiMessage);
                             const messageContent = aiMessage.querySelector('.message-content');
+                            
+                            // Плавная прокрутка к новому сообщению
+                            aiMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
                             
                             // Печатаем сообщение
                             typeText(messageContent, 'Загрузите фотографию с хорошо освещённым лицом, желательно при естественном свете 👇', 20);
@@ -1062,7 +1070,7 @@
                 closeBtn.onclick = function() {
                     modal.remove();
                 };
-            }
+                }
 
             const payBtn = modal.querySelector('#subscriptionPayBtn');
             if (payBtn) {
@@ -1075,7 +1083,7 @@
                         errorDiv.textContent = 'Пожалуйста, введите корректный email';
                         errorDiv.style.display = 'block';
                         return;
-                    }
+        }
 
                     const publicId = '{{ config.CLOUDPAYMENTS_PUBLIC_ID }}';
                     const analysisId = localStorage.getItem('lastAnalysisId');
@@ -1107,7 +1115,7 @@
                     })
                     .catch(function (reason) {
                         console.log('Payment widget error:', reason);
-                    });
+        });
                 };
             }
 
