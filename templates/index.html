@@ -530,41 +530,41 @@
             // Инициализация drag & drop
             if (dropZone) {
                 console.log('Инициализация drag & drop');
-                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                    dropZone.addEventListener(eventName, preventDefaults, false);
-                });
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
 
-                function preventDefaults(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
 
-                ['dragenter', 'dragover'].forEach(eventName => {
-                    dropZone.addEventListener(eventName, highlight, false);
-                });
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
 
-                ['dragleave', 'drop'].forEach(eventName => {
-                    dropZone.addEventListener(eventName, unhighlight, false);
-                });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
 
-                function highlight(e) {
+        function highlight(e) {
                     dropZone.classList.add('highlight');
-                }
+        }
 
-                function unhighlight(e) {
+        function unhighlight(e) {
                     dropZone.classList.remove('highlight');
-                }
+        }
 
-                dropZone.addEventListener('drop', handleDrop, false);
+        dropZone.addEventListener('drop', handleDrop, false);
 
-                function handleDrop(e) {
+        function handleDrop(e) {
                     console.log('Drop event triggered');
-                    const dt = e.dataTransfer;
-                    const files = dt.files;
+            const dt = e.dataTransfer;
+            const files = dt.files;
                     if (files.length > 0) {
                         console.log('Файл перетащен:', files[0].name);
-                        handleFiles({ target: { files: files } });
-                    }
+            handleFiles({ target: { files: files } });
+        }
                 }
             } else {
                 console.error('drop-zone не найден');
@@ -593,20 +593,8 @@
             }
         }
 
-        // Функция для исправления ориентации изображения
+        // Функция для исправления ориентации изображения с учетом EXIF
         async function fixImageOrientation(file) {
-            let orientation = 1;
-            // Считываем ориентацию через exif-js
-            try {
-                const arrayBuffer = await file.arrayBuffer();
-                const exif = EXIF.readFromBinaryFile(arrayBuffer);
-                if (exif && exif.Orientation) {
-                    orientation = exif.Orientation;
-                }
-            } catch (e) {
-                console.warn('Не удалось прочитать EXIF:', e);
-            }
-
             // Если файл HEIC, сначала конвертируем его в JPEG
             if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
                 try {
@@ -627,67 +615,70 @@
                 }
             }
 
-            // Теперь рисуем на canvas с учетом ориентации
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const img = new Image();
                     img.onload = function() {
-                        let canvas = document.createElement('canvas');
-                        let ctx = canvas.getContext('2d');
-                        let w = img.width;
-                        let h = img.height;
-                        // Определяем размеры canvas и трансформацию
-                        if (orientation > 4) {
-                            canvas.width = h;
-                            canvas.height = w;
-                        } else {
-                            canvas.width = w;
-                            canvas.height = h;
-                        }
-                        // Трансформация согласно EXIF
-                        switch (orientation) {
-                            case 2: // horizontal flip
-                                ctx.translate(w, 0);
-                                ctx.scale(-1, 1);
-                                break;
-                            case 3: // 180°
-                                ctx.translate(w, h);
-                                ctx.rotate(Math.PI);
-                                break;
-                            case 4: // vertical flip
-                                ctx.translate(0, h);
-                                ctx.scale(1, -1);
-                                break;
-                            case 5: // vertical flip + 90° CW
-                                ctx.rotate(0.5 * Math.PI);
-                                ctx.scale(1, -1);
-                                break;
-                            case 6: // 90° CW
-                                ctx.rotate(0.5 * Math.PI);
-                                ctx.translate(0, -h);
-                                break;
-                            case 7: // horizontal flip + 90° CW
-                                ctx.rotate(0.5 * Math.PI);
-                                ctx.translate(w, -h);
-                                ctx.scale(-1, 1);
-                                break;
-                            case 8: // 90° CCW
-                                ctx.rotate(-0.5 * Math.PI);
-                                ctx.translate(-w, 0);
-                                break;
-                            default:
-                                // Ориентация 1 — ничего не делаем
-                                break;
-                        }
-                        ctx.drawImage(img, 0, 0);
-                        canvas.toBlob((blob) => {
-                            const fixedFile = new File([blob], file.name, {
-                                type: file.type,
-                                lastModified: Date.now()
-                            });
-                            resolve(fixedFile);
-                        }, file.type);
+                        // Читаем EXIF-Orientation
+                        EXIF.getData(img, function() {
+                            let orientation = EXIF.getTag(this, 'Orientation') || 1;
+                            let canvas = document.createElement('canvas');
+                            let ctx = canvas.getContext('2d');
+                            let width = img.width;
+                            let height = img.height;
+                            // Определяем размеры canvas и трансформацию
+                            if (orientation > 4) {
+                                canvas.width = height;
+                                canvas.height = width;
+                            } else {
+                                canvas.width = width;
+                                canvas.height = height;
+                            }
+                            // Трансформация по ориентации
+                            switch (orientation) {
+                                case 2: // horizontal flip
+                                    ctx.translate(width, 0);
+                                    ctx.scale(-1, 1);
+                                    break;
+                                case 3: // 180°
+                                    ctx.translate(width, height);
+                                    ctx.rotate(Math.PI);
+                                    break;
+                                case 4: // vertical flip
+                                    ctx.translate(0, height);
+                                    ctx.scale(1, -1);
+                                    break;
+                                case 5: // vertical flip + 90°
+                                    ctx.rotate(0.5 * Math.PI);
+                                    ctx.scale(1, -1);
+                                    break;
+                                case 6: // 90°
+                                    ctx.rotate(0.5 * Math.PI);
+                                    ctx.translate(0, -height);
+                                    break;
+                                case 7: // horizontal flip + 90°
+                                    ctx.rotate(0.5 * Math.PI);
+                                    ctx.translate(width, -height);
+                                    ctx.scale(-1, 1);
+                                    break;
+                                case 8: // -90°
+                                    ctx.rotate(-0.5 * Math.PI);
+                                    ctx.translate(-width, 0);
+                                    break;
+                                default:
+                                    // orientation == 1: ничего не делаем
+                                    break;
+                            }
+                            ctx.drawImage(img, 0, 0);
+                            canvas.toBlob((blob) => {
+                                const fixedFile = new File([blob], file.name, {
+                                    type: file.type,
+                                    lastModified: Date.now()
+                                });
+                                resolve(fixedFile);
+                            }, file.type);
+                        });
                     };
                     img.onerror = reject;
                     img.src = e.target.result;
@@ -1118,7 +1109,7 @@
                     
                     // Добавляем контейнер с кнопками в сообщение пользователя
                     userMessage.appendChild(buttonsContainer);
-                    
+
                     // Добавляем сообщение пользователя в чат
                     chatMessages.appendChild(userMessage);
 
@@ -1196,7 +1187,7 @@
                 closeBtn.onclick = function() {
                     modal.remove();
                 };
-            }
+                }
 
             const payBtn = modal.querySelector('#subscriptionPayBtn');
             if (payBtn) {
@@ -1209,7 +1200,7 @@
                         errorDiv.textContent = 'Пожалуйста, введите корректный email';
                         errorDiv.style.display = 'block';
                         return;
-                    }
+        }
 
                     const publicId = '{{ config.CLOUDPAYMENTS_PUBLIC_ID }}';
                     const analysisId = localStorage.getItem('lastAnalysisId');
@@ -1241,7 +1232,7 @@
                     })
                     .catch(function (reason) {
                         console.log('Payment widget error:', reason);
-                    });
+        });
                 };
             }
 

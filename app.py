@@ -18,7 +18,7 @@ import re
 import shutil
 import uuid
 import pillow_heif
-from PIL import Image, UnidentifiedImageError, ExifTags
+from PIL import Image, UnidentifiedImageError
 import logging
 import gspread
 from google.oauth2.service_account import Credentials
@@ -113,31 +113,6 @@ def cleanup_temp_files(filepath):
     except Exception as e:
         logger.error(f"Ошибка при удалении временного файла {filepath}: {str(e)}")
 
-def fix_orientation_pillow(image):
-    try:
-        exif = image._getexif()
-        if exif is not None:
-            orientation_key = next(
-                k for k, v in ExifTags.TAGS.items() if v == 'Orientation'
-            )
-            orientation = exif.get(orientation_key, 1)
-            if orientation == 3:
-                image = image.rotate(180, expand=True)
-            elif orientation == 6:
-                image = image.rotate(270, expand=True)
-            elif orientation == 8:
-                image = image.rotate(90, expand=True)
-    except Exception as e:
-        print('EXIF orientation error:', e)
-    return image
-
-def force_vertical(image):
-    w, h = image.size
-    if w > h:
-        # Повернуть на 90 градусов по часовой стрелке
-        image = image.rotate(270, expand=True)
-    return image
-
 @app.route('/')
 def index():
     return render_template('index.html', config={'CLOUDPAYMENTS_PUBLIC_ID': CLOUDPAYMENTS_PUBLIC_ID})
@@ -202,9 +177,6 @@ def analyze():
                 logger.info(f"Формат изображения: {img.format}")
                 logger.info(f"Размер: {img.size}")
                 logger.info(f"Режим: {img.mode}")
-                img = fix_orientation_pillow(img)
-                img = force_vertical(img)
-                img.save(filepath)
         except UnidentifiedImageError:
             logger.error(f"Неподдерживаемый формат изображения: {filepath}")
             # cleanup_temp_files(filepath)
