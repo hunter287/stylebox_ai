@@ -65,45 +65,12 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'heic', 'heif'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def fix_orientation(img):
-    """Поворачивает изображение согласно EXIF Orientation, если нужно"""
-    try:
-        exif = img._getexif()
-        if exif:
-            orientation_tag = None
-            for tag, value in ExifTags.TAGS.items():
-                if value == 'Orientation':
-                    orientation_tag = tag
-                    break
-            if orientation_tag:
-                orientation = exif.get(orientation_tag, 1)
-                if orientation == 3:
-                    img = img.rotate(180, expand=True)
-                    logger.info("EXIF: Применен поворот на 180 градусов")
-                elif orientation == 6:
-                    img = img.rotate(270, expand=True)
-                    logger.info("EXIF: Применен поворот на 270 градусов (Rotate 90 CW)")
-                elif orientation == 8:
-                    img = img.rotate(90, expand=True)
-                    logger.info("EXIF: Применен поворот на 90 градусов (Rotate 270 CW)")
-                else:
-                    logger.info(f"EXIF: Ориентация {orientation}, поворот не требуется")
-            else:
-                logger.info("EXIF: Тег Orientation не найден")
-        else:
-            logger.info("EXIF: Данные отсутствуют")
-    except Exception as e:
-        logger.info(f'EXIF orientation error: {e}')
-    return img
-
 def convert_to_jpg(image_path):
     """Конвертирует изображение в JPG формат"""
     try:
         logger.info(f"Начало конвертации изображения: {image_path}")
         with Image.open(image_path) as img:
             logger.info(f"Исходное изображение: формат={img.format}, размер={img.size}, режим={img.mode}")
-            # Применяем EXIF-ориентацию
-            img = fix_orientation(img)
             # Если изображение в формате RGBA, конвертируем в RGB
             if img.mode in ('RGBA', 'LA'):
                 logger.info("Конвертация из RGBA/LA в RGB")
