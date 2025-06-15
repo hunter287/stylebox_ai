@@ -486,7 +486,6 @@
                 <button class="upload-button" onclick="document.getElementById('fileInput').click()">
                     Выбрать файл
                 </button>
-                <img id="preview" style="max-width: 220px; margin: 1rem auto 0 auto; display: none; border-radius: 1rem; box-shadow: 0 2px 8px #0001;" />
                 <div id="heic-warning" style="display: none; color: #bb279b; margin-top: 0.5rem;">HEIC-файл: конвертация...</div>
             </div>
 
@@ -561,10 +560,9 @@
         async function handlePreviewAndFiles(e) {
             const file = e.target.files[0];
             if (!file) return;
-            const img = document.getElementById('preview');
             const warning = document.getElementById('heic-warning');
-            img.style.display = 'none';
             warning.style.display = 'none';
+            let dataUrl = null;
             if (file.type === 'image/heic' || file.name.endsWith('.heic')) {
                 warning.style.display = 'block';
                 warning.textContent = 'HEIC-файл: конвертация...';
@@ -576,28 +574,42 @@
                     });
                     const reader = new FileReader();
                     reader.onload = function(e) {
-                        img.src = e.target.result;
-                        img.style.display = 'block';
+                        dataUrl = e.target.result;
                         warning.style.display = 'none';
-                        window._lastUploadedImage = e.target.result;
+                        showMainPreview(dataUrl); // Мгновенно показываем превью
                     };
                     reader.readAsDataURL(jpgBlob);
                 } catch (e) {
                     warning.textContent = 'Ошибка конвертации HEIC: ' + e;
-                    img.style.display = 'none';
-                    window._lastUploadedImage = null;
                 }
             } else {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    img.src = e.target.result;
-                    img.style.display = 'block';
-                    window._lastUploadedImage = e.target.result;
+                    dataUrl = e.target.result;
+                    showMainPreview(dataUrl); // Мгновенно показываем превью
                 };
                 reader.readAsDataURL(file);
             }
             // После превью — стандартная обработка загрузки
             handleFiles(e);
+        }
+
+        function showMainPreview(dataUrl) {
+            window._lastUploadedImage = dataUrl;
+            // Вставляем превью в чат как отдельное сообщение AI
+            const chatMessages = document.querySelector('.chat-messages');
+            const aiMessage = document.createElement('div');
+            aiMessage.className = 'message ai';
+            aiMessage.innerHTML = `
+                <div class="avatar">AI</div>
+                <div class="message-content">
+                    <div style="text-align:center;">
+                        <img src="${dataUrl}" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(aiMessage);
+            aiMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         function handleFiles(e) {
@@ -740,13 +752,8 @@
                         <p>${data.explanation}</p>
                     `;
 
-                    // Сначала показываем изображение
-                    if (window._lastUploadedImage) {
-                        const imgElement = document.createElement('div');
-                        imgElement.innerHTML = `<img src="${window._lastUploadedImage}" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
-                        imgElement.classList.add('fade-in');
-                        messageContent.appendChild(imgElement);
-                    } else if (data.analysis_id) {
+                    // Не добавлять фото, если window._lastUploadedImage уже показано
+                    if (!window._lastUploadedImage) {
                         const imgElement = document.createElement('div');
                         imgElement.innerHTML = `<img src="/static/reports/last_image_${data.analysis_id}.jpg" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
                         imgElement.classList.add('fade-in');
