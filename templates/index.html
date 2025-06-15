@@ -645,6 +645,13 @@
             chatMessages.appendChild(aiMessage);
             aiMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
             typeText(document.getElementById('preview-typing'), 'Сейчас проанализирую ваше фото', 20);
+            // Скроллим к индикатору загрузки, чтобы он был виден на мобильных
+            setTimeout(() => {
+                const loadingIndicator = document.getElementById('loadingIndicator');
+                if (loadingIndicator) {
+                    loadingIndicator.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 100);
         }
 
         function handleFiles(e) {
