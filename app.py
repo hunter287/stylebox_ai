@@ -72,41 +72,6 @@ def convert_to_jpg(image_path):
         with Image.open(image_path) as img:
             logger.info(f"Исходное изображение: формат={img.format}, размер={img.size}, режим={img.mode}")
             
-            # Проверяем соотношение сторон
-            width, height = img.size
-            aspect_ratio = width / height
-            is_4_3 = abs(aspect_ratio - 4/3) < 0.01  # Допускаем небольшую погрешность
-            logger.info(f"Соотношение сторон: {aspect_ratio:.2f}, 4:3: {is_4_3}")
-            
-            # Проверяем EXIF данные для ориентации
-            try:
-                exif = img._getexif()
-                if exif:
-                    logger.info(f"EXIF данные найдены: {exif}")
-                    orientation = exif.get(274)  # 274 - это тег ориентации в EXIF
-                    if orientation:
-                        logger.info(f"Тег ориентации: {orientation}")
-                        # Для изображений 4:3 с мобильных устройств
-                        if is_4_3 and orientation in [3, 6, 8]:
-                            logger.info("Обнаружено изображение 4:3 с ориентацией")
-                            # Не применяем поворот для изображений 4:3
-                            logger.info("Пропускаем поворот для изображения 4:3")
-                        else:
-                            # Применяем поворот в зависимости от ориентации
-                            if orientation == 3:
-                                img = img.rotate(180, expand=True)
-                                logger.info("Применен поворот на 180 градусов")
-                            elif orientation == 6:
-                                img = img.rotate(270, expand=True)
-                                logger.info("Применен поворот на 270 градусов")
-                            elif orientation == 8:
-                                img = img.rotate(90, expand=True)
-                                logger.info("Применен поворот на 90 градусов")
-                else:
-                    logger.info("EXIF данные не найдены")
-            except Exception as e:
-                logger.info(f"Ошибка при чтении EXIF: {str(e)}")
-            
             # Если изображение в формате RGBA, конвертируем в RGB
             if img.mode in ('RGBA', 'LA'):
                 logger.info("Конвертация из RGBA/LA в RGB")
@@ -228,41 +193,6 @@ def analyze():
                 # Пробуем открыть файл как HEIC до сохранения
                 with Image.open(file) as img:
                     logger.info(f"HEIC файл успешно открыт: формат={img.format}, размер={img.size}, режим={img.mode}")
-                    
-                    # Проверяем соотношение сторон
-                    width, height = img.size
-                    aspect_ratio = width / height
-                    is_4_3 = abs(aspect_ratio - 4/3) < 0.01  # Допускаем небольшую погрешность
-                    logger.info(f"Соотношение сторон HEIC: {aspect_ratio:.2f}, 4:3: {is_4_3}")
-                    
-                    # Проверяем EXIF данные
-                    try:
-                        exif = img._getexif()
-                        if exif:
-                            logger.info(f"EXIF данные HEIC: {exif}")
-                            orientation = exif.get(274)
-                            if orientation:
-                                logger.info(f"Тег ориентации HEIC: {orientation}")
-                                # Для изображений 4:3 с мобильных устройств
-                                if is_4_3 and orientation in [3, 6, 8]:
-                                    logger.info("Обнаружено изображение 4:3 с ориентацией")
-                                    # Не применяем поворот для изображений 4:3
-                                    logger.info("Пропускаем поворот для изображения 4:3")
-                                else:
-                                    # Применяем поворот в зависимости от ориентации
-                                    if orientation == 3:
-                                        img = img.rotate(180, expand=True)
-                                        logger.info("Применен поворот на 180 градусов")
-                                    elif orientation == 6:
-                                        img = img.rotate(270, expand=True)
-                                        logger.info("Применен поворот на 270 градусов")
-                                    elif orientation == 8:
-                                        img = img.rotate(90, expand=True)
-                                        logger.info("Применен поворот на 90 градусов")
-                        else:
-                            logger.info("EXIF данные не найдены в HEIC")
-                    except Exception as e:
-                        logger.info(f"Ошибка при чтении EXIF HEIC: {str(e)}")
             except Exception as e:
                 logger.error(f"Ошибка при проверке HEIC файла: {str(e)}")
                 logger.error(f"Traceback: {traceback.format_exc()}")
