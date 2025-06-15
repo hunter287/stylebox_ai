@@ -72,6 +72,10 @@ def convert_to_jpg(image_path):
         with Image.open(image_path) as img:
             logger.info(f"Исходное изображение: формат={img.format}, размер={img.size}, режим={img.mode}")
             
+            # Проверяем, является ли изображение квадратным
+            is_square = img.size[0] == img.size[1]
+            logger.info(f"Изображение квадратное: {is_square}")
+            
             # Проверяем EXIF данные для ориентации
             try:
                 exif = img._getexif()
@@ -80,16 +84,22 @@ def convert_to_jpg(image_path):
                     orientation = exif.get(274)  # 274 - это тег ориентации в EXIF
                     if orientation:
                         logger.info(f"Тег ориентации: {orientation}")
-                        # Применяем поворот в зависимости от ориентации
-                        if orientation == 3:
-                            img = img.rotate(180, expand=True)
-                            logger.info("Применен поворот на 180 градусов")
-                        elif orientation == 6:
-                            img = img.rotate(270, expand=True)
-                            logger.info("Применен поворот на 270 градусов")
-                        elif orientation == 8:
-                            img = img.rotate(90, expand=True)
-                            logger.info("Применен поворот на 90 градусов")
+                        # Для квадратных изображений с мобильных устройств
+                        if is_square and orientation in [3, 6, 8]:
+                            logger.info("Обнаружено квадратное изображение с ориентацией")
+                            # Не применяем поворот для квадратных изображений
+                            logger.info("Пропускаем поворот для квадратного изображения")
+                        else:
+                            # Применяем поворот в зависимости от ориентации
+                            if orientation == 3:
+                                img = img.rotate(180, expand=True)
+                                logger.info("Применен поворот на 180 градусов")
+                            elif orientation == 6:
+                                img = img.rotate(270, expand=True)
+                                logger.info("Применен поворот на 270 градусов")
+                            elif orientation == 8:
+                                img = img.rotate(90, expand=True)
+                                logger.info("Применен поворот на 90 градусов")
                 else:
                     logger.info("EXIF данные не найдены")
             except Exception as e:
@@ -216,6 +226,11 @@ def analyze():
                 # Пробуем открыть файл как HEIC до сохранения
                 with Image.open(file) as img:
                     logger.info(f"HEIC файл успешно открыт: формат={img.format}, размер={img.size}, режим={img.mode}")
+                    
+                    # Проверяем, является ли изображение квадратным
+                    is_square = img.size[0] == img.size[1]
+                    logger.info(f"HEIC изображение квадратное: {is_square}")
+                    
                     # Проверяем EXIF данные
                     try:
                         exif = img._getexif()
@@ -224,16 +239,22 @@ def analyze():
                             orientation = exif.get(274)
                             if orientation:
                                 logger.info(f"Тег ориентации HEIC: {orientation}")
-                                # Применяем поворот в зависимости от ориентации
-                                if orientation == 3:
-                                    img = img.rotate(180, expand=True)
-                                    logger.info("Применен поворот на 180 градусов")
-                                elif orientation == 6:
-                                    img = img.rotate(270, expand=True)
-                                    logger.info("Применен поворот на 270 градусов")
-                                elif orientation == 8:
-                                    img = img.rotate(90, expand=True)
-                                    logger.info("Применен поворот на 90 градусов")
+                                # Для квадратных изображений с мобильных устройств
+                                if is_square and orientation in [3, 6, 8]:
+                                    logger.info("Обнаружено квадратное HEIC изображение с ориентацией")
+                                    # Не применяем поворот для квадратных изображений
+                                    logger.info("Пропускаем поворот для квадратного HEIC изображения")
+                                else:
+                                    # Применяем поворот в зависимости от ориентации
+                                    if orientation == 3:
+                                        img = img.rotate(180, expand=True)
+                                        logger.info("Применен поворот на 180 градусов")
+                                    elif orientation == 6:
+                                        img = img.rotate(270, expand=True)
+                                        logger.info("Применен поворот на 270 градусов")
+                                    elif orientation == 8:
+                                        img = img.rotate(90, expand=True)
+                                        logger.info("Применен поворот на 90 градусов")
                         else:
                             logger.info("EXIF данные не найдены в HEIC")
                     except Exception as e:
