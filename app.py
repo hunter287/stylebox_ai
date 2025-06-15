@@ -72,6 +72,19 @@ def convert_to_jpg(image_path):
         with Image.open(image_path) as img:
             logger.info(f"Исходное изображение: формат={img.format}, размер={img.size}, режим={img.mode}")
             
+            # Проверяем EXIF данные для ориентации
+            try:
+                exif = img._getexif()
+                if exif:
+                    logger.info(f"EXIF данные найдены: {exif}")
+                    orientation = exif.get(274)  # 274 - это тег ориентации в EXIF
+                    if orientation:
+                        logger.info(f"Тег ориентации: {orientation}")
+                else:
+                    logger.info("EXIF данные не найдены")
+            except Exception as e:
+                logger.info(f"Ошибка при чтении EXIF: {str(e)}")
+            
             # Если изображение в формате RGBA, конвертируем в RGB
             if img.mode in ('RGBA', 'LA'):
                 logger.info("Конвертация из RGBA/LA в RGB")
@@ -208,6 +221,18 @@ def analyze():
                 # Пробуем открыть файл как HEIC до сохранения
                 with Image.open(file) as img:
                     logger.info(f"HEIC файл успешно открыт: формат={img.format}, размер={img.size}, режим={img.mode}")
+                    # Проверяем EXIF данные
+                    try:
+                        exif = img._getexif()
+                        if exif:
+                            logger.info(f"EXIF данные HEIC: {exif}")
+                            orientation = exif.get(274)
+                            if orientation:
+                                logger.info(f"Тег ориентации HEIC: {orientation}")
+                        else:
+                            logger.info("EXIF данные не найдены в HEIC")
+                    except Exception as e:
+                        logger.info(f"Ошибка при чтении EXIF HEIC: {str(e)}")
             except Exception as e:
                 logger.error(f"Ошибка при проверке HEIC файла: {str(e)}")
                 logger.error(f"Traceback: {traceback.format_exc()}")
