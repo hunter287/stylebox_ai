@@ -482,7 +482,7 @@
             <div class="upload-area" id="dropZone">
                 <div class="upload-icon">📸</div>
                 <div class="upload-text">Перетащите фотографию сюда или нажмите для выбора</div>
-                <input type="file" id="fileInput" accept="image/*" style="display: none">
+                <input type="file" id="fileInput" accept="image/jpeg,image/png,image/heic,image/heif" style="display: none">
                 <button class="upload-button" onclick="document.getElementById('fileInput').click()">
                     Выбрать файл
                 </button>
@@ -564,30 +564,42 @@
 
         function fixImageOrientation(file) {
             return new Promise((resolve) => {
-                EXIF.getData(file, function() {
-                    const orientation = EXIF.getTag(this, 'Orientation');
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const img = new Image();
-                        img.onload = function() {
-                            const canvas = document.createElement('canvas');
-                            const ctx = canvas.getContext('2d');
+                const objectUrl = URL.createObjectURL(file);
+                const img = new Image();
+                
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Для HEIC файлов используем оригинальные размеры
+                    if (file.type === 'image/heic' || file.type === 'image/heif') {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        
+                        canvas.toBlob((blob) => {
+                            URL.revokeObjectURL(objectUrl);
+                            resolve(new File([blob], file.name, {
+                                type: file.type,
+                                lastModified: file.lastModified
+                            }));
+                        }, file.type);
+                    } else {
+                        // Для остальных файлов проверяем EXIF
+                        EXIF.getData(file, function() {
+                            const orientation = EXIF.getTag(this, 'Orientation');
                             
-                            // Устанавливаем размеры canvas в соответствии с ориентацией
-                            if (img.width > img.height) {
+                            if (orientation === 6) {
                                 canvas.width = img.height;
                                 canvas.height = img.width;
                                 ctx.translate(canvas.width/2, canvas.height/2);
-                                
-                                // Определяем направление поворота на основе EXIF
-                                if (orientation === 6) {
-                                    // Поворот по часовой стрелке
-                                    ctx.rotate(Math.PI/2);
-                                } else if (orientation === 8) {
-                                    // Поворот против часовой стрелки
-                                    ctx.rotate(-Math.PI/2);
-                                }
-                                
+                                ctx.rotate(Math.PI/2);
+                                ctx.drawImage(img, -img.height/2, -img.width/2);
+                            } else if (orientation === 8) {
+                                canvas.width = img.height;
+                                canvas.height = img.width;
+                                ctx.translate(canvas.width/2, canvas.height/2);
+                                ctx.rotate(-Math.PI/2);
                                 ctx.drawImage(img, -img.height/2, -img.width/2);
                             } else {
                                 canvas.width = img.width;
@@ -595,40 +607,42 @@
                                 ctx.drawImage(img, 0, 0);
                             }
                             
-                            // Конвертируем canvas в Blob
                             canvas.toBlob((blob) => {
+                                URL.revokeObjectURL(objectUrl);
                                 resolve(new File([blob], file.name, {
                                     type: file.type,
                                     lastModified: file.lastModified
                                 }));
                             }, file.type);
-                        };
-                        img.src = e.target.result;
-                    };
-                    reader.readAsDataURL(file);
-                });
+                        });
+                    }
+                };
+                
+                img.onerror = function() {
+                    URL.revokeObjectURL(objectUrl);
+                    resolve(file);
+                };
+                
+                img.src = objectUrl;
             });
         }
 
         function uploadFile(file) {
-            // Сначала исправляем ориентацию изображения
             fixImageOrientation(file).then(fixedFile => {
                 const formData = new FormData();
                 formData.append('image', fixedFile);
-                // Добавляем email, если он есть в localStorage
+                
                 const lastEmail = localStorage.getItem('lastGuideEmail');
                 if (lastEmail) {
                     formData.append('email', lastEmail);
                 }
 
-                // Показываем превью изображения
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     window._lastUploadedImage = e.target.result;
                 };
                 reader.readAsDataURL(fixedFile);
 
-                // Показываем индикатор загрузки
                 loading.style.display = 'block';
                 errorMessage.style.display = 'none';
                 resultContainer.style.display = 'none';
@@ -637,7 +651,12 @@
                     method: 'POST',
                     body: formData
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     loading.style.display = 'none';
                     if (data.error) {
@@ -699,9 +718,13 @@
                 })
                 .catch(error => {
                     loading.style.display = 'none';
-                    errorMessage.textContent = 'Произошла ошибка при загрузке файла';
+                    errorMessage.textContent = 'Произошла ошибка при загрузке файла. Пожалуйста, попробуйте еще раз.';
                     errorMessage.style.display = 'block';
                 });
+            }).catch(error => {
+                loading.style.display = 'none';
+                errorMessage.textContent = 'Ошибка при обработке изображения. Пожалуйста, попробуйте еще раз.';
+                errorMessage.style.display = 'block';
             });
         }
 

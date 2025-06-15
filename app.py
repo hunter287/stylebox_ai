@@ -26,8 +26,16 @@ import traceback
 import time
 
 # Настройка логирования
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('app.log', encoding='utf-8'),
+        logging.StreamHandler()  # Для вывода в консоль
+    ]
+)
 logger = logging.getLogger(__name__)
+logger.info("Приложение запущено")
 
 # Регистрация поддержки HEIF
 pillow_heif.register_heif_opener()
@@ -60,21 +68,35 @@ def allowed_file(filename):
 def convert_to_jpg(image_path):
     """Конвертирует изображение в JPG формат"""
     try:
+        logger.info(f"Начало конвертации изображения: {image_path}")
         with Image.open(image_path) as img:
+            logger.info(f"Исходное изображение: формат={img.format}, размер={img.size}, режим={img.mode}")
+            
             # Если изображение в формате RGBA, конвертируем в RGB
             if img.mode in ('RGBA', 'LA'):
+                logger.info("Конвертация из RGBA/LA в RGB")
                 background = Image.new('RGB', img.size, (255, 255, 255))
                 background.paste(img, mask=img.split()[-1])
                 img = background
             elif img.mode != 'RGB':
+                logger.info(f"Конвертация из {img.mode} в RGB")
                 img = img.convert('RGB')
             
             # Сохраняем как JPG
             jpg_path = os.path.splitext(image_path)[0] + '.jpg'
+            logger.info(f"Сохранение JPG: {jpg_path}")
             img.save(jpg_path, 'JPEG', quality=95)
-            return jpg_path
+            
+            # Проверяем, что файл создался и имеет размер
+            if os.path.exists(jpg_path) and os.path.getsize(jpg_path) > 0:
+                logger.info(f"JPG успешно создан, размер: {os.path.getsize(jpg_path)} байт")
+                return jpg_path
+            else:
+                raise Exception("JPG файл не был создан или пустой")
+                
     except Exception as e:
         logger.error(f"Ошибка при конвертации изображения: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise
 
 def resize_image(image_path, max_size=800):
@@ -123,29 +145,23 @@ def payment_success():
 
 @app.route('/analyze', methods=['POST', 'GET'])
 def analyze():
-    # Если это GET-запрос и запрошен PDF
-    if request.method == 'GET' and ('pdf' in request.args or request.args.get('pdf') == '1'):
-        if 'last_analysis' in session and 'last_image_path' in session:
-            analysis = session['last_analysis']
-            image_path = session['last_image_path']
-            filename_wo_ext = os.path.splitext(os.path.basename(image_path))[0].lower()
-            pdf_path = os.path.join('static/reports', f'report_{filename_wo_ext}.pdf')
-            full_pdf_path = generate_pdf_report(analysis, image_path, output_path=pdf_path)
-            return send_file(
-                full_pdf_path,
-                mimetype='application/pdf',
-                as_attachment=True,
-                download_name=os.path.basename(full_pdf_path)
-            )
-        return jsonify({'error': 'No analysis found'}), 400
-
+    print("=== DEBUG: Запрос получен ===")  # Добавляем print для отладки
+    logger.info("=== Начало обработки запроса /analyze ===")
+    logger.info(f"Метод запроса: {request.method}")
+    logger.info(f"Заголовки запроса: {dict(request.headers)}")
+    logger.info(f"Форма запроса: {request.form}")
+    logger.info(f"Файлы в запросе: {request.files}")
+    
     if 'image' not in request.files:
+        logger.warning("Файл изображения не найден в запросе")
         # Если нет изображения, но запрошен PDF — используем кэш анализа
         if ('pdf' in request.form or request.args.get('pdf') == '1') and 'last_analysis' in session and 'last_image_path' in session:
+            logger.info("Найдены данные последнего анализа в сессии для PDF")
             analysis = session['last_analysis']
             image_path = session['last_image_path']
             filename_wo_ext = os.path.splitext(os.path.basename(image_path))[0].lower()
             pdf_path = os.path.join('static/reports', f'report_{filename_wo_ext}.pdf')
+            logger.info(f"Генерация PDF: {pdf_path}")
             full_pdf_path = generate_pdf_report(analysis, image_path, output_path=pdf_path)
             return send_file(
                 full_pdf_path,
@@ -157,46 +173,88 @@ def analyze():
     
     file = request.files['image']
     if file.filename == '':
+        logger.warning("Имя файла пустое")
         return jsonify({'error': 'No selected file'}), 400
     
+    logger.info(f"Получен файл: {file.filename}")
+    logger.info(f"Тип файла: {file.content_type}")
+    
+    # Проверяем, является ли файл HEIC
+    is_heic = file.filename.lower().endswith(('.heic', '.heif'))
+    logger.info(f"Файл HEIC/HEIF: {is_heic}")
+    
     if not allowed_file(file.filename):
+        logger.warning(f"Неподдерживаемый формат файла: {file.filename}")
         return jsonify({'error': f'Неподдерживаемый формат файла. Поддерживаемые форматы: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
     
     try:
         # Сохраняем файл
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        # Логируем информацию о файле до сохранения
+        logger.info("=== Информация о загружаемом файле ===")
+        logger.info(f"Исходное имя файла: {file.filename}")
+        logger.info(f"Безопасное имя файла: {filename}")
+        logger.info(f"Тип файла: {file.content_type}")
+        file_content = file.read()
+        logger.info(f"Размер файла: {len(file_content)} байт")
+        file.seek(0)  # Возвращаем указатель в начало файла
+        
+        # Проверяем, что это действительно HEIC файл
+        if is_heic:
+            logger.info("Обнаружен HEIC/HEIF файл")
+            try:
+                # Пробуем открыть файл как HEIC до сохранения
+                with Image.open(file) as img:
+                    logger.info(f"HEIC файл успешно открыт: формат={img.format}, размер={img.size}, режим={img.mode}")
+            except Exception as e:
+                logger.error(f"Ошибка при проверке HEIC файла: {str(e)}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                return jsonify({'error': 'Ошибка при проверке HEIC файла'}), 400
+        
+        logger.info(f"Сохранение файла: {filepath}")
         file.save(filepath)
         
         logger.info(f"Файл сохранен: {filepath}")
-        logger.info(f"Размер файла: {os.path.getsize(filepath)} байт")
+        logger.info(f"Размер файла на диске: {os.path.getsize(filepath)} байт")
+        logger.info(f"Тип файла: {file.content_type}")
 
         # Проверяем и конвертируем изображение если нужно
         try:
+            logger.info("Открытие изображения для проверки")
             with Image.open(filepath) as img:
                 logger.info(f"Формат изображения: {img.format}")
                 logger.info(f"Размер: {img.size}")
                 logger.info(f"Режим: {img.mode}")
+                
+                # Проверяем, что изображение не пустое
+                if img.size[0] == 0 or img.size[1] == 0:
+                    raise Exception("Изображение имеет нулевой размер")
+                
         except UnidentifiedImageError:
             logger.error(f"Неподдерживаемый формат изображения: {filepath}")
-            # cleanup_temp_files(filepath)
+            cleanup_temp_files(filepath)
             return jsonify({'error': 'Неподдерживаемый формат изображения'}), 400
         except Exception as e:
             logger.error(f"Ошибка при открытии изображения: {str(e)}")
-            # cleanup_temp_files(filepath)
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            cleanup_temp_files(filepath)
             return jsonify({'error': 'Ошибка при обработке изображения'}), 400
 
         # Конвертируем в JPG если это не JPG
         original_filepath = filepath
         if not filename.lower().endswith(('.jpg', '.jpeg')):
             try:
+                logger.info(f"Начало конвертации {filename} в JPG")
                 jpg_path = convert_to_jpg(filepath)
-                # cleanup_temp_files(filepath)  # Удаляем оригинальный файл
+                cleanup_temp_files(filepath)  # Удаляем оригинальный файл
                 filepath = jpg_path
                 logger.info(f"Изображение сконвертировано в JPG: {filepath}")
             except Exception as e:
                 logger.error(f"Ошибка при конвертации в JPG: {str(e)}")
-                # cleanup_temp_files(filepath)
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                cleanup_temp_files(filepath)
                 return jsonify({'error': 'Ошибка при конвертации изображения'}), 500
 
         # Изменяем размер изображения
