@@ -72,9 +72,11 @@ def convert_to_jpg(image_path):
         with Image.open(image_path) as img:
             logger.info(f"Исходное изображение: формат={img.format}, размер={img.size}, режим={img.mode}")
             
-            # Проверяем, является ли изображение квадратным
-            is_square = img.size[0] == img.size[1]
-            logger.info(f"Изображение квадратное: {is_square}")
+            # Проверяем соотношение сторон
+            width, height = img.size
+            aspect_ratio = width / height
+            is_4_3 = abs(aspect_ratio - 4/3) < 0.01  # Допускаем небольшую погрешность
+            logger.info(f"Соотношение сторон: {aspect_ratio:.2f}, 4:3: {is_4_3}")
             
             # Проверяем EXIF данные для ориентации
             try:
@@ -84,11 +86,11 @@ def convert_to_jpg(image_path):
                     orientation = exif.get(274)  # 274 - это тег ориентации в EXIF
                     if orientation:
                         logger.info(f"Тег ориентации: {orientation}")
-                        # Для квадратных изображений с мобильных устройств
-                        if is_square and orientation in [3, 6, 8]:
-                            logger.info("Обнаружено квадратное изображение с ориентацией")
-                            # Не применяем поворот для квадратных изображений
-                            logger.info("Пропускаем поворот для квадратного изображения")
+                        # Для изображений 4:3 с мобильных устройств
+                        if is_4_3 and orientation in [3, 6, 8]:
+                            logger.info("Обнаружено изображение 4:3 с ориентацией")
+                            # Не применяем поворот для изображений 4:3
+                            logger.info("Пропускаем поворот для изображения 4:3")
                         else:
                             # Применяем поворот в зависимости от ориентации
                             if orientation == 3:
@@ -227,9 +229,11 @@ def analyze():
                 with Image.open(file) as img:
                     logger.info(f"HEIC файл успешно открыт: формат={img.format}, размер={img.size}, режим={img.mode}")
                     
-                    # Проверяем, является ли изображение квадратным
-                    is_square = img.size[0] == img.size[1]
-                    logger.info(f"HEIC изображение квадратное: {is_square}")
+                    # Проверяем соотношение сторон
+                    width, height = img.size
+                    aspect_ratio = width / height
+                    is_4_3 = abs(aspect_ratio - 4/3) < 0.01  # Допускаем небольшую погрешность
+                    logger.info(f"Соотношение сторон HEIC: {aspect_ratio:.2f}, 4:3: {is_4_3}")
                     
                     # Проверяем EXIF данные
                     try:
@@ -239,11 +243,11 @@ def analyze():
                             orientation = exif.get(274)
                             if orientation:
                                 logger.info(f"Тег ориентации HEIC: {orientation}")
-                                # Для квадратных изображений с мобильных устройств
-                                if is_square and orientation in [3, 6, 8]:
-                                    logger.info("Обнаружено квадратное HEIC изображение с ориентацией")
-                                    # Не применяем поворот для квадратных изображений
-                                    logger.info("Пропускаем поворот для квадратного HEIC изображения")
+                                # Для изображений 4:3 с мобильных устройств
+                                if is_4_3 and orientation in [3, 6, 8]:
+                                    logger.info("Обнаружено изображение 4:3 с ориентацией")
+                                    # Не применяем поворот для изображений 4:3
+                                    logger.info("Пропускаем поворот для изображения 4:3")
                                 else:
                                     # Применяем поворот в зависимости от ориентации
                                     if orientation == 3:
