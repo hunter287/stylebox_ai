@@ -94,6 +94,12 @@
             overflow-y: auto;
         }
 
+        .message,
+        .message.ai,
+        .message.user {
+            align-items: flex-start !important;
+        }
+
         .message {
             display: flex;
             margin-bottom: 1.5rem;
@@ -155,7 +161,43 @@
         }
 
         .message-content {
-            flex: 1;
+            white-space: pre-line;
+        }
+
+        .message.ai .message-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .avatar {
+            flex-shrink: 0;
+            align-self: flex-start;
+        }
+
+        .user-message {
+            width: 100%;
+        }
+        .user-message .message-content {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+        .user-buttons-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            width: 100%;
+        }
+
+        .ai-text {
+            margin-bottom: 0.5rem;
+            width: 100%;
+        }
+
+        .ai-image {
+            text-align: center;
+            width: 100%;
         }
 
         .upload-area {
@@ -486,7 +528,6 @@
                 <button class="upload-button" onclick="document.getElementById('fileInput').click()">
                     Выбрать файл
                 </button>
-                <div id="heic-warning" style="display: none; color: #bb279b; margin-top: 0.5rem;">HEIC-файл: конвертация...</div>
             </div>
 
             <div class="error-message" id="errorMessage"></div>
@@ -560,12 +601,8 @@
         async function handlePreviewAndFiles(e) {
             const file = e.target.files[0];
             if (!file) return;
-            const warning = document.getElementById('heic-warning');
-            warning.style.display = 'none';
             let dataUrl = null;
             if (file.type === 'image/heic' || file.name.endsWith('.heic')) {
-                warning.style.display = 'block';
-                warning.textContent = 'HEIC-файл: конвертация...';
                 try {
                     const jpgBlob = await heic2any({
                         blob: file,
@@ -575,12 +612,11 @@
                     const reader = new FileReader();
                     reader.onload = function(e) {
                         dataUrl = e.target.result;
-                        warning.style.display = 'none';
                         showMainPreview(dataUrl); // Мгновенно показываем превью
                     };
                     reader.readAsDataURL(jpgBlob);
                 } catch (e) {
-                    warning.textContent = 'Ошибка конвертации HEIC: ' + e;
+                    // Ошибка конвертации HEIC — ничего не показываем
                 }
             } else {
                 const reader = new FileReader();
@@ -596,20 +632,19 @@
 
         function showMainPreview(dataUrl) {
             window._lastUploadedImage = dataUrl;
-            // Вставляем превью в чат как отдельное сообщение AI
             const chatMessages = document.querySelector('.chat-messages');
             const aiMessage = document.createElement('div');
             aiMessage.className = 'message ai';
             aiMessage.innerHTML = `
                 <div class="avatar">AI</div>
                 <div class="message-content">
-                    <div style="text-align:center;">
-                        <img src="${dataUrl}" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">
-                    </div>
+                    <div class="ai-text" id="preview-typing"></div>
+                    <div class="ai-image"><img src="${dataUrl}" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;"></div>
                 </div>
             `;
             chatMessages.appendChild(aiMessage);
             aiMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            typeText(document.getElementById('preview-typing'), 'Сейчас проанализирую ваше фото', 20);
         }
 
         function handleFiles(e) {
@@ -744,39 +779,41 @@
                     }
 
                     // Добавляем ответ AI с расширенным анализом
-                    const messageContent = createAIMessage();
-                    
+                    const aiMessage = document.createElement('div');
+                    aiMessage.className = 'message ai';
+                    aiMessage.innerHTML = `
+                        <div class="avatar">AI</div>
+                        <div class="message-content">
+                            <div class="ai-text" id="analysis-typing"></div>
+                            ${!window._lastUploadedImage && data.analysis_id ? `<div class="ai-image"><img src="/static/reports/last_image_${data.analysis_id}.jpg" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;"></div>` : ''}
+                        </div>
+                    `;
+                    chatMessages.appendChild(aiMessage);
+                    aiMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    const messageContent = aiMessage.querySelector('.ai-text');
+
                     // Создаем HTML для текстовой части анализа
                     const analysisHTML = `
                         <p>Ваш цветотип: <strong>${data.color_type}</strong></p>
                         <p>${data.explanation}</p>
                     `;
 
-                    // Не добавлять фото, если window._lastUploadedImage уже показано
-                    if (!window._lastUploadedImage) {
-                        const imgElement = document.createElement('div');
-                        imgElement.innerHTML = `<img src="/static/reports/last_image_${data.analysis_id}.jpg" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;">`;
-                        imgElement.classList.add('fade-in');
-                        messageContent.appendChild(imgElement);
-                    }
-
-                    // Затем анимируем текст
                     setTimeout(() => {
                         // Сначала описание (тип + объяснение)
                         typeHTML(messageContent, analysisHTML, 20, () => {
                             // После окончания описания — палитры и сочетания по очереди
                             let palettePromise = Promise.resolve();
                             if (data.dark_colors_hex) {
-                                palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Тёмные цвета', data.dark_colors_hex));
+                                palettePromise = palettePromise.then(() => addColorPalette(messageContent.parentElement, 'Тёмные цвета', data.dark_colors_hex));
                             }
                             if (data.bright_colors_hex) {
-                                palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Яркие цвета', data.bright_colors_hex));
+                                palettePromise = palettePromise.then(() => addColorPalette(messageContent.parentElement, 'Яркие цвета', data.bright_colors_hex));
                             }
                             if (data.light_colors_hex) {
-                                palettePromise = palettePromise.then(() => addColorPalette(messageContent, 'Светлые цвета', data.light_colors_hex));
+                                palettePromise = palettePromise.then(() => addColorPalette(messageContent.parentElement, 'Светлые цвета', data.light_colors_hex));
                             }
                             if (data.color_combinations_svg) {
-                                palettePromise = palettePromise.then(() => addColorCombinations(messageContent, data.color_combinations_svg));
+                                palettePromise = palettePromise.then(() => addColorCombinations(messageContent.parentElement, data.color_combinations_svg));
                             }
                             palettePromise.then(() => {
                                 setTimeout(addGuideOffer, 500);
@@ -802,20 +839,15 @@
 
         function typeHTML(element, html, speed = 30, onDone) {
             let i = 0;
-            const typingSpan = document.createElement('span');
-            typingSpan.className = 'typing';
-            
-            // Создаем временный элемент для хранения HTML
             const temp = document.createElement('div');
             temp.innerHTML = html;
             const text = temp.textContent;
-            
-            // Создаем контейнер для текста
+
+            // Создаем fade-in div для текста
             const textContainer = document.createElement('div');
-            textContainer.classList.add('fade-in');
+            textContainer.className = 'fade-in';
             element.appendChild(textContainer);
-            element.appendChild(typingSpan);
-            
+
             function type() {
                 if (i < text.length) {
                     // Находим позицию в HTML, соответствующую текущей позиции в тексте
@@ -830,16 +862,11 @@
                             htmlPos++;
                         }
                     }
-                    
-                    // Обновляем содержимое контейнера
                     textContainer.innerHTML = html.substring(0, htmlPos);
-                    
                     i++;
                     setTimeout(type, speed);
                 } else {
-                    // Финальное состояние без курсора
                     textContainer.innerHTML = html;
-                    typingSpan.remove();
                     if (onDone) onDone();
                 }
             }
@@ -848,15 +875,12 @@
 
         function typeText(element, text, speed = 30, onDone) {
             let i = 0;
-            const typingSpan = document.createElement('span');
-            typingSpan.className = 'typing';
-            
-            // Создаем контейнер для текста
+            // Создаем fade-in div для текста
             const textContainer = document.createElement('div');
-            textContainer.classList.add('fade-in');
+            textContainer.className = 'fade-in';
+            element.innerHTML = ''; // Очищаем содержимое
             element.appendChild(textContainer);
-            element.appendChild(typingSpan);
-            
+
             function type() {
                 if (i < text.length) {
                     textContainer.textContent = text.substring(0, i + 1);
@@ -864,7 +888,6 @@
                     setTimeout(type, speed);
                 } else {
                     textContainer.textContent = text;
-                    typingSpan.remove();
                     if (onDone) onDone();
                 }
             }
@@ -903,7 +926,7 @@
                     const preorderButtonId = 'subscriptionPreorderBtn_' + Date.now();
                     
                     buttonsContainer.innerHTML = `
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <div class="user-buttons-row">
                             <button class="upload-button subscription-preorder-btn" id="${preorderButtonId}" style="background-color: #bb279b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#8B1B6A';" onmouseout="this.style.backgroundColor='#bb279b';">Оформить предзаказ</button>
                         </div>
                     `;
@@ -1093,7 +1116,7 @@
                     buttonsContainer.style.gap = '10px';
                     buttonsContainer.style.justifyContent = 'flex-end';
                     buttonsContainer.innerHTML = `
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <div class="user-buttons-row">
                             <button class="upload-button" id="determineColorBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">Определить цветотип</button>
                             <button class="upload-button" id="preorderBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">Предзаказ на ИИ-стилиста</button>
                 </div>
@@ -1380,7 +1403,7 @@
                     const preorderButtonId = 'subscriptionPreorderBtn_' + Date.now();
                     
                     buttonsContainer.innerHTML = `
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <div class="user-buttons-row">
                             <button class="upload-button guide-buy-btn" id="${buyButtonId}" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='rgba(187, 39, 155, 0.15)'; this.style.color='#8B1B6A'; this.style.borderColor='#8B1B6A';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#bb279b'; this.style.borderColor='#bb279b';">Расскажи подробнее</button>
                         </div>
                     `;
@@ -1448,7 +1471,7 @@
                     const preorderButtonId = 'subscriptionPreorderBtn_' + Date.now();
                     
                     buttonsContainer.innerHTML = `
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <div class="user-buttons-row">
                             <button class="upload-button guide-buy-btn" id="${buyButtonId}" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='rgba(187, 39, 155, 0.15)'; this.style.color='#8B1B6A'; this.style.borderColor='#8B1B6A';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#bb279b'; this.style.borderColor='#bb279b';">Приобрести персональный гайд</button>
                             <button class="upload-button subscription-preorder-btn" id="${preorderButtonId}" style="background-color: #bb279b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#8B1B6A';" onmouseout="this.style.backgroundColor='#bb279b';">Предзаказ на ИИ-стилиста</button>
                         </div>
