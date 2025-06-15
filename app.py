@@ -65,31 +65,61 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'heic', 'heif'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def convert_to_jpg(image_path):
-    """Конвертирует изображение в JPG формат"""
+def fix_orientation(img):
+    """Поворачивает изображение согласно EXIF Orientation, если нужно"""
+    try:
+        exif = img._getexif()
+        if exif:
+            orientation_tag = None
+            for tag, value in ExifTags.TAGS.items():
+                if value == 'Orientation':
+                    orientation_tag = tag
+                    break
+            if orientation_tag:
+                orientation = exif.get(orientation_tag, 1)
+                if orientation == 3:
+                    img = img.rotate(180, expand=True)
+                    logger.info("EXIF: Применен поворот на 180 градусов")
+                elif orientation == 6:
+                    img = img.rotate(270, expand=True)
+                    logger.info("EXIF: Применен поворот на 270 градусов (Rotate 90 CW)")
+                elif orientation == 8:
+                    img = img.rotate(90, expand=True)
+                    logger.info("EXIF: Применен поворот на 90 градусов (Rotate 270 CW)")
+                else:
+                    logger.info(f"EXIF: Ориентация {orientation}, поворот не требуется")
+            else:
+                logger.info("EXIF: Тег Orientation не найден")
+        else:
+            logger.info("EXIF: Данные отсутствуют")
+    except Exception as e:
+        logger.info(f'EXIF orientation error: {e}')
+    return img
+
+def convert_to_jpg(image_path, target_width=800):
     try:
         logger.info(f"Начало конвертации изображения: {image_path}")
         with Image.open(image_path) as img:
             logger.info(f"Исходное изображение: формат={img.format}, размер={img.size}, режим={img.mode}")
-            # Если изображение в формате RGBA, конвертируем в RGB
+            # Применяем EXIF-ориентацию
+            img = fix_orientation(img)
+            # Ресайз с сохранением пропорций
+            w_percent = (target_width / float(img.size[0]))
+            h_size = int((float(img.size[1]) * float(w_percent)))
+            img = img.resize((target_width, h_size), Image.LANCZOS)
+            logger.info(f"Изображение изменено до размеров {img.size}")
+            # Конвертация в RGB, если нужно
             if img.mode in ('RGBA', 'LA'):
-                logger.info("Конвертация из RGBA/LA в RGB")
                 background = Image.new('RGB', img.size, (255, 255, 255))
                 background.paste(img, mask=img.split()[-1])
                 img = background
             elif img.mode != 'RGB':
-                logger.info(f"Конвертация из {img.mode} в RGB")
                 img = img.convert('RGB')
-            # Сохраняем как JPG (EXIF не сохраняем)
+            # Сохраняем как JPG
             jpg_path = os.path.splitext(image_path)[0] + '.jpg'
-            logger.info(f"Сохранение JPG: {jpg_path}")
             img.save(jpg_path, 'JPEG', quality=95)
-            # Проверяем, что файл создался и имеет размер
-            if os.path.exists(jpg_path) and os.path.getsize(jpg_path) > 0:
-                logger.info(f"JPG успешно создан, размер: {os.path.getsize(jpg_path)} байт")
-                return jpg_path
-            else:
-                raise Exception("JPG файл не был создан или пустой")
+            logger.info(f"JPG успешно создан, размер: {os.path.getsize(jpg_path)} байт")
+            return jpg_path
     except Exception as e:
         logger.error(f"Ошибка при конвертации изображения: {str(e)}")
         logger.error(f"Traceback: {traceback.format_exc()}")
