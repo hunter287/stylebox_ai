@@ -598,6 +598,9 @@
             handleFiles({ target: { files: files } });
         }
 
+        let lastFixedBlob = null;
+        let lastFixedFileName = null;
+
         async function handlePreviewAndFiles(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -615,19 +618,26 @@
                         showMainPreview(dataUrl); // Мгновенно показываем превью
                     };
                     reader.readAsDataURL(jpgBlob);
+                    lastFixedBlob = jpgBlob;
+                    lastFixedFileName = file.name.replace(/\.[^.]+$/, '.jpg');
+                    uploadFile(jpgBlob, lastFixedFileName);
                 } catch (e) {
                     // Ошибка конвертации HEIC — ничего не показываем
                 }
             } else {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    dataUrl = e.target.result;
-                    showMainPreview(dataUrl); // Мгновенно показываем превью
-                };
-                reader.readAsDataURL(file);
+                // Исправляем ориентацию через canvas
+                fixImageOrientation(file).then(fixedFile => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        dataUrl = e.target.result;
+                        showMainPreview(dataUrl); // Мгновенно показываем превью
+                    };
+                    reader.readAsDataURL(fixedFile);
+                    lastFixedBlob = fixedFile;
+                    lastFixedFileName = file.name;
+                    uploadFile(fixedFile, file.name);
+                });
             }
-            // После превью — стандартная обработка загрузки
-            handleFiles(e);
         }
 
         function showMainPreview(dataUrl) {
@@ -734,112 +744,106 @@
             });
         }
 
-        function uploadFile(file) {
+        function uploadFile(blobOrFile, fileName) {
             console.log("=== DEBUG: Starting uploadFile ===");
-            // Сначала исправляем ориентацию изображения
-            fixImageOrientation(file).then(fixedFile => {
-                console.log("=== DEBUG: File after orientation fix ===");
-                console.log("Fixed file name:", fixedFile.name);
-                console.log("Fixed file type:", fixedFile.type);
-                console.log("Fixed file size:", fixedFile.size);
-                
-                const formData = new FormData();
-                formData.append('image', fixedFile);
-                // Добавляем email, если он есть в localStorage
-                const lastEmail = localStorage.getItem('lastGuideEmail');
-                if (lastEmail) {
-                    formData.append('email', lastEmail);
+            // blobOrFile может быть либо File, либо Blob
+            let fileToSend;
+            if (blobOrFile instanceof File) {
+                fileToSend = blobOrFile;
+            } else {
+                // Blob -> File
+                fileToSend = new File([blobOrFile], fileName || 'photo.jpg', { type: blobOrFile.type || 'image/jpeg' });
+            }
+            const formData = new FormData();
+            formData.append('image', fileToSend);
+            // Добавляем email, если он есть в localStorage
+            const lastEmail = localStorage.getItem('lastGuideEmail');
+            if (lastEmail) {
+                formData.append('email', lastEmail);
+            }
+
+            // Показываем индикатор загрузки
+            loading.style.display = 'block';
+            errorMessage.style.display = 'none';
+            resultContainer.style.display = 'none';
+
+            console.log("=== DEBUG: Sending file to server ===");
+            fetch('/analyze', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                console.log("=== DEBUG: Server response ===");
+                console.log("Status:", response.status);
+                console.log("Headers:", Object.fromEntries(response.headers.entries()));
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("=== DEBUG: Response data ===");
+                console.log(data);
+                loading.style.display = 'none';
+                if (data.error) {
+                    errorMessage.textContent = data.error;
+                    errorMessage.style.display = 'block';
+                    return;
                 }
 
-                // Показываем индикатор загрузки
-                loading.style.display = 'block';
-                errorMessage.style.display = 'none';
-                resultContainer.style.display = 'none';
+                // Сохраняем analysis_id для оплаты
+                if (data.analysis_id) {
+                    localStorage.setItem('lastAnalysisId', data.analysis_id);
+                }
 
-                console.log("=== DEBUG: Sending file to server ===");
-                fetch('/analyze', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => {
-                    console.log("=== DEBUG: Server response ===");
-                    console.log("Status:", response.status);
-                    console.log("Headers:", Object.fromEntries(response.headers.entries()));
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log("=== DEBUG: Response data ===");
-                    console.log(data);
-                    loading.style.display = 'none';
-                    if (data.error) {
-                        errorMessage.textContent = data.error;
-                        errorMessage.style.display = 'block';
-                        return;
-                    }
+                // Добавляем ответ AI с расширенным анализом
+                const aiMessage = document.createElement('div');
+                aiMessage.className = 'message ai';
+                aiMessage.innerHTML = `
+                    <div class="avatar">AI</div>
+                    <div class="message-content">
+                        <div class="ai-text" id="analysis-typing"></div>
+                        ${!window._lastUploadedImage && data.analysis_id ? `<div class="ai-image"><img src="/static/reports/last_image_${data.analysis_id}.jpg" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;"></div>` : ''}
+                    </div>
+                `;
+                chatMessages.appendChild(aiMessage);
+                aiMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const messageContent = aiMessage.querySelector('.ai-text');
 
-                    // Сохраняем analysis_id для оплаты
-                    if (data.analysis_id) {
-                        localStorage.setItem('lastAnalysisId', data.analysis_id);
-                    }
+                // Создаем HTML для текстовой части анализа
+                const analysisHTML = `
+                    <p>Ваш цветотип: <strong>${data.color_type}</strong></p>
+                    <p>${data.explanation}</p>
+                `;
 
-                    // Добавляем ответ AI с расширенным анализом
-                    const aiMessage = document.createElement('div');
-                    aiMessage.className = 'message ai';
-                    aiMessage.innerHTML = `
-                        <div class="avatar">AI</div>
-                        <div class="message-content">
-                            <div class="ai-text" id="analysis-typing"></div>
-                            ${!window._lastUploadedImage && data.analysis_id ? `<div class="ai-image"><img src="/static/reports/last_image_${data.analysis_id}.jpg" alt="Фото" style="max-width:180px; border-radius:1rem; margin:1rem 0 1.2rem 0; box-shadow:0 2px 8px #0001; display:block;"></div>` : ''}
-                        </div>
-                    `;
-                    chatMessages.appendChild(aiMessage);
-                    aiMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    const messageContent = aiMessage.querySelector('.ai-text');
-
-                    // Создаем HTML для текстовой части анализа
-                    const analysisHTML = `
-                        <p>Ваш цветотип: <strong>${data.color_type}</strong></p>
-                        <p>${data.explanation}</p>
-                    `;
-
-                    setTimeout(() => {
-                        // Сначала описание (тип + объяснение)
-                        typeHTML(messageContent, analysisHTML, 20, () => {
-                            // После окончания описания — палитры и сочетания по очереди
-                            let palettePromise = Promise.resolve();
-                            if (data.dark_colors_hex) {
-                                palettePromise = palettePromise.then(() => addColorPalette(messageContent.parentElement, 'Тёмные цвета', data.dark_colors_hex));
-                            }
-                            if (data.bright_colors_hex) {
-                                palettePromise = palettePromise.then(() => addColorPalette(messageContent.parentElement, 'Яркие цвета', data.bright_colors_hex));
-                            }
-                            if (data.light_colors_hex) {
-                                palettePromise = palettePromise.then(() => addColorPalette(messageContent.parentElement, 'Светлые цвета', data.light_colors_hex));
-                            }
-                            if (data.color_combinations_svg) {
-                                palettePromise = palettePromise.then(() => addColorCombinations(messageContent.parentElement, data.color_combinations_svg));
-                            }
-                            palettePromise.then(() => {
-                                setTimeout(addGuideOffer, 500);
-                            });
+                setTimeout(() => {
+                    // Сначала описание (тип + объяснение)
+                    typeHTML(messageContent, analysisHTML, 20, () => {
+                        // После окончания описания — палитры и сочетания по очереди
+                        let palettePromise = Promise.resolve();
+                        if (data.dark_colors_hex) {
+                            palettePromise = palettePromise.then(() => addColorPalette(messageContent.parentElement, 'Тёмные цвета', data.dark_colors_hex));
+                        }
+                        if (data.bright_colors_hex) {
+                            palettePromise = palettePromise.then(() => addColorPalette(messageContent.parentElement, 'Яркие цвета', data.bright_colors_hex));
+                        }
+                        if (data.light_colors_hex) {
+                            palettePromise = palettePromise.then(() => addColorPalette(messageContent.parentElement, 'Светлые цвета', data.light_colors_hex));
+                        }
+                        if (data.color_combinations_svg) {
+                            palettePromise = palettePromise.then(() => addColorCombinations(messageContent.parentElement, data.color_combinations_svg));
+                        }
+                        palettePromise.then(() => {
+                            setTimeout(addGuideOffer, 500);
                         });
-                    }, 500);
-                })
-                .catch(error => {
-                    console.error("=== DEBUG: Upload error ===");
-                    console.error("Error details:", error);
-                    loading.style.display = 'none';
-                    errorMessage.textContent = 'Произошла ошибка при загрузке файла. Пожалуйста, попробуйте еще раз.';
-                    errorMessage.style.display = 'block';
-                });
-            }).catch(error => {
-                console.error("=== DEBUG: Orientation fix error ===");
+                    });
+                }, 500);
+            })
+            .catch(error => {
+                console.error("=== DEBUG: Upload error ===");
                 console.error("Error details:", error);
                 loading.style.display = 'none';
-                errorMessage.textContent = 'Ошибка при обработке изображения. Пожалуйста, попробуйте еще раз.';
+                errorMessage.textContent = 'Произошла ошибка при загрузке файла. Пожалуйста, попробуйте еще раз.';
                 errorMessage.style.display = 'block';
             });
         }
