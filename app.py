@@ -80,6 +80,16 @@ def convert_to_jpg(image_path):
                     orientation = exif.get(274)  # 274 - это тег ориентации в EXIF
                     if orientation:
                         logger.info(f"Тег ориентации: {orientation}")
+                        # Применяем поворот в зависимости от ориентации
+                        if orientation == 3:
+                            img = img.rotate(180, expand=True)
+                            logger.info("Применен поворот на 180 градусов")
+                        elif orientation == 6:
+                            img = img.rotate(270, expand=True)
+                            logger.info("Применен поворот на 270 градусов")
+                        elif orientation == 8:
+                            img = img.rotate(90, expand=True)
+                            logger.info("Применен поворот на 90 градусов")
                 else:
                     logger.info("EXIF данные не найдены")
             except Exception as e:
@@ -158,7 +168,7 @@ def payment_success():
 
 @app.route('/analyze', methods=['POST', 'GET'])
 def analyze():
-    print("=== DEBUG: Запрос получен ===")  # Добавляем print для отладки
+    print("=== DEBUG: Запрос получен ===")
     logger.info("=== Начало обработки запроса /analyze ===")
     logger.info(f"Метод запроса: {request.method}")
     logger.info(f"Заголовки запроса: {dict(request.headers)}")
@@ -167,22 +177,7 @@ def analyze():
     
     if 'image' not in request.files:
         logger.warning("Файл изображения не найден в запросе")
-        # Если нет изображения, но запрошен PDF — используем кэш анализа
-        if ('pdf' in request.form or request.args.get('pdf') == '1') and 'last_analysis' in session and 'last_image_path' in session:
-            logger.info("Найдены данные последнего анализа в сессии для PDF")
-            analysis = session['last_analysis']
-            image_path = session['last_image_path']
-            filename_wo_ext = os.path.splitext(os.path.basename(image_path))[0].lower()
-            pdf_path = os.path.join('static/reports', f'report_{filename_wo_ext}.pdf')
-            logger.info(f"Генерация PDF: {pdf_path}")
-            full_pdf_path = generate_pdf_report(analysis, image_path, output_path=pdf_path)
-            return send_file(
-                full_pdf_path,
-                mimetype='application/pdf',
-                as_attachment=True,
-                download_name=os.path.basename(full_pdf_path)
-            )
-        return jsonify({'error': 'No image uploaded'}), 400
+        return jsonify({'error': 'No file part'}), 400
     
     file = request.files['image']
     if file.filename == '':
@@ -229,6 +224,16 @@ def analyze():
                             orientation = exif.get(274)
                             if orientation:
                                 logger.info(f"Тег ориентации HEIC: {orientation}")
+                                # Применяем поворот в зависимости от ориентации
+                                if orientation == 3:
+                                    img = img.rotate(180, expand=True)
+                                    logger.info("Применен поворот на 180 градусов")
+                                elif orientation == 6:
+                                    img = img.rotate(270, expand=True)
+                                    logger.info("Применен поворот на 270 градусов")
+                                elif orientation == 8:
+                                    img = img.rotate(90, expand=True)
+                                    logger.info("Применен поворот на 90 градусов")
                         else:
                             logger.info("EXIF данные не найдены в HEIC")
                     except Exception as e:
