@@ -486,6 +486,8 @@
                 <button class="upload-button" onclick="document.getElementById('fileInput').click()">
                     Выбрать файл
                 </button>
+                <img id="preview" style="max-width: 220px; margin: 1rem auto 0 auto; display: none; border-radius: 1rem; box-shadow: 0 2px 8px #0001;" />
+                <div id="heic-warning" style="display: none; color: #bb279b; margin-top: 0.5rem;">HEIC-файл: конвертация...</div>
             </div>
 
             <div class="error-message" id="errorMessage"></div>
@@ -512,6 +514,7 @@
 
     <script src="https://widget.cloudpayments.ru/bundles/cloudpayments.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/heic2any/dist/heic2any.min.js"></script>
     <script>
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
@@ -547,12 +550,51 @@
         }
 
         dropZone.addEventListener('drop', handleDrop, false);
-        fileInput.addEventListener('change', handleFiles, false);
+        fileInput.addEventListener('change', handlePreviewAndFiles, false);
 
         function handleDrop(e) {
             const dt = e.dataTransfer;
             const files = dt.files;
             handleFiles({ target: { files: files } });
+        }
+
+        async function handlePreviewAndFiles(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const img = document.getElementById('preview');
+            const warning = document.getElementById('heic-warning');
+            img.style.display = 'none';
+            warning.style.display = 'none';
+            if (file.type === 'image/heic' || file.name.endsWith('.heic')) {
+                warning.style.display = 'block';
+                warning.textContent = 'HEIC-файл: конвертация...';
+                try {
+                    const jpgBlob = await heic2any({
+                        blob: file,
+                        toType: 'image/jpeg',
+                        quality: 0.9
+                    });
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        img.src = e.target.result;
+                        img.style.display = 'block';
+                        warning.style.display = 'none';
+                    };
+                    reader.readAsDataURL(jpgBlob);
+                } catch (e) {
+                    warning.textContent = 'Ошибка конвертации HEIC: ' + e;
+                    img.style.display = 'none';
+                }
+            } else {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    img.src = e.target.result;
+                    img.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+            // После превью — стандартная обработка загрузки
+            handleFiles(e);
         }
 
         function handleFiles(e) {
