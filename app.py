@@ -652,5 +652,9 @@ def check_email_in_sheet():
         logger.error(f"Ошибка при проверке email в Google Sheets: {str(e)}")
         return jsonify({'found': False, 'error': str(e)}), 500
 
+@app.route('/oto')
+def oto_offer():
+    return render_template('oto.html', config={'CLOUDPAYMENTS_PUBLIC_ID': CLOUDPAYMENTS_PUBLIC_ID})
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True) 

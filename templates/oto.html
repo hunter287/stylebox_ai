@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Спецпредложение — ИИ-стилист</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #bb279b;
+            --primary-light: #EDE9FE;
+            --text-primary: #1F2937;
+            --text-secondary: #6B7280;
+            --background: #FFFFFF;
+            --surface: #FFFFFF;
+            --border: #E5E7EB;
+        }
+        body {
+            font-family: 'Nunito', Arial, sans-serif !important;
+            background-color: var(--background);
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 2.5rem auto 0 auto;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .header h1 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+            font-family: 'Nunito', Arial, sans-serif;
+        }
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-family: 'Nunito', Arial, sans-serif !important;
+        }
+        .offer-block {
+            background: var(--surface);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07);
+            padding: 2rem 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .ai-message {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+        .message-content {
+            flex: 1;
+        }
+        .advantages-list {
+            margin: 1.5rem 0 2rem 0;
+            padding-left: 1.2rem;
+        }
+        .advantages-list li {
+            margin-bottom: 0.7rem;
+            font-size: 1.08rem;
+        }
+        .preorder-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.9rem 2.2rem;
+            border-radius: 0.7rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .preorder-btn:hover {
+            background: #8B1B6A;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: auto;
+            background: rgba(31,41,55,0.25);
+            backdrop-filter: blur(2px);
+        }
+        .modal-content {
+            background: #fff;
+            margin: 7% auto;
+            padding: 2rem 2.2rem 1.5rem 2.2rem;
+            border-radius: 1.2rem;
+            max-width: 370px;
+            box-shadow: 0 8px 32px #0002;
+            position: relative;
+            text-align: center;
+        }
+        .close {
+            position: absolute;
+            right: 1.2rem;
+            top: 1.2rem;
+            font-size: 1.7rem;
+            color: #7C3AED;
+            cursor: pointer;
+        }
+        .modal-input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border-radius: 0.7rem;
+            border: 1.5px solid #E5E7EB;
+            font-size: 1rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.2rem;
+            outline: none;
+            transition: border 0.2s;
+            box-sizing: border-box;
+        }
+        .modal-input:focus {
+            border: 1.5px solid #7C3AED;
+            outline: none;
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 0.7rem;
+            }
+            .offer-block {
+                padding: 1.2rem 0.5rem;
+            }
+            .modal-content {
+                padding: 1.2rem 0.7rem 1rem 0.7rem;
+                max-width: 98vw;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Спецпредложение для вас</h1>
+        </div>
+        <div class="offer-block">
+            <div class="ai-message">
+                <div class="avatar">AI</div>
+                <div class="message-content">
+                    <div style="font-size:1.13rem; margin-bottom:1.2rem;">Здравствуйте, вы уже приобрели персональный гайд по цветотипу, поэтому у нас для вас спецпредложение по предзаказу на ИИ-стилиста.</div>
+                    <ul class="advantages-list">
+                        <li>🤖 Персональный ИИ-стилист появится 1 июля</li>
+                        <li>📅 12 месяцев доступа + 2 месяца в подарок</li>
+                        <li>🎨 Бесплатный персональный цветовой гайд</li>
+                        <li>👗 Подбор вещей под ваш цветотип и фигуру</li>
+                        <li>💡 Примеры стильных сочетаний одежды</li>
+                        <li>💎 В 10-20 раз выгоднее услуг стилиста</li>
+                        <li>🔥 Специальная скидка 500 руб для владельцев гайда</li>
+                        <li>💰 Сейчас всего 3490 руб/год <span style="color:#888; font-size:0.98em; margin-left:8px;"><s>3990 руб/год</s></span></li>
+                        <li>💎 Потом будет стоить 9990 руб/год</li>
+                    </ul>
+                    <button class="preorder-btn" id="preorderBtn">Оформить предзаказ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Модальное окно для email и оплаты -->
+    <div id="subscriptionModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeSubscriptionModal">&times;</span>
+            <h2>Оформить предзаказ</h2>
+            <div style="margin-bottom:1rem; color:#6B7280; font-size:1rem;">Введите ваш email для оформления предзаказа</div>
+            <input type="email" id="subscriptionEmail" placeholder="Ваш email" class="modal-input" autocomplete="email" autofocus>
+            <div id="subscriptionEmailError" style="color:#DC2626; font-size:0.95rem; margin:6px 0 0 0; display:none;"></div>
+            <button class="preorder-btn" id="subscriptionPayBtn" style="margin-top:1.2rem; width:100%;">Оформить предзаказ за 3490 руб</button>
+            <div id="subscriptionPaySuccess" style="display:none; margin-top:1.2rem; color:#059669; font-weight:500;">
+                Спасибо за предзаказ!<br>Мы свяжемся с вами 1 июля для активации подписки.<br>Проверьте папку "Входящие" или "Спам".
+            </div>
+        </div>
+    </div>
+    <script src="https://widget.cloudpayments.ru/bundles/cloudpayments.js"></script>
+    <script>
+        // Открытие модального окна
+        document.getElementById('preorderBtn').onclick = function() {
+            document.getElementById('subscriptionModal').style.display = 'block';
+            setTimeout(() => {
+                const emailInput = document.getElementById('subscriptionEmail');
+                if (emailInput) emailInput.focus();
+            }, 100);
+        };
+
+        // Закрытие модального окна
+        document.getElementById('closeSubscriptionModal').onclick = function() {
+            document.getElementById('subscriptionModal').style.display = 'none';
+            document.getElementById('subscriptionEmail').value = '';
+            document.getElementById('subscriptionEmailError').style.display = 'none';
+            document.getElementById('subscriptionPaySuccess').style.display = 'none';
+            document.getElementById('subscriptionPayBtn').style.display = 'block';
+            document.getElementById('subscriptionEmail').style.display = 'block';
+        };
+
+        // Оплата через CloudPayments
+        document.getElementById('subscriptionPayBtn').onclick = async function() {
+            const email = document.getElementById('subscriptionEmail').value.trim();
+            const errorDiv = document.getElementById('subscriptionEmailError');
+            errorDiv.style.display = 'none';
+            if (!/^\S+@\S+\.\S+$/.test(email)) {
+                errorDiv.textContent = 'Пожалуйста, введите корректный email';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            const publicId = '{{ config.CLOUDPAYMENTS_PUBLIC_ID }}';
+            const widget = new cp.CloudPayments();
+            widget.pay('charge', {
+                publicId: publicId,
+                description: 'Предзаказ на ИИ-стилиста (годовая подписка, спеццена для владельцев гайда)',
+                amount: 3490.00,
+                currency: 'RUB',
+                skin: 'classic',
+                email: email,
+                data: {
+                    email: email,
+                    type: 'subscription',
+                    special_offer: true
+                }
+            }, {
+                onSuccess: function(options) {
+                    window.location.href = '/payment-success?type=subscription';
+                },
+                onFail: function(reason) {
+                    errorDiv.textContent = 'Платеж не прошел: ' + (reason && reason.message ? reason.message : 'Неизвестная ошибка');
+                    errorDiv.style.display = 'block';
+                }
+            });
+        };
+        // Закрытие по клику вне окна
+        window.onclick = function(event) {
+            const modal = document.getElementById('subscriptionModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+                document.getElementById('subscriptionEmail').value = '';
+                document.getElementById('subscriptionEmailError').style.display = 'none';
+                document.getElementById('subscriptionPaySuccess').style.display = 'none';
+                document.getElementById('subscriptionPayBtn').style.display = 'block';
+                document.getElementById('subscriptionEmail').style.display = 'block';
+            }
+        };
+    </script>
+</body>
+</html> 
