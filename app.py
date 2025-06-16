@@ -351,7 +351,7 @@ def send_guide_email(email, pdf_path):
                 {"email": to_email}
             ],
             "from_email": from_email,
-            "from_name": "Color Type AI",
+            "from_name": "Style Box AI",
             "subject": "Ваш персональный цветовой гайд",
             "body": {
                 "html": (
@@ -359,12 +359,14 @@ def send_guide_email(email, pdf_path):
                     "<p>Здравствуйте!<br><br>"
                     "Спасибо за приобретение персонального цветового гайда.<br>"
                     f"Скачать ваш гайд можно по <a href=\"{pdf_url}\">ссылке</a>.<br><br>"
+                    "Вы также можете оформить <b><a href=\"https://ai.stylebox.live/oto?utm_source=emai_guide\" style=\"color:#bb279b;\">предзаказ на ИИ-стилиста</a></b> с дополнительной скидкой 500 руб., т.к. вы купили персональный гайд.<br>"
+                    "Итого, для вас ИИ-стилист на целый год будет стоить <b>3490 руб.<br><br>"
                     "С уважением,<br>"
-                    "Color Type AI<br><br>"
+                    "Style Box AI<br><br>"
                     "<a href=\"https://noreply.stylebox.live/ru/go2_unsubscribe\" style=\"color:#7C3AED;\">Отписаться от рассылки</a>"
                     "</p></body></html>"
                 ),
-                "plaintext": "Здравствуйте! Спасибо за приобретение персонального цветового гайда. Ссылка на ваш гайд: {pdf_url}".format(pdf_url=pdf_url)
+                "plaintext": "Здравствуйте! Спасибо за приобретение персонального цветового гайда. Ссылка на ваш гайд: {pdf_url}\n\nВы также можете оформить предзаказ на ИИ-стилиста со скидкой 500 руб. по ссылке: https://ai.stylebox.live/oto?utm_source=emai_guide\nИтого, для вас ИИ-стилист на целый год будет стоить 3490 руб.".format(pdf_url=pdf_url)
             }
         }
     }
@@ -474,9 +476,7 @@ def send_guide_email_apology(email):
 
 К сожалению, возникла техническая ошибка при формировании вашего PDF-отчёта.
 Пожалуйста, попробуйте повторить попытку или свяжитесь с поддержкой.
-
-С уважением,
-Color Type AI
+Style Box AI
 """
     msg.attach(MIMEText(body, 'plain', 'utf-8'))
 
