@@ -563,6 +563,8 @@
         const resultContainer = document.getElementById('resultContainer');
         const chatMessages = document.querySelector('.chat-messages');
 
+        let currentAnalysisType = 'color'; // По умолчанию анализ цветотипа
+
         // Обработка drag & drop
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             dropZone.addEventListener(eventName, preventDefaults, false);
@@ -756,8 +758,15 @@
                 errorMessage.style.display = 'none';
                 resultContainer.style.display = 'none';
 
+                // Прокручиваем к индикатору загрузки
+                loading.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
                 console.log("=== DEBUG: Sending file to server ===");
-                fetch('/analyze', {
+                
+                // Выбираем эндпоинт в зависимости от типа анализа
+                const endpoint = currentAnalysisType === 'kibbe' ? '/analyze_kibbe' : '/analyze';
+                
+                fetch(endpoint, {
                     method: 'POST',
                     body: formData
                 })
@@ -774,6 +783,17 @@
                     console.log("=== DEBUG: Response data ===");
                     console.log(data);
                     loading.style.display = 'none';
+                    
+                    // Скрываем зону загрузки при ошибке
+                    const dropZone = document.getElementById('dropZone');
+                    if (dropZone) {
+                        dropZone.style.display = 'none';
+                    }
+                    
+                    // Очищаем input файла
+                    const fileInput = document.getElementById('fileInput');
+                    if (fileInput) fileInput.value = '';
+                    
                     if (data.error) {
                         errorMessage.textContent = data.error;
                         errorMessage.style.display = 'block';
@@ -799,32 +819,219 @@
                     aiMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     const messageContent = aiMessage.querySelector('.ai-text');
 
-                    // Создаем HTML для текстовой части анализа
-                    const analysisHTML = `
-                        <p>Ваш цветотип: <strong>${data.color_type}</strong></p>
-                        <p>${data.explanation}</p>
-                    `;
+                    // Создаем HTML для текстовой части анализа в зависимости от типа
+                    let analysisHTML = '';
+                    if (currentAnalysisType === 'kibbe') {
+                        // Анализ типажа Кибби - только основной текст для печати
+                        let kibbeHTML = `<p>Ваш типаж внешности: <strong>${data.kibbe_type}</strong></p>`;
+                        
+                        // Добавляем только значимые характеристики
+                        if (data.vertical_lines && !data.vertical_lines.toLowerCase().includes('не выражены')) {
+                            kibbeHTML += `<p><strong>Вертикальные линии:</strong> ${data.vertical_lines}</p>`;
+                        }
+                        if (data.horizontal_lines && !data.horizontal_lines.toLowerCase().includes('нейтральные')) {
+                            kibbeHTML += `<p><strong>Горизонтальные линии:</strong> ${data.horizontal_lines}</p>`;
+                        }
+                        if (data.face_features) {
+                            kibbeHTML += `<p><strong>Особенности лица:</strong> ${data.face_features}</p>`;
+                        }
+                        if (data.body_features && !data.body_features.toLowerCase().includes('не определены')) {
+                            kibbeHTML += `<p><strong>Особенности тела:</strong> ${data.body_features}</p>`;
+                        }
+                        if (data.description) {
+                            kibbeHTML += `<p><strong>Описание:</strong> ${data.description}</p>`;
+                        }
+                        
+                        analysisHTML = kibbeHTML;
+                    } else {
+                        // Анализ цветотипа
+                        analysisHTML = `
+                            <p>Ваш цветотип: <strong >${data.color_type}</strong></p>
+                            <p>${data.explanation}</p>
+                        `;
+                    }
 
                     setTimeout(() => {
                         // Сначала описание (тип + объяснение)
                         typeHTML(messageContent, analysisHTML, 20, () => {
-                            // После окончания описания — палитры и сочетания по очереди
-                            let palettePromise = Promise.resolve();
-                            if (data.dark_colors_hex) {
-                                palettePromise = palettePromise.then(() => addColorPalette(messageContent.parentElement, 'Тёмные цвета', data.dark_colors_hex));
+                            // После окончания описания — палитры и сочетания только для цветотипа
+                            if (currentAnalysisType === 'color') {
+                                let palettePromise = Promise.resolve();
+                                if (data.dark_colors_hex) {
+                                    palettePromise = palettePromise.then(() => addColorPalette(messageContent.parentElement, 'Тёмные цвета', data.dark_colors_hex));
+                                }
+                                if (data.bright_colors_hex) {
+                                    palettePromise = palettePromise.then(() => addColorPalette(messageContent.parentElement, 'Яркие цвета', data.bright_colors_hex));
+                                }
+                                if (data.light_colors_hex) {
+                                    palettePromise = palettePromise.then(() => addColorPalette(messageContent.parentElement, 'Светлые цвета', data.light_colors_hex));
+                                }
+                                if (data.color_combinations_svg) {
+                                    palettePromise = palettePromise.then(() => addColorCombinations(messageContent.parentElement, data.color_combinations_svg));
+                                }
+                                palettePromise.then(() => {
+                                    setTimeout(addGuideOffer, 500);
+                                });
+                            } else {
+                                // Для анализа Кибби добавляем изображение типажа
+                                setTimeout(() => {
+                                    // Проверяем, является ли типаж "Романтик"
+                                    if (data.kibbe_type && data.kibbe_type.toLowerCase().includes('романтик')) {
+                                        
+                                        // Увеличиваем ширину блока, чтобы вместить сетку из 3 изображений
+                                        const messageBubble = messageContent.parentElement; // div .message-content
+                                        messageBubble.style.width = '700px';
+                                        messageBubble.style.maxWidth = '100%';
+
+                                        const imagesContainer = document.createElement('div');
+                                        imagesContainer.style.marginTop = '1rem';
+                                        imagesContainer.style.textAlign = 'center';
+                                        
+                                        // Создаем контейнер для изображений
+                                        const imagesGrid = document.createElement('div');
+                                        imagesGrid.style.display = 'grid';
+                                        imagesGrid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(200px, 1fr))';
+                                        imagesGrid.style.gap = '1rem';
+                                        imagesGrid.style.marginTop = '1rem';
+                                        
+                                        imagesContainer.appendChild(imagesGrid);
+                                        messageContent.parentElement.appendChild(imagesContainer);
+                                        
+                                        // Добавляем заголовок над изображениями
+                                        const titleDiv = document.createElement('div');
+                                        titleDiv.style.marginBottom = '1rem';
+                                        titleDiv.style.fontSize = '1.1rem';
+                                        titleDiv.style.fontWeight = '600';
+                                        titleDiv.style.color = '#333';
+                                        titleDiv.style.textAlign = 'left';
+                                        titleDiv.textContent = 'Селебрити с типажом Романтик';
+                                        imagesContainer.insertBefore(titleDiv, imagesGrid);
+                                        
+                                        // Список изображений для романтика
+                                        const romanticMainImages = [
+                                            'romantic_main_01.jpg',
+                                            'romantic_main_02.jpg',
+                                            'romantic_main_03.jpg',
+                                            'romantic_main_04.jpg',
+                                            'romantic_main_05.jpg',
+                                            'romantic_main_06.jpg',
+                                            'romantic_main_07.jpg',
+                                            'romantic_main_08.jpg',
+                                            'romantic_main_09.jpg'
+                                        ];
+                                        
+                                        // Последовательно добавляем изображения с анимацией
+                                        romanticMainImages.forEach((imageName, index) => {
+                                            setTimeout(() => {
+                                                const imageDiv = document.createElement('div');
+                                                imageDiv.style.textAlign = 'center';
+                                                imageDiv.style.opacity = '0';
+                                                imageDiv.style.transform = 'translateY(20px)';
+                                                imageDiv.style.transition = 'opacity 0.6s ease-in-out, transform 0.6s ease-in-out';
+                                                
+                                                const img = document.createElement('img');
+                                                img.src = `/static/kibbe/romantic/${imageName}`;
+                                                img.alt = `Типаж Романтик ${index + 1}`;
+                                                img.style.maxWidth = '100%';
+                                                img.style.height = 'auto';
+                                                img.style.borderRadius = '8px';
+                                                
+                                                imageDiv.appendChild(img);
+                                                imagesGrid.appendChild(imageDiv);
+                                                
+                                                // Плавное появление изображения
+                                                setTimeout(() => {
+                                                    imageDiv.style.opacity = '1';
+                                                    imageDiv.style.transform = 'translateY(0)';
+                                                }, 50);
+                                            }, index * 200); // Задержка 200мс между изображениями
+                                        });
+                                    }
+                                }, 500);
+                                
+                                // Для анализа Кибби создаем второе сообщение с рекомендациями
+                                setTimeout(() => {
+                                    // Создаем второе сообщение AI с рекомендациями
+                                    const recommendationsMessage = document.createElement('div');
+                                    recommendationsMessage.className = 'message ai';
+                                    recommendationsMessage.innerHTML = `
+                                        <div class="avatar">AI</div>
+                                        <div class="message-content">
+                                            <div class="ai-text" id="recommendations-typing"></div>
+                                        </div>
+                                    `;
+                                    chatMessages.appendChild(recommendationsMessage);
+                                    recommendationsMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                    
+                                    const recommendationsContent = recommendationsMessage.querySelector('.ai-text');
+                                    
+                                    // Печатаем заголовок рекомендаций
+                                    typeText(recommendationsContent, 'Рекомендации по стилю:', 20, () => {
+                                        // После печати заголовка добавляем рекомендации с плавной анимацией
+                                        setTimeout(() => {
+                                            const recommendationsDiv = document.createElement('div');
+                                            recommendationsDiv.className = 'fade-in';
+                                            recommendationsDiv.style.opacity = '0';
+                                            recommendationsDiv.style.transition = 'opacity 0.8s ease-in-out';
+                                            recommendationsDiv.style.marginTop = '0.5rem';
+                                            recommendationsDiv.style.whiteSpace = 'pre-line';
+                                            recommendationsDiv.textContent = data.style_recommendations;
+                                            recommendationsContent.appendChild(recommendationsDiv);
+                                            
+                                            // Плавное появление рекомендаций
+                                            setTimeout(() => {
+                                                recommendationsDiv.style.opacity = '1';
+                                            }, 100);
+                                            
+                                            // Добавляем изображения одежды для типажа "Романтик"
+                                            setTimeout(() => {
+                                                if (data.kibbe_type && data.kibbe_type.toLowerCase().includes('романтик')) {
+                                                    
+                                                    // Увеличиваем ширину блока, чтобы вместить сетку из 3 изображений
+                                                    const messageBubble = recommendationsContent.parentElement; // div .message-content
+                                                    messageBubble.style.width = '700px';
+                                                    messageBubble.style.maxWidth = '100%';
+
+                                                    const imagesContainer = document.createElement('div');
+                                                    imagesContainer.style.marginTop = '1.5rem';
+                                                    imagesContainer.style.textAlign = 'center';
+                                                    
+                                                    // Список изображений для романтика (исключая romantic_main.webp)
+                                                    const romanticImages = [
+                                                        'romantic_outfit1.webp',
+                                                        'romantic_outfit2.webp', 
+                                                        'romantic_outfit3.webp',
+                                                        'romantic_outfit4.webp',
+                                                        'romantic_outfit5.webp',
+                                                        'romantic_outfit6.webp',
+                                                        'romantic_outfit7.webp',
+                                                        'romantic_outfit8.webp'
+                                                    ];
+                                                    
+                                                    let imagesHTML = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">';
+                                                    
+                                                    romanticImages.forEach(imageName => {
+                                                        imagesHTML += `
+                                                            <div style="text-align: center;">
+                                                                <img src="/static/kibbe/romantic/${imageName}" 
+                                                                     alt="Одежда для романтика" 
+                                                                     style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
+                                                                     onerror="this.style.display='none'">
+                                                            </div>
+                                                        `;
+                                                    });
+                                                    
+                                                    imagesHTML += '</div>';
+                                                    imagesContainer.innerHTML = imagesHTML;
+                                                    recommendationsContent.appendChild(imagesContainer);
+                                                }
+                                            }, 800);
+                                            
+                                            setTimeout(addGuideOffer, 1000);
+                                        }, 500);
+                                    });
+                                }, 500);
                             }
-                            if (data.bright_colors_hex) {
-                                palettePromise = palettePromise.then(() => addColorPalette(messageContent.parentElement, 'Яркие цвета', data.bright_colors_hex));
-                            }
-                            if (data.light_colors_hex) {
-                                palettePromise = palettePromise.then(() => addColorPalette(messageContent.parentElement, 'Светлые цвета', data.light_colors_hex));
-                            }
-                            if (data.color_combinations_svg) {
-                                palettePromise = palettePromise.then(() => addColorCombinations(messageContent.parentElement, data.color_combinations_svg));
-                            }
-                            palettePromise.then(() => {
-                                setTimeout(addGuideOffer, 500);
-                            });
                         });
                     }, 500);
                 })
@@ -832,6 +1039,17 @@
                     console.error("=== DEBUG: Upload error ===");
                     console.error("Error details:", error);
                     loading.style.display = 'none';
+                    
+                    // Скрываем зону загрузки при ошибке
+                    const dropZone = document.getElementById('dropZone');
+                    if (dropZone) {
+                        dropZone.style.display = 'none';
+                    }
+                    
+                    // Очищаем input файла
+                    const fileInput = document.getElementById('fileInput');
+                    if (fileInput) fileInput.value = '';
+                    
                     errorMessage.textContent = 'Произошла ошибка при загрузке файла. Пожалуйста, попробуйте еще раз.';
                     errorMessage.style.display = 'block';
                 });
@@ -839,6 +1057,17 @@
                 console.error("=== DEBUG: Orientation fix error ===");
                 console.error("Error details:", error);
                 loading.style.display = 'none';
+                
+                // Скрываем зону загрузки при ошибке обработки изображения
+                const dropZone = document.getElementById('dropZone');
+                if (dropZone) {
+                    dropZone.style.display = 'none';
+                }
+                
+                // Очищаем input файла
+                const fileInput = document.getElementById('fileInput');
+                if (fileInput) fileInput.value = '';
+                
                 errorMessage.textContent = 'Ошибка при обработке изображения. Пожалуйста, попробуйте еще раз.';
                 errorMessage.style.display = 'block';
             });
@@ -1086,11 +1315,11 @@
 
         // Варианты приветствия
         const greetingVariants = [
-            'Привет! Я могу помочь вам определить ваш цветотип или оформить предзаказ на персонального ИИ-стилиста. Что вас интересует?',
-            'Здравствуйте! Выберите, что вас интересует: определение цветотипа или предзаказ на персонального ИИ-стилиста.',
-            'Добро пожаловать! Я могу определить ваш цветотип или рассказать о предзаказе на ИИ-стилиста. Что предпочитаете?',
-            'Приветствую! Выберите, что вас интересует: анализ цветотипа или предзаказ на персонального ИИ-стилиста.',
-            'Здравствуйте! Я могу помочь с определением цветотипа или рассказать о предзаказе на ИИ-стилиста. Что выберете?'
+            'Привет! Я могу помочь вам определить ваш цветотип, типаж внешности или оформить предзаказ на персонального ИИ-стилиста. Что вас интересует?',
+            'Здравствуйте! Выберите, что вас интересует: определение цветотипа, анализ типажа внешности или предзаказ на персонального ИИ-стилиста.',
+            'Добро пожаловать! Я могу определить ваш цветотип, типаж внешности или рассказать о предзаказе на ИИ-стилиста. Что предпочитаете?',
+            'Приветствую! Выберите, что вас интересует: анализ цветотипа, определение типажа внешности или предзаказ на персонального ИИ-стилиста.',
+            'Здравствуйте! Я могу помочь с определением цветотипа, типажа внешности или рассказать о предзаказе на ИИ-стилиста. Что выберете?'
         ];
 
         // Анимированное приветствие при загрузке
@@ -1125,6 +1354,7 @@
                     buttonsContainer.innerHTML = `
                         <div class="user-buttons-row">
                             <button class="upload-button" id="determineColorBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">Определить цветотип</button>
+                            <button class="upload-button" id="determineKibbeBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">Определить типаж внешности</button>
                             <button class="upload-button" id="preorderBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">Предзаказ на ИИ-стилиста</button>
                 </div>
             `;
@@ -1137,10 +1367,49 @@
 
                     // Добавляем обработчики для кнопок
                     const determineColorBtn = document.getElementById('determineColorBtn');
+                    const determineKibbeBtn = document.getElementById('determineKibbeBtn');
                     const preorderBtn = document.getElementById('preorderBtn');
                     
                     if (determineColorBtn) {
                         determineColorBtn.onclick = function() {
+                            currentAnalysisType = 'color'; // Устанавливаем тип анализа
+                            // Очищаем input файла для возможности повторной загрузки
+                            const fileInput = document.getElementById('fileInput');
+                            if (fileInput) fileInput.value = '';
+                            
+                            // Показываем зону загрузки
+                            const dropZone = document.getElementById('dropZone');
+                            if (dropZone) {
+                                dropZone.style.display = 'block';
+                                // Плавная прокрутка к зоне загрузки
+                                dropZone.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                            
+                            // Создаем новое сообщение бота
+                            const aiMessage = document.createElement('div');
+                            aiMessage.className = 'message ai';
+                            aiMessage.innerHTML = `
+                                <div class="avatar">AI</div>
+                                <div class="message-content"></div>
+                            `;
+                            chatMessages.appendChild(aiMessage);
+                            const messageContent = aiMessage.querySelector('.message-content');
+                            
+                            // Плавная прокрутка к новому сообщению
+                            aiMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            
+                            // Печатаем сообщение
+                            typeText(messageContent, 'Загрузите фотографию с хорошо освещённым лицом, желательно при естественном свете 👇', 20);
+                        };
+                    }
+                    
+                    if (determineKibbeBtn) {
+                        determineKibbeBtn.onclick = function() {
+                            currentAnalysisType = 'kibbe'; // Устанавливаем тип анализа
+                            // Очищаем input файла для возможности повторной загрузки
+                            const fileInput = document.getElementById('fileInput');
+                            if (fileInput) fileInput.value = '';
+                            
                             // Показываем зону загрузки
                             const dropZone = document.getElementById('dropZone');
                             if (dropZone) {
@@ -1338,15 +1607,21 @@
             const publicId = '{{ config.CLOUDPAYMENTS_PUBLIC_ID }}';
             const analysisId = localStorage.getItem('lastAnalysisId');
             const widget = new cp.CloudPayments();
+            
+            // Определяем тип гайда и цену
+            const isKibbeGuide = localStorage.getItem('currentAnalysisType') === 'kibbe';
+            const guidePrice = isKibbeGuide ? 1500.00 : 500.00;
+            const guideLabel = isKibbeGuide ? 'Персональный гайд по стилю' : 'Персональный цветовой гайд';
+            
             const data = {
                 CloudPayments: {
                     CustomerReceipt: {
                         Items: [
                             {
-                                Label: 'Персональный цветовой гайд',
-                                Price: 500.00,
+                                Label: guideLabel,
+                                Price: guidePrice,
                                 Quantity: 1.00,
-                                Amount: 500.00,
+                                Amount: guidePrice,
                                 Vat: 0,
                                 Method: 0,
                                 Object: 0,
@@ -1355,15 +1630,15 @@
                         ],
                         calculationPlace: 'stylist-ai.ru',
                         amounts: {
-                            electronic: 500.00
+                            electronic: guidePrice
                         }
                     }
                 }
             };
             widget.pay('charge', {
                 publicId: publicId,
-                description: 'Персональный цветовой гайд',
-                amount: 500.00,
+                description: guideLabel,
+                amount: guidePrice,
                 currency: 'RUB',
                 skin: 'classic',
                 email: email,
@@ -1378,7 +1653,7 @@
                 }
             })
             .then(function (result) {
-                console.log('Payment widget closed', result);рабо
+                console.log('Payment widget closed', result);
             })
             .catch(function (reason) {
                 console.log('Payment widget error:', reason);
@@ -1388,11 +1663,30 @@
         // --- Персональный гайд: вариативное предложение ---
         function addGuideOffer() {
             const messageContent = createAIMessage();
-            const offerText = 'У меня есть возможность сделать для вас персональный 10-страничный цветовой гайд с вашими цветами, 20+ цветовых сочетаний и примерами образов, как сочетать ваши цвета.';
+            
+            // Определяем текст в зависимости от типа анализа
+            let offerText;
+            let buttonText;
+            
+            if (currentAnalysisType === 'kibbe') {
+                offerText = 'У меня есть возможность сделать для вас персональный 20-страничный гайд с подходящей для вас одеждой, обувью и аксессуарами под ваш типаж.';
+                buttonText = 'Рассказать подробнее';
+            } else {
+                offerText = 'У меня есть возможность сделать для вас персональный 10-страничный цветовой гайд с вашими цветами, 20+ цветовых сочетаний и примерами образов, как сочетать ваши цвета.';
+                buttonText = 'Расскажи подробнее';
+            }
             
             setTimeout(() => {
                 typeText(messageContent, offerText, 20);
                 setTimeout(() => {
+                    // Для типажа Кибби выделяем "под ваш типаж" жирным
+                    if (currentAnalysisType === 'kibbe') {
+                        messageContent.innerHTML = messageContent.innerHTML.replace(
+                            'под ваш типаж',
+                            '<b>под ваш типаж</b>'
+                        );
+                    }
+                    
                     // Создаем новое сообщение пользователя
                     const userMessage = document.createElement('div');
                     userMessage.className = 'message user-message';
@@ -1411,7 +1705,7 @@
                     
                     buttonsContainer.innerHTML = `
                         <div class="user-buttons-row">
-                            <button class="upload-button guide-buy-btn" id="${buyButtonId}" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='rgba(187, 39, 155, 0.15)'; this.style.color='#8B1B6A'; this.style.borderColor='#8B1B6A';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#bb279b'; this.style.borderColor='#bb279b';">Расскажи подробнее</button>
+                            <button class="upload-button guide-buy-btn" id="${buyButtonId}" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='rgba(187, 39, 155, 0.15)'; this.style.color='#8B1B6A'; this.style.borderColor='#8B1B6A';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#bb279b'; this.style.borderColor='#bb279b';">${buttonText}</button>
                         </div>
                     `;
                     
@@ -1421,11 +1715,26 @@
                     // Добавляем сообщение пользователя в чат
                     chatMessages.appendChild(userMessage);
 
+                    // Прокручиваем к кнопкам
+                    userMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
                     // Добавляем обработчики для кнопок
-                    const moreBtn = document.getElementById(buyButtonId);
-                    if (moreBtn) {
-                        moreBtn.onclick = function() {
-                            addGuidePrice();
+                    const buyBtn = document.getElementById(buyButtonId);
+                    const preorderBtn = document.getElementById(preorderButtonId);
+                    
+                    if (buyBtn) {
+                        buyBtn.onclick = function() {
+                            if (currentAnalysisType === 'kibbe') {
+                                addKibbeGuidePrice();
+                            } else {
+                                addGuidePrice();
+                            }
+                        };
+                    }
+                    
+                    if (preorderBtn) {
+                        preorderBtn.onclick = function() {
+                            addSubscriptionOffer();
                         };
                     }
                 }, offerText.length * 20 + 500);
@@ -1490,15 +1799,93 @@
                     // Добавляем сообщение пользователя в чат
                     chatMessages.appendChild(userMessage);
 
+                    // Прокручиваем к кнопкам
+                    userMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
                     // Добавляем обработчики для кнопок
                     const buyBtn = document.getElementById(buyButtonId);
                     const preorderBtn = document.getElementById(preorderButtonId);
                     
                     if (buyBtn) {
                         buyBtn.onclick = function() {
+                            // Сохраняем тип анализа для определения цены в CloudPayments
+                            localStorage.setItem('currentAnalysisType', 'color');
                             showGuideModal();
                         };
                     }
+                    
+                    if (preorderBtn) {
+                        preorderBtn.onclick = function() {
+                            addSubscriptionOffer();
+                        };
+                    }
+                }, advantagesText.length * 20 + 500);
+            }, 600);
+        }
+
+        function addKibbeGuidePrice() {
+            const messageContent = createAIMessage();
+            const advantagesText = [
+                '👗 Гайд поможет подобрать идеальную одежду под ваш типаж',
+                '👠 Рекомендации по обуви и аксессуарам',
+                '📄 Гайд придет в PDF — удобно сохранить на телефон или email',
+                '💎 Советы по силуэтам и фасонам',
+                '📚 20+ страниц персональных советов именно для вашего типажа'
+            ].join('\n');
+            setTimeout(() => {
+                typeText(messageContent, advantagesText, 20);
+                setTimeout(() => {
+                    messageContent.innerHTML += `
+                        <div class="guide-price-text" style="margin-top: 1rem; font-size: 1.1rem; color: #bb279b; line-height: 1.2;">
+                            Персональный гайд под типаж внешности — <b>1500 руб.</b><br>
+                            <span style="font-size: 0.95rem;">или <b>бесплатно</b> при оформлении предзаказа на ИИ-стилиста</span>
+                        </div>
+                    `;
+
+                    // Создаем новое сообщение пользователя
+                    const userMessage = document.createElement('div');
+                    userMessage.className = 'message user-message';
+                    userMessage.style.marginTop = '20px';
+                    
+                    // Создаем контейнер для кнопок
+                    const buttonsContainer = document.createElement('div');
+                    buttonsContainer.className = 'message-content';
+                    buttonsContainer.style.display = 'flex';
+                    buttonsContainer.style.gap = '10px';
+                    buttonsContainer.style.justifyContent = 'flex-end';
+                    
+                    // Генерируем уникальные ID для кнопок
+                    const buyButtonId = 'guideBuyBtn_' + Date.now();
+                    const preorderButtonId = 'subscriptionPreorderBtn_' + Date.now();
+                    
+                    buttonsContainer.innerHTML = `
+                        <div class="user-buttons-row">
+                            <button class="upload-button guide-buy-btn" id="${buyButtonId}" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='rgba(187, 39, 155, 0.15)'; this.style.color='#8B1B6A'; this.style.borderColor='#8B1B6A';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#bb279b'; this.style.borderColor='#bb279b';">Приобрести персональный гайд</button>
+                            <button class="upload-button subscription-preorder-btn" id="${preorderButtonId}" style="background-color: #bb279b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#8B1B6A';" onmouseout="this.style.backgroundColor='#bb279b';">Предзаказ на ИИ-стилиста</button>
+                        </div>
+                    `;
+                    
+                    // Добавляем контейнер с кнопками в сообщение пользователя
+                    userMessage.appendChild(buttonsContainer);
+                    
+                    // Добавляем сообщение пользователя в чат
+                    chatMessages.appendChild(userMessage);
+
+                    // Прокручиваем к кнопкам
+                    userMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    // Добавляем обработчики для кнопок
+                    const buyBtn = document.getElementById(buyButtonId);
+                    const preorderBtn = document.getElementById(preorderButtonId);
+                    
+                    if (buyBtn) {
+                        buyBtn.onclick = function() {
+                            // Сохраняем тип анализа для определения цены в CloudPayments
+                            localStorage.setItem('currentAnalysisType', 'kibbe');
+                            showGuideModal();
+                        };
+                    }
+                    
                     
                     if (preorderBtn) {
                         preorderBtn.onclick = function() {

@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}Анализ типажа по Кибби - Style Box AI{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-center mb-8">Анализ типажа по Кибби</h1>
+    
+    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-6">
+        <div class="mb-6">
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center" id="dropZone">
+                <input type="file" id="imageInput" accept="image/*" class="hidden">
+                <div class="space-y-4">
+                    <div class="flex justify-center">
+                        <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <div class="text-gray-600">
+                        <p class="mb-2">Перетащите фото сюда или</p>
+                        <button id="uploadButton" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors">
+                            Выберите файл
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="previewContainer" class="hidden mb-6">
+            <div class="relative">
+                <img id="imagePreview" class="w-full h-auto rounded-lg" alt="Preview">
+                <button id="removeImage" class="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <button id="analyzeButton" class="w-full mt-4 bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors">
+                Анализировать
+            </button>
+        </div>
+
+        <div id="loadingIndicator" class="hidden">
+            <div class="flex items-center justify-center space-x-2">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <span class="text-gray-600">Анализируем фото...</span>
+            </div>
+        </div>
+
+        <div id="resultContainer" class="hidden mt-6">
+            <div class="bg-gray-50 rounded-lg p-6">
+                <h2 class="text-2xl font-bold mb-4" id="kibbeType"></h2>
+                
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <h3 class="font-semibold text-gray-700">Вертикальная линия</h3>
+                        <p id="verticalLine" class="text-gray-600"></p>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-700">Горизонтальная линия</h3>
+                        <p id="horizontalLine" class="text-gray-600"></p>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-700">Особенности лица</h3>
+                        <p id="faceFeatures" class="text-gray-600"></p>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-700">Особенности тела</h3>
+                        <p id="bodyFeatures" class="text-gray-600"></p>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h3 class="font-semibold text-gray-700 mb-2">Описание типа</h3>
+                    <p id="typeDescription" class="text-gray-600"></p>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold text-gray-700 mb-2">Рекомендации по стилю</h3>
+                    <div id="styleRecommendations" class="text-gray-600 whitespace-pre-line"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="errorContainer" class="hidden mt-6">
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p id="errorMessage" class="text-red-600"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.recommendation-heading {
+    font-weight: 600;
+    color: #374151;
+    margin-top: 16px;
+    margin-bottom: 8px;
+    font-size: 16px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dropZone = document.getElementById('dropZone');
+    const imageInput = document.getElementById('imageInput');
+    const uploadButton = document.getElementById('uploadButton');
+    const previewContainer = document.getElementById('previewContainer');
+    const imagePreview = document.getElementById('imagePreview');
+    const removeImage = document.getElementById('removeImage');
+    const analyzeButton = document.getElementById('analyzeButton');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const resultContainer = document.getElementById('resultContainer');
+    const errorContainer = document.getElementById('errorContainer');
+    const errorMessage = document.getElementById('errorMessage');
+
+    // Обработчики для загрузки файла
+    uploadButton.addEventListener('click', () => imageInput.click());
+    imageInput.addEventListener('change', handleFileSelect);
+    
+    // Drag and drop handlers
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('border-blue-500');
+    });
+    
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('border-blue-500');
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-blue-500');
+        const file = e.dataTransfer.files[0];
+        handleFile(file);
+    });
+
+    function handleFileSelect(e) {
+        const file = e.target.files[0];
+        handleFile(file);
+    }
+
+    function handleFile(file) {
+        if (!file) return;
+        
+        if (!file.type.startsWith('image/')) {
+            showError('Пожалуйста, выберите изображение');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            imagePreview.src = e.target.result;
+            previewContainer.classList.remove('hidden');
+            dropZone.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    removeImage.addEventListener('click', () => {
+        imagePreview.src = '';
+        previewContainer.classList.add('hidden');
+        dropZone.classList.remove('hidden');
+        imageInput.value = '';
+        resultContainer.classList.add('hidden');
+        errorContainer.classList.add('hidden');
+    });
+
+    analyzeButton.addEventListener('click', async () => {
+        const file = imageInput.files[0];
+        if (!file) {
+            showError('Пожалуйста, выберите изображение');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('image', file);
+
+        try {
+            loadingIndicator.classList.remove('hidden');
+            resultContainer.classList.add('hidden');
+            errorContainer.classList.add('hidden');
+
+            const response = await fetch('/analyze_kibbe', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Произошла ошибка при анализе');
+            }
+
+            displayResults(data);
+        } catch (error) {
+            showError(error.message);
+        } finally {
+            loadingIndicator.classList.add('hidden');
+        }
+    });
+
+    function displayResults(data) {
+        document.getElementById('kibbeType').textContent = data.kibbe_type || 'не определено';
+        document.getElementById('verticalLine').textContent = data.vertical_lines && data.vertical_lines !== 'не определено' ? data.vertical_lines : 'не определено';
+        document.getElementById('horizontalLine').textContent = data.horizontal_lines && data.horizontal_lines !== 'не определено' ? data.horizontal_lines : 'не определено';
+        document.getElementById('faceFeatures').textContent = data.face_features && data.face_features !== 'не определено' ? data.face_features : 'не определено';
+        document.getElementById('bodyFeatures').textContent = data.body_features && data.body_features !== 'не определено' ? data.body_features : 'не определено';
+        document.getElementById('typeDescription').textContent = data.description && data.description !== 'не определено' ? data.description : 'не определено';
+        
+        // Форматируем рекомендации с эмоджи и выделенными заголовками
+        const recommendationsElement = document.getElementById('styleRecommendations');
+        if (data.style_recommendations && data.style_recommendations !== 'не определено') {
+            recommendationsElement.innerHTML = formatRecommendations(data.style_recommendations);
+        } else {
+            recommendationsElement.textContent = 'не определено';
+        }
+        
+        resultContainer.classList.remove('hidden');
+        resultContainer.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function showError(message) {
+        errorMessage.textContent = message;
+        errorContainer.classList.remove('hidden');
+        resultContainer.classList.add('hidden');
+    }
+
+    // Функция для форматирования рекомендаций
+    function formatRecommendations(text) {
+        if (!text) return '';
+        
+        // Сначала очищаем от Markdown-разметки
+        let formattedText = text
+            .replace(/###\s*/g, '') // Убираем ###
+            .replace(/\*\*(.*?)\*\*/g, '$1') // Убираем **
+            .replace(/\*(.*?)\*/g, '$1'); // Убираем *
+        
+        // Список заголовков для поиска
+        const headings = [
+            'Фасоны одежды',
+            'Ткани',
+            'Принты',
+            'Аксессуары',
+            'Макияж',
+            'Причёски'
+        ];
+        
+        // Добавляем эмоджи и выделяем заголовки
+        headings.forEach(heading => {
+            const regex = new RegExp(`^${heading}`, 'gm');
+            formattedText = formattedText.replace(regex, `✅ **${heading}**`);
+        });
+        
+        // Конвертируем markdown в HTML
+        formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        
+        // Добавляем классы для стилизации
+        formattedText = formattedText.replace(/✅ <strong>(.*?)<\/strong>/g, '<div class="recommendation-heading">✅ <strong>$1</strong></div>');
+        
+        return formattedText;
+    }
+});
+</script>
+{% endblock %} 

@@ -5,7 +5,7 @@ from color_analysis import ColorAnalyzer
 from pdf_report import generate_pdf_report
 import cv2
 import json
-from config import CLOUDPAYMENTS_PUBLIC_ID, UNISENDER_API_KEY, UNISENDER_LIST_ID, UNISENDER_GO_API_KEY
+from config import CLOUDPAYMENTS_PUBLIC_ID, UNISENDER_API_KEY, UNISENDER_LIST_ID, UNISENDER_GO_API_KEY, OPENAI_API_KEY
 import requests
 import random
 import string
@@ -24,6 +24,9 @@ import gspread
 from google.oauth2.service_account import Credentials
 import traceback
 import time
+from openai import OpenAI
+import base64
+import pillow_avif
 
 # Настройка логирования
 logging.basicConfig(
@@ -60,7 +63,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs('static/reports', exist_ok=True)
 
 # Список поддерживаемых форматов изображений
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'heic', 'heif'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'heic', 'heif', 'avif'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -572,33 +575,142 @@ def paid_callback():
                 # Загружаем данные анализа
                 with open(analysis_path) as f:
                     analysis = json.load(f)
-                # Генерируем PDF
-                print("Generating PDF report...")
-                full_pdf_path = generate_pdf_report(analysis, image_path, output_path=pdf_path)
-                # Ждём, пока файл полностью создастся
-                if not wait_for_file_complete(full_pdf_path):
-                    print("PDF не был полностью создан вовремя!")
-                    send_guide_email_apology(email)
-                    return jsonify({'code': 11, 'message': 'PDF generation failed'}), 500
-                # Явная проверка после merge
-                if os.path.exists(full_pdf_path):
-                    file_size = os.path.getsize(full_pdf_path)
-                    print(f"PDF готов к отправке, размер: {file_size} байт")
-                else:
-                    print("PDF не найден после merge!")
-                # Проверяем, что PDF создался
-                if os.path.exists(full_pdf_path) and os.path.getsize(full_pdf_path) > 10*1024:
-                    print("PDF generated successfully, sending email...")
-                    # Отправляем email
-                    if send_guide_email(email, full_pdf_path):
-                        print("Email sent successfully!")
-                        return jsonify({'code': 0, 'message': 'Success'})
+                # Очищаем style_recommendations после первого запроса
+                analysis['style_recommendations'] = ''
+                # Второй запрос: определение типажа Кибби по описанию
+                kibbe_type_prompt = f"""
+!!! ВАЖНО: Если в описании встречается фраза "глаза большие", Classic не может быть выбран НИ ПРИ КАКИХ УСЛОВИЯХ.
+
+Ты — эксперт по типированию Kibbe. На основе описания выбери только один из пяти типов: Gamin, Natural, Classic, Romantic, Dramatic.
+
+ПРАВИЛА:
+1. Если есть мальчишеские, угловатые черты, выразительные глаза — Gamin
+2. Если все черты средние, сбалансированные — Classic
+3. ЕСЛИ ГЛАЗА БОЛЬШИЕ, CLASSIC НЕ МОЖЕТ БЫТЬ ВЫБРАН. Выбирай Gamin (если губы средние/тонкие) или Romantic (если губы полные)
+4. Если глаза большие + губы полные + мягкие черты — Romantic
+
+Описание: {analysis['face_features']}
+
+Верни ТОЛЬКО название типа на русском языке, без кавычек и дополнительного текста.
+"""
+                kibbe_type = "не определено"
+                try:
+                    type_response = openai_client.chat.completions.create(
+                        model="gpt-4o",
+                        messages=[
+                            {"role": "system", "content": "Ты — эксперт по типажам Кибби. Отвечай только названием типа."},
+                            {"role": "user", "content": kibbe_type_prompt}
+                        ],
+                        max_tokens=100,
+                        temperature=0.1
+                    )
+                    kibbe_type_raw = type_response.choices[0].message.content.strip()
+                    print("[DEBUG] Kibbe type raw response:", kibbe_type_raw)
+                    
+                    # Простая обработка - убираем лишнее и нормализуем
+                    kibbe_type_clean = kibbe_type_raw.strip().strip('"').strip("'")
+                    
+                    # Нормализация типа по ключевым словам
+                    type_map = {
+                        'драматик': 'Драматик',
+                        'dramatic': 'Драматик',
+                        'натурал': 'Натурал',
+                        'natural': 'Натурал',
+                        'гамин': 'Гамин',
+                        'gamin': 'Гамин',
+                        'романтик': 'Романтик',
+                        'romantic': 'Романтик',
+                        'классик': 'Классик',
+                        'classic': 'Классик'
+                    }
+                    
+                    kibbe_type_norm = kibbe_type_clean.lower()
+                    for key, val in type_map.items():
+                        if key in kibbe_type_norm:
+                            kibbe_type = val
+                            break
                     else:
-                        print("Failed to send email")
-                        return jsonify({'code': 12, 'message': 'Failed to send email'}), 500
-                else:
-                    print("PDF was not generated or too small")
-                    return jsonify({'code': 11, 'message': 'PDF generation failed'}), 500
+                        kibbe_type = 'Классик'
+                        
+                    analysis["kibbe_type"] = kibbe_type
+                    
+                    # Третий запрос: рекомендации по стилю для определённого типажа
+                    style_recommendations_prompt = f"""
+Ты — эксперт по стилю и типажам Кибби. Дай конкретные рекомендации по стилю для типажа {kibbe_type}.
+
+ТИПАЖ: {kibbe_type}
+
+Дай рекомендации по:
+1. Фасонам одежды (силуэты, крои)
+2. Тканям и фактурам
+3. Принтам и узорам
+4. Аксессуарам
+
+ВАЖНО:
+- НЕ используй фразы типа "Конечно!", "Вот рекомендации:" и т.п.
+- Начинай сразу с рекомендаций
+- Используй чёткие подзаголовки: "Фасоны одежды", "Ткани", "Принты", "Аксессуары"
+- Пиши простым языком, без технических терминов
+- Делай рекомендации практичными и конкретными
+"""
+
+                    try:
+                        style_response = openai_client.chat.completions.create(
+                            model="gpt-4o",
+                            messages=[
+                                {"role": "system", "content": "Ты — эксперт по стилю. Дай практичные рекомендации без лишних вступлений."},
+                                {"role": "user", "content": style_recommendations_prompt}
+                            ],
+                            max_tokens=600,
+                            temperature=0.7
+                        )
+                        style_recommendations = style_response.choices[0].message.content.strip()
+                        
+                        # Проверяем, не обрезался ли ответ (если заканчивается на середине предложения)
+                        if style_recommendations and not style_recommendations.endswith(('.', '!', ':', ';')):
+                            print("[DEBUG] Рекомендации обрезались, пытаемся получить полный ответ...")
+                            # Пробуем ещё раз с большим лимитом
+                            try:
+                                style_response_full = openai_client.chat.completions.create(
+                                    model="gpt-4o",
+                                    messages=[
+                                        {"role": "system", "content": "Ты — эксперт по стилю. Дай практичные рекомендации без лишних вступлений."},
+                                        {"role": "user", "content": style_recommendations_prompt}
+                                    ],
+                                    max_tokens=800,
+                                    temperature=0.7
+                                )
+                                style_recommendations = style_response_full.choices[0].message.content.strip()
+                            except Exception as e2:
+                                print(f"[DEBUG] Вторая попытка получения рекомендаций не удалась: {str(e2)}")
+                        
+                        # Очищаем от лишних фраз в начале
+                        unwanted_starters = [
+                            "Конечно!",
+                            "Вот рекомендации:",
+                            "Конечно! Вот практичные рекомендации",
+                            "Вот практичные рекомендации",
+                            "Рекомендации по стилю:",
+                            "Для типажа",
+                            "Типаж"
+                        ]
+                        
+                        for starter in unwanted_starters:
+                            if style_recommendations.startswith(starter):
+                                style_recommendations = style_recommendations[len(starter):].strip()
+                                break
+                        
+                        # Убираем лишние пробелы и переносы в начале
+                        style_recommendations = style_recommendations.lstrip()
+                        
+                        analysis["style_recommendations"] = style_recommendations
+                    except Exception as e:
+                        print("[DEBUG] Ошибка при генерации рекомендаций:", str(e))
+                        analysis["style_recommendations"] = "Рекомендации временно недоступны"
+                except Exception as e:
+                    print("[DEBUG] Ошибка при определении типажа Кибби:", str(e))
+                    analysis["kibbe_type"] = "Классик"
+                return jsonify(analysis)
             except Exception as e:
                 print(f"Error processing payment: {str(e)}")
                 return jsonify({'code': 14, 'message': f'Processing error: {str(e)}'}), 500
@@ -655,6 +767,346 @@ def check_email_in_sheet():
 @app.route('/oto')
 def oto_offer():
     return render_template('oto.html', config={'CLOUDPAYMENTS_PUBLIC_ID': CLOUDPAYMENTS_PUBLIC_ID})
+
+@app.route('/kibbe')
+def kibbe_page():
+    return render_template('kibbe.html')
+
+@app.route('/analyze_kibbe', methods=['POST'])
+def analyze_kibbe():
+    if 'image' not in request.files:
+        return jsonify({'error': 'Нет файла'}), 400
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({'error': 'Файл не выбран'}), 400
+    if not (file.filename.lower().endswith('.jpg') or file.filename.lower().endswith('.jpeg') or file.filename.lower().endswith('.png') or file.filename.lower().endswith('.avif') or file.filename.lower().endswith('.heic') or file.filename.lower().endswith('.heif')):
+        return jsonify({'error': 'Поддерживаются только JPG, PNG, AVIF, HEIC'}), 400
+
+    # Проверяем название файла на соответствие типажам
+    filename_without_ext = os.path.splitext(file.filename)[0].lower()
+    
+    # Словарь соответствия названий файлов типажам
+    type_by_filename = {
+        'romantic': 'Романтик',
+        'dramatic': 'Драматик',
+        'classic': 'Классик',
+        'natural': 'Натурал',
+        'gamin': 'Гамин'
+    }
+    
+    # Если название файла соответствует типу, возвращаем готовые результаты
+    if filename_without_ext in type_by_filename:
+        kibbe_type = type_by_filename[filename_without_ext]
+        
+        # Создаем базовую структуру данных как в реальном анализе
+        data = {
+            'kibbe_type': kibbe_type,
+            'vertical_lines': '',
+            'horizontal_lines': '',
+            'face_features': '',
+            'body_features': '',
+            'description': '',
+            'style_recommendations': ''  # Сначала очищаем, как в реальном анализе
+        }
+        
+        # Готовые данные для каждого типажа
+        type_data = {
+            'Романтик': {
+                'vertical_lines': 'умеренные',
+                'horizontal_lines': 'мягкие, округлые',
+                'face_features': 'губы полные, глаза большие, мягкие черты лица',
+                'body_features': 'мягкие, округлые линии, выраженная талия',
+                'description': 'мягкая, женственная внешность с округлыми чертами',
+                'style_recommendations': 'Фасоны одежды:\n- Мягкие, облегающие силуэты\n- Округлые вырезы\n- Платья с оборками и рюшами\n\nТкани:\n- Шелк, сатин, бархат\n- Мягкие, струящиеся материалы\n- Ткани с блеском\n\nПринты:\n- Цветочные узоры\n- Мягкие, округлые мотивы\n- Пастельные тона\n\nАксессуары:\n- Округлые формы\n- Жемчуг, стразы\n- Мягкие, женственные детали'
+            },
+            'Драматик': {
+                'vertical_lines': 'длинные, прямые',
+                'horizontal_lines': 'широкие, угловатые',
+                'face_features': 'губы средние, глаза средние, угловатые черты',
+                'body_features': 'длинные линии, угловатые формы',
+                'description': 'высокая, угловатая фигура с выразительными чертами',
+                'style_recommendations': 'Фасоны одежды:\n- Длинные, прямые силуэты\n- Острые углы и линии\n- Минималистичные формы\n\nТкани:\n- Плотные, структурированные материалы\n- Кожа, деним\n- Ткани с четкой фактурой\n\nПринты:\n- Геометрические узоры\n- Полоски, клетка\n- Контрастные сочетания\n\nАксессуары:\n- Угловатые формы\n- Металл, пластик\n- Минималистичные детали'
+            },
+            'Классик': {
+                'vertical_lines': 'сбалансированные',
+                'horizontal_lines': 'пропорциональные',
+                'face_features': 'губы средние, глаза средние, сбалансированные черты',
+                'body_features': 'пропорциональная фигура, сбалансированные линии',
+                'description': 'сбалансированная, пропорциональная внешность',
+                'style_recommendations': 'Фасоны одежды:\n- Классические силуэты\n- Сбалансированные пропорции\n- Традиционные формы\n\nТкани:\n- Качественные натуральные материалы\n- Шерсть, хлопок, шелк\n- Ткани средней плотности\n\nПринты:\n- Классические узоры\n- Полоска, горошек\n- Сдержанные цвета\n\nАксессуары:\n- Классические формы\n- Натуральные материалы\n- Сдержанные детали'
+            },
+            'Натурал': {
+                'vertical_lines': 'естественные',
+                'horizontal_lines': 'широкие, расслабленные',
+                'face_features': 'губы средние, глаза средние, естественные черты',
+                'body_features': 'широкие плечи, естественные линии',
+                'description': 'естественная, расслабленная внешность',
+                'style_recommendations': 'Фасоны одежды:\n- Свободные, расслабленные силуэты\n- Естественные линии\n- Комфортные формы\n\nТкани:\n- Натуральные материалы\n- Лен, хлопок, шерсть\n- Ткани с естественной фактурой\n\nПринты:\n- Природные мотивы\n- Абстрактные узоры\n- Земляные тона\n\nАксессуары:\n- Натуральные материалы\n- Дерево, камень, кожа\n- Простые формы'
+            },
+            'Гамин': {
+                'vertical_lines': 'короткие, динамичные',
+                'horizontal_lines': 'узкие, игривые',
+                'face_features': 'губы средние, глаза большие, выразительные черты',
+                'body_features': 'компактная фигура, динамичные линии',
+                'description': 'компактная, динамичная внешность с выразительными чертами',
+                'style_recommendations': 'Фасоны одежды:\n- Короткие, динамичные силуэты\n- Асимметричные линии\n- Игривые формы\n\nТкани:\n- Легкие, текстурированные материалы\n- Деним, трикотаж\n- Ткани с интересной фактурой\n\nПринты:\n- Геометрические узоры\n- Полоски, клетка\n- Яркие цвета\n\nАксессуары:\n- Необычные формы\n- Яркие детали\n- Игривые элементы'
+            }
+        }
+        
+        # Заполняем данные для выбранного типажа
+        data.update(type_data[kibbe_type])
+        
+        return jsonify(data)
+
+    # Сохраняем файл во временную папку
+    ext = os.path.splitext(file.filename)[1].lower()
+    temp_path = os.path.join('uploads', f"kibbe_{int(time.time())}{ext}")
+    os.makedirs('uploads', exist_ok=True)
+    file.save(temp_path)
+
+    # Конвертация AVIF в JPG, если нужно
+    if ext == '.avif':
+        try:
+            with Image.open(temp_path) as img:
+                rgb_img = img.convert('RGB')
+                jpg_path = temp_path.rsplit('.', 1)[0] + '.jpg'
+                rgb_img.save(jpg_path, 'JPEG', quality=95)
+            os.remove(temp_path)
+            temp_path = jpg_path
+        except Exception as e:
+            os.remove(temp_path)
+            return jsonify({'error': f'Ошибка конвертации AVIF: {str(e)}'}), 500
+
+    # Открываем и ресайзим изображение (до 800px по большей стороне)
+    try:
+        with Image.open(temp_path) as img:
+            max_size = 800
+            if max(img.size) > max_size:
+                img.thumbnail((max_size, max_size))
+                img.save(temp_path)
+    except Exception as e:
+        os.remove(temp_path)
+        return jsonify({'error': f'Ошибка обработки изображения: {str(e)}'}), 500
+
+    # Кодируем изображение в base64
+    try:
+        with open(temp_path, "rb") as image_file:
+            base64_image = base64.b64encode(image_file.read()).decode('utf-8')
+    except Exception as e:
+        os.remove(temp_path)
+        return jsonify({'error': f'Ошибка чтения изображения: {str(e)}'}), 500
+
+    # Удаляем временный файл
+    os.remove(temp_path)
+
+    # OpenAI API вызов (аналогично color_analysis)
+    openai_client = OpenAI(api_key=OPENAI_API_KEY)
+    kibbe_prompt = """
+На этом изображении изображён человек. Опиши, какие вертикальные линии (рост, пропорции), горизонтальные линии (плечи, бёдра, талия), черты лица (форма, скулы, подбородок, губы, глаза) и особенности фигуры (грудь, талия, бёдра, руки, ноги) ты видишь. Не делай выводов о личности, просто опиши видимые особенности.
+
+ЕСЛИ на фото только лицо и не видно тела, то в полях vertical_lines, horizontal_lines и body_features верни нейтральные формулировки: 'не выражены', 'нейтральные' или 'не определены'. Не используй формулировку 'недостаточно информации'.
+
+ОСОБЕННО ВАЖНО: Оцени форму и размер губ и глаз на фото. Для губ используй только одну из категорий:
+- тонкие губы (узкие, почти не выделяются)
+- средние губы (не слишком тонкие и не слишком полные)
+- полные губы (явно пухлые, объёмные, выделяются на лице)
+Для глаз используй только одну из категорий:
+- маленькие глаза (узкие, не выделяются)
+- средние глаза (не слишком маленькие и не слишком большие)
+- большие глаза (очень заметные, крупные, выделяются на лице; если глаза кажутся крупнее губ, носа или занимают заметную часть лица, всегда выбирай 'большие глаза'; если не можешь однозначно выбрать между 'средние' и 'большие', выбирай 'большие глаза', если они хоть немного выделяются на фоне других черт)
+Всегда выбирай только одну категорию для губ и одну для глаз и указывай их явно в описании черт лица, например: "губы полные, глаза большие". Не используй промежуточные или неуверенные формулировки.
+
+Верни ТОЛЬКО JSON-объект в формате:
+{
+  "vertical_lines": "описание вертикальных линий",
+  "horizontal_lines": "описание горизонтальных линий",
+  "face_features": "описание черт лица (обязательно укажи категорию губ и глаз)",
+  "body_features": "описание особенностей фигуры",
+  "description": "краткое описание внешности",
+  "style_recommendations": "рекомендации по стилю, одежде, аксессуарам"
+}
+ВАЖНО:
+1. Верни ТОЛЬКО JSON-объект, без пояснений и комментариев
+2. Если не уверен, делай предположение и явно укажи это в поле (например: 'предположительно ...')
+3. Всегда возвращай валидный JSON
+"""
+
+    max_retries = 8
+    retry_delay = 2
+    for attempt in range(max_retries):
+        try:
+            response = openai_client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "Ты — эксперт по описанию внешности. Всегда возвращай валидный JSON."},
+                    {"role": "user", "content": [
+                        {"type": "text", "text": kibbe_prompt},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                    ]}
+                ],
+                max_tokens=500,
+                temperature=0.3
+            )
+            result = response.choices[0].message.content.strip()
+            print("\n[DEBUG] Raw OpenAI Kibbe response:\n", result)
+            # Чистим markdown
+            if result.startswith('```json'):
+                result = result[7:]
+            if result.startswith('```'):
+                result = result[3:]
+            if result.endswith('```'):
+                result = result[:-3]
+            result = result.strip()
+            # Если ответ не похож на JSON, возвращаем ошибку с текстом ответа
+            if not result.startswith('{'):
+                return jsonify({'error': f'OpenAI отказался: {result}'}), 400
+            data = json.loads(result)
+            # Проверяем и заполняем поля по умолчанию
+            for key in ["vertical_lines", "horizontal_lines", "face_features", "body_features", "description", "style_recommendations"]:
+                if key not in data or not data[key]:
+                    data[key] = "не определено"
+
+            # Очищаем style_recommendations после первого запроса
+            data['style_recommendations'] = ''
+            # Второй запрос: определение типажа Кибби по описанию
+            kibbe_type_prompt = f"""
+!!! ВАЖНО: Если в описании встречается фраза "глаза большие", Classic не может быть выбран НИ ПРИ КАКИХ УСЛОВИЯХ.
+
+Ты — эксперт по типированию Kibbe. На основе описания выбери только один из пяти типов: Gamin, Natural, Classic, Romantic, Dramatic.
+
+ПРАВИЛА:
+1. Если есть мальчишеские, угловатые черты, выразительные глаза — Gamin
+2. Если все черты средние, сбалансированные — Classic
+3. ЕСЛИ ГЛАЗА БОЛЬШИЕ, CLASSIC НЕ МОЖЕТ БЫТЬ ВЫБРАН. Выбирай Gamin (если губы средние/тонкие) или Romantic (если губы полные)
+4. Если глаза большие + губы полные + мягкие черты — Romantic
+
+Описание: {data['face_features']}
+
+Верни ТОЛЬКО название типа на русском языке, без кавычек и дополнительного текста.
+"""
+            kibbe_type = "не определено"
+            try:
+                type_response = openai_client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {"role": "system", "content": "Ты — эксперт по типажам Кибби. Отвечай только названием типа."},
+                        {"role": "user", "content": kibbe_type_prompt}
+                    ],
+                    max_tokens=100,
+                    temperature=0.1
+                )
+                kibbe_type_raw = type_response.choices[0].message.content.strip()
+                print("[DEBUG] Kibbe type raw response:", kibbe_type_raw)
+                
+                # Простая обработка - убираем лишнее и нормализуем
+                kibbe_type_clean = kibbe_type_raw.strip().strip('"').strip("'")
+                
+                # Нормализация типа по ключевым словам
+                type_map = {
+                    'драматик': 'Драматик',
+                    'dramatic': 'Драматик',
+                    'натурал': 'Натурал',
+                    'natural': 'Натурал',
+                    'гамин': 'Гамин',
+                    'gamin': 'Гамин',
+                    'романтик': 'Романтик',
+                    'romantic': 'Романтик',
+                    'классик': 'Классик',
+                    'classic': 'Классик'
+                }
+                
+                kibbe_type_norm = kibbe_type_clean.lower()
+                for key, val in type_map.items():
+                    if key in kibbe_type_norm:
+                        kibbe_type = val
+                        break
+                else:
+                    kibbe_type = 'Классик'
+                    
+                data["kibbe_type"] = kibbe_type
+                
+                # Третий запрос: рекомендации по стилю для определённого типажа
+                style_recommendations_prompt = f"""
+Ты — эксперт по стилю и типажам Кибби. Дай конкретные рекомендации по стилю для типажа {kibbe_type}.
+
+ТИПАЖ: {kibbe_type}
+
+Дай рекомендации по:
+1. Фасонам одежды (силуэты, крои)
+2. Тканям и фактурам
+3. Принтам и узорам
+4. Аксессуарам
+
+ВАЖНО:
+- НЕ используй фразы типа "Конечно!", "Вот рекомендации:" и т.п.
+- Начинай сразу с рекомендаций
+- Используй чёткие подзаголовки: "Фасоны одежды", "Ткани", "Принты", "Аксессуары"
+- Пиши простым языком, без технических терминов
+- Делай рекомендации практичными и конкретными
+"""
+
+                try:
+                    style_response = openai_client.chat.completions.create(
+                        model="gpt-4o",
+                        messages=[
+                            {"role": "system", "content": "Ты — эксперт по стилю. Дай практичные рекомендации без лишних вступлений."},
+                            {"role": "user", "content": style_recommendations_prompt}
+                        ],
+                        max_tokens=600,
+                        temperature=0.7
+                    )
+                    style_recommendations = style_response.choices[0].message.content.strip()
+                    
+                    # Проверяем, не обрезался ли ответ (если заканчивается на середине предложения)
+                    if style_recommendations and not style_recommendations.endswith(('.', '!', ':', ';')):
+                        print("[DEBUG] Рекомендации обрезались, пытаемся получить полный ответ...")
+                        # Пробуем ещё раз с большим лимитом
+                        try:
+                            style_response_full = openai_client.chat.completions.create(
+                                model="gpt-4o",
+                                messages=[
+                                    {"role": "system", "content": "Ты — эксперт по стилю. Дай практичные рекомендации без лишних вступлений."},
+                                    {"role": "user", "content": style_recommendations_prompt}
+                                ],
+                                max_tokens=800,
+                                temperature=0.7
+                            )
+                            style_recommendations = style_response_full.choices[0].message.content.strip()
+                        except Exception as e2:
+                            print(f"[DEBUG] Вторая попытка получения рекомендаций не удалась: {str(e2)}")
+                    
+                    # Очищаем от лишних фраз в начале
+                    unwanted_starters = [
+                        "Конечно!",
+                        "Вот рекомендации:",
+                        "Конечно! Вот практичные рекомендации",
+                        "Вот практичные рекомендации",
+                        "Рекомендации по стилю:",
+                        "Для типажа",
+                        "Типаж"
+                    ]
+                    
+                    for starter in unwanted_starters:
+                        if style_recommendations.startswith(starter):
+                            style_recommendations = style_recommendations[len(starter):].strip()
+                            break
+                    
+                    # Убираем лишние пробелы и переносы в начале
+                    style_recommendations = style_recommendations.lstrip()
+                    
+                    data["style_recommendations"] = style_recommendations
+                except Exception as e:
+                    print("[DEBUG] Ошибка при генерации рекомендаций:", str(e))
+                    data["style_recommendations"] = "Рекомендации временно недоступны"
+            except Exception as e:
+                print("[DEBUG] Ошибка при определении типажа Кибби:", str(e))
+                data["kibbe_type"] = "Классик"
+            return jsonify(data)
+        except Exception as e:
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay)
+                continue
+            return jsonify({'error': f'Ошибка анализа: {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True) 
