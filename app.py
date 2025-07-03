@@ -629,6 +629,11 @@ def get_guide_pdf():
 @app.route('/paid_callback', methods=['POST'])
 def paid_callback():
     # Получаем данные из form-data или JSON
+    print("[paid_callback] Request method:", request.method)
+    print("[paid_callback] Request headers:", dict(request.headers))
+    print("[paid_callback] Request form data:", dict(request.form))
+    print("[paid_callback] Request JSON:", request.get_json())
+    
     data = request.form if request.form else request.get_json()
     print("[paid_callback] Webhook data:", dict(data))
     print("[paid_callback] after webhook data print")
