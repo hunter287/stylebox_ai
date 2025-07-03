@@ -34,4 +34,11 @@ UNISENDER_GO_API_KEY = os.getenv('UNISENDER_GO_API_KEY')
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///stylist_ai.db')
 
 # Application settings
-MAX_REQUESTS_PER_DAY = 10 
+MAX_REQUESTS_PER_DAY = 10
+
+# Google Sheets configuration
+GOOGLE_SHEET_ID = os.getenv('GOOGLE_SHEET_ID')
+GOOGLE_SHEET_RANGE = os.getenv('GOOGLE_SHEET_RANGE', 'A:A')
+GOOGLE_SHEET_WORKSHEET = os.getenv('GOOGLE_SHEET_WORKSHEET', 'Лист1')
+GOOGLE_SHEET_KIBBE_WORKSHEET = os.getenv('GOOGLE_SHEET_KIBBE_WORKSHEET', 'kibbe')
+GOOGLE_SERVICE_ACCOUNT_FILE = os.getenv('GOOGLE_SERVICE_ACCOUNT_FILE', 'google_service_account.json') 

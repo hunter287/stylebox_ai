@@ -2,10 +2,10 @@ from flask import Flask, request, jsonify, render_template, send_file, session
 import os
 from werkzeug.utils import secure_filename
 from color_analysis import ColorAnalyzer
-from pdf_report import generate_pdf_report
+from pdf_report import generate_pdf_report, generate_kibbe_pdf
 import cv2
 import json
-from config import CLOUDPAYMENTS_PUBLIC_ID, UNISENDER_API_KEY, UNISENDER_LIST_ID, UNISENDER_GO_API_KEY, OPENAI_API_KEY
+from config import CLOUDPAYMENTS_PUBLIC_ID, UNISENDER_API_KEY, UNISENDER_LIST_ID, UNISENDER_GO_API_KEY, OPENAI_API_KEY, GOOGLE_SHEET_ID, GOOGLE_SHEET_RANGE, GOOGLE_SHEET_WORKSHEET, GOOGLE_SHEET_KIBBE_WORKSHEET, GOOGLE_SERVICE_ACCOUNT_FILE
 import requests
 import random
 import string
@@ -404,6 +404,74 @@ def send_guide_email(email, pdf_path):
         print(f"Ошибка при отправке письма: {str(e)}")
         return False
 
+
+def send_kibbe_guide_email(email, pdf_path):
+    # Используем Web API Unisender Go для транзакционных писем
+    api_key = UNISENDER_GO_API_KEY
+    api_url = "https://go2.unisender.ru/ru/transactional/api/v1/email/send.json"
+    from_email = 'info@stylebox.live'
+    to_email = email
+
+    # Формируем URL для скачивания PDF
+    pdf_url = request.host_url.rstrip('/') + '/' + pdf_path
+
+    payload = {
+        "api_key": api_key,
+        "message": {
+            "recipients": [
+                {"email": to_email}
+            ],
+            "from_email": from_email,
+            "from_name": "Style Box AI",
+            "subject": "Ваш персональный гайд по стилю",
+            "body": {
+                "html": (
+                    "<html><body>"
+                    "<p>Здравствуйте!<br><br>"
+                    "Спасибо за приобретение персонального гайда по стилю.<br>"
+                    f"Скачать ваш гайд можно по <a href=\"{pdf_url}\">ссылке</a>.<br><br>"
+                    "Вы также можете оформить <b><a href=\"https://ai.stylebox.live/oto?utm_source=emai_guide\" style=\"color:#bb279b;\">предзаказ на ИИ-стилиста</a></b> с дополнительной скидкой 500 руб., т.к. вы купили персональный гайд.<br>"
+                    "Итого, для вас ИИ-стилист на целый год будет стоить <b>3490 руб.<br><br>"
+                    "С уважением,<br>"
+                    "Style Box AI<br><br>"
+                    "<a href=\"https://noreply.stylebox.live/ru/go2_unsubscribe\" style=\"color:#7C3AED;\">Отписаться от рассылки</a>"
+                    "</p></body></html>"
+                ),
+                "plaintext": "Здравствуйте! Спасибо за приобретение персонального гайда по стилю. Ссылка на ваш гайд: {pdf_url}\n\nВы также можете оформить предзаказ на ИИ-стилиста со скидкой 500 руб. по ссылке: https://ai.stylebox.live/oto?utm_source=emai_guide\nИтого, для вас ИИ-стилист на целый год будет стоить 3490 руб.".format(pdf_url=pdf_url)
+            }
+        }
+    }
+
+    print("Отправка письма с гайдом по Кибби через Unisender Go Transactional API...")
+    print(f"API URL: {api_url}")
+    print(f"From: {from_email}")
+    print(f"To: {to_email}")
+    print(f"PDF URL: {pdf_url}")
+    print(f"Payload: {json.dumps(payload, ensure_ascii=False, indent=2)}")
+
+    try:
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+        response = requests.post(api_url, json=payload, headers=headers, verify=False)
+        print(f"Response status: {response.status_code}")
+        print(f"Response headers: {response.headers}")
+        print(f"Response body: {response.text}")
+
+        if response.status_code == 200:
+            print("Письмо с гайдом по Кибби отправлено через Unisender Go Transactional API!")
+            return True
+        else:
+            print(f"Ошибка отправки письма с гайдом по Кибби: {response.text}")
+            return False
+    except requests.exceptions.SSLError as e:
+        print(f"SSL ошибка: {str(e)}")
+        return False
+    except Exception as e:
+        print(f"Ошибка при отправке письма с гайдом по Кибби: {str(e)}")
+        return False
+
 def wait_for_file_complete(filepath, min_size=10*1024, timeout=10):
     """Ждёт, пока файл не появится и не станет больше min_size байт."""
     start = time.time()
@@ -459,6 +527,58 @@ def send_guide():
             return jsonify({'error': 'PDF not created after 10 attempts, apology email sent'}), 500
     except Exception as e:
         print(f"Error in send_guide: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/send_kibbe_guide_email', methods=['POST'])
+def send_kibbe_guide():
+    """Endpoint to send the Kibbe guide via email"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+        if 'last_kibbe_analysis' not in session or 'last_kibbe_image_path' not in session:
+            return jsonify({'error': 'No Kibbe analysis found'}), 400
+        
+        analysis = session['last_kibbe_analysis']
+        image_path = session['last_kibbe_image_path']
+        kibbe_type = analysis.get('kibbe_type', 'romantic')
+        
+        # Проверяем, что файл с фото существует
+        if not os.path.exists(image_path):
+            print(f"Image file not found: {image_path}")
+            send_guide_email_apology(email)
+            return jsonify({'error': 'Image file not found'}), 404
+        
+        # Генерируем PDF для Кибби
+        try:
+            full_pdf_path = generate_kibbe_pdf(
+                user_photo_path=image_path,
+                kibbe_type=kibbe_type,
+                email=email
+            )
+            print(f"Kibbe PDF generated: {full_pdf_path}")
+            
+            if os.path.exists(full_pdf_path) and os.path.getsize(full_pdf_path) > 10*1024:
+                # Отправляем email с гайдом по Кибби
+                if send_kibbe_guide_email(email, full_pdf_path):
+                    print("Kibbe guide email sent successfully!")
+                    return jsonify({'success': True})
+                else:
+                    print("Error sending Kibbe guide email!")
+                    return jsonify({'error': 'Failed to send Kibbe guide email'}), 500
+            else:
+                # Если не удалось — письмо с извинением
+                send_guide_email_apology(email)
+                return jsonify({'error': 'Kibbe PDF not created, apology email sent'}), 500
+        except Exception as e:
+            print(f"Error generating Kibbe PDF: {str(e)}")
+            send_guide_email_apology(email)
+            return jsonify({'error': f'Error generating Kibbe PDF: {str(e)}'}), 500
+            
+    except Exception as e:
+        print(f"Error in send_kibbe_guide: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 # Функция для отправки письма с извинением
@@ -556,167 +676,110 @@ def paid_callback():
         print("[paid_callback] after custom_fields_dict extraction, value:", analysis_id)
     print("[paid_callback] Email:", email)
     print("[paid_callback] Analysis ID:", analysis_id)
-    analysis_path = f'static/reports/last_analysis_{analysis_id}.json'
-    image_path = f'static/reports/last_image_{analysis_id}.jpg'
-    pdf_path = f'static/reports/report_{normalize_email(email)}_{analysis_id}.pdf'
-    print("[paid_callback] Analysis path:", analysis_path, "Exists:", os.path.exists(analysis_path))
-    print("[paid_callback] Image path:", image_path, "Exists:", os.path.exists(image_path))
+    
+    # Определяем тип покупки по описанию
+    description = data.get('Description', '').lower()
+    is_kibbe_guide = 'стиль' in description or 'типаж' in description or 'kibbe' in description
+    
+    if is_kibbe_guide:
+        # Для гайдов по Кибби используем данные из сессии
+        analysis_path = None
+        image_path = None
+        pdf_path = None
+        print("[paid_callback] Kibbe guide purchase detected")
+    else:
+        # Для цветотипов используем старую логику
+        analysis_path = f'static/reports/last_analysis_{analysis_id}.json'
+        image_path = f'static/reports/last_image_{analysis_id}.jpg'
+        pdf_path = f'static/reports/report_{normalize_email(email)}_{analysis_id}.pdf'
+        print("[paid_callback] Color guide purchase detected")
+    
+    print("[paid_callback] Analysis path:", analysis_path, "Exists:", os.path.exists(analysis_path) if analysis_path else "N/A")
+    print("[paid_callback] Image path:", image_path, "Exists:", os.path.exists(image_path) if image_path else "N/A")
     print("[paid_callback] PDF path:", pdf_path)
     
     if status == 'completed':
         # Получаем email и analysis_id из данных
-        if not email or not analysis_id:
-            print("Missing required data:", {'email': email, 'analysis_id': analysis_id})
-            return jsonify({'code': 10, 'message': 'No email or analysis_id'}), 400
+        if not email:
+            print("Missing required data: email")
+            return jsonify({'code': 10, 'message': 'No email'}), 400
 
-        # Проверяем наличие файлов анализа и изображения
-        if os.path.exists(analysis_path) and os.path.exists(image_path):
+        if is_kibbe_guide:
+            # Обработка покупки гайда по Кибби
             try:
-                # Загружаем данные анализа
-                with open(analysis_path) as f:
-                    analysis = json.load(f)
-                # Очищаем style_recommendations после первого запроса
-                analysis['style_recommendations'] = ''
-                # Второй запрос: определение типажа Кибби по описанию
-                kibbe_type_prompt = f"""
-!!! ВАЖНО: Если в описании встречается фраза "глаза большие", Classic не может быть выбран НИ ПРИ КАКИХ УСЛОВИЯХ.
-
-Ты — эксперт по типированию Kibbe. На основе описания выбери только один из пяти типов: Gamin, Natural, Classic, Romantic, Dramatic.
-
-ПРАВИЛА:
-1. Если есть мальчишеские, угловатые черты, выразительные глаза — Gamin
-2. Если все черты средние, сбалансированные — Classic
-3. ЕСЛИ ГЛАЗА БОЛЬШИЕ, CLASSIC НЕ МОЖЕТ БЫТЬ ВЫБРАН. Выбирай Gamin (если губы средние/тонкие) или Romantic (если губы полные)
-4. Если глаза большие + губы полные + мягкие черты — Romantic
-
-Описание: {analysis['face_features']}
-
-Верни ТОЛЬКО название типа на русском языке, без кавычек и дополнительного текста.
-"""
-                kibbe_type = "не определено"
-                try:
-                    type_response = openai_client.chat.completions.create(
-                        model="gpt-4o",
-                        messages=[
-                            {"role": "system", "content": "Ты — эксперт по типажам Кибби. Отвечай только названием типа."},
-                            {"role": "user", "content": kibbe_type_prompt}
-                        ],
-                        max_tokens=100,
-                        temperature=0.1
+                # Генерируем PDF для Кибби и отправляем email
+                if 'last_kibbe_analysis' in session and 'last_kibbe_image_path' in session:
+                    analysis = session['last_kibbe_analysis']
+                    image_path = session['last_kibbe_image_path']
+                    kibbe_type = analysis.get('kibbe_type', 'romantic')
+                    
+                    # Проверяем, что файл с фото существует
+                    if not os.path.exists(image_path):
+                        print(f"[paid_callback] Image file not found: {image_path}")
+                        return jsonify({'code': 11, 'message': 'Image file not found'}), 404
+                    
+                    # Генерируем PDF для Кибби
+                    full_pdf_path = generate_kibbe_pdf(
+                        user_photo_path=image_path,
+                        kibbe_type=kibbe_type,
+                        email=email
                     )
-                    kibbe_type_raw = type_response.choices[0].message.content.strip()
-                    print("[DEBUG] Kibbe type raw response:", kibbe_type_raw)
+                    print(f"[paid_callback] Kibbe PDF generated: {full_pdf_path}")
                     
-                    # Простая обработка - убираем лишнее и нормализуем
-                    kibbe_type_clean = kibbe_type_raw.strip().strip('"').strip("'")
-                    
-                    # Нормализация типа по ключевым словам
-                    type_map = {
-                        'драматик': 'Драматик',
-                        'dramatic': 'Драматик',
-                        'натурал': 'Натурал',
-                        'natural': 'Натурал',
-                        'гамин': 'Гамин',
-                        'gamin': 'Гамин',
-                        'романтик': 'Романтик',
-                        'romantic': 'Романтик',
-                        'классик': 'Классик',
-                        'classic': 'Классик'
-                    }
-                    
-                    kibbe_type_norm = kibbe_type_clean.lower()
-                    for key, val in type_map.items():
-                        if key in kibbe_type_norm:
-                            kibbe_type = val
-                            break
+                    if os.path.exists(full_pdf_path) and os.path.getsize(full_pdf_path) > 10*1024:
+                        # Отправляем email с гайдом по Кибби
+                        if send_kibbe_guide_email(email, full_pdf_path):
+                            print("[paid_callback] Kibbe guide email sent successfully!")
+                            return jsonify({'code': 0, 'message': 'Kibbe guide sent successfully'}), 200
+                        else:
+                            print("[paid_callback] Error sending Kibbe guide email!")
+                            return jsonify({'code': 12, 'message': 'Failed to send Kibbe guide email'}), 500
                     else:
-                        kibbe_type = 'Классик'
-                        
-                    analysis["kibbe_type"] = kibbe_type
-                    
-                    # Третий запрос: рекомендации по стилю для определённого типажа
-                    style_recommendations_prompt = f"""
-Ты — эксперт по стилю и типажам Кибби. Дай конкретные рекомендации по стилю для типажа {kibbe_type}.
-
-ТИПАЖ: {kibbe_type}
-
-Дай рекомендации по:
-1. Фасонам одежды (силуэты, крои)
-2. Тканям и фактурам
-3. Принтам и узорам
-4. Аксессуарам
-
-ВАЖНО:
-- НЕ используй фразы типа "Конечно!", "Вот рекомендации:" и т.п.
-- Начинай сразу с рекомендаций
-- Используй чёткие подзаголовки: "Фасоны одежды", "Ткани", "Принты", "Аксессуары"
-- Пиши простым языком, без технических терминов
-- Делай рекомендации практичными и конкретными
-"""
-
-                    try:
-                        style_response = openai_client.chat.completions.create(
-                            model="gpt-4o",
-                            messages=[
-                                {"role": "system", "content": "Ты — эксперт по стилю. Дай практичные рекомендации без лишних вступлений."},
-                                {"role": "user", "content": style_recommendations_prompt}
-                            ],
-                            max_tokens=600,
-                            temperature=0.7
-                        )
-                        style_recommendations = style_response.choices[0].message.content.strip()
-                        
-                        # Проверяем, не обрезался ли ответ (если заканчивается на середине предложения)
-                        if style_recommendations and not style_recommendations.endswith(('.', '!', ':', ';')):
-                            print("[DEBUG] Рекомендации обрезались, пытаемся получить полный ответ...")
-                            # Пробуем ещё раз с большим лимитом
-                            try:
-                                style_response_full = openai_client.chat.completions.create(
-                                    model="gpt-4o",
-                                    messages=[
-                                        {"role": "system", "content": "Ты — эксперт по стилю. Дай практичные рекомендации без лишних вступлений."},
-                                        {"role": "user", "content": style_recommendations_prompt}
-                                    ],
-                                    max_tokens=800,
-                                    temperature=0.7
-                                )
-                                style_recommendations = style_response_full.choices[0].message.content.strip()
-                            except Exception as e2:
-                                print(f"[DEBUG] Вторая попытка получения рекомендаций не удалась: {str(e2)}")
-                        
-                        # Очищаем от лишних фраз в начале
-                        unwanted_starters = [
-                            "Конечно!",
-                            "Вот рекомендации:",
-                            "Конечно! Вот практичные рекомендации",
-                            "Вот практичные рекомендации",
-                            "Рекомендации по стилю:",
-                            "Для типажа",
-                            "Типаж"
-                        ]
-                        
-                        for starter in unwanted_starters:
-                            if style_recommendations.startswith(starter):
-                                style_recommendations = style_recommendations[len(starter):].strip()
-                                break
-                        
-                        # Убираем лишние пробелы и переносы в начале
-                        style_recommendations = style_recommendations.lstrip()
-                        
-                        analysis["style_recommendations"] = style_recommendations
-                    except Exception as e:
-                        print("[DEBUG] Ошибка при генерации рекомендаций:", str(e))
-                        analysis["style_recommendations"] = "Рекомендации временно недоступны"
-                except Exception as e:
-                    print("[DEBUG] Ошибка при определении типажа Кибби:", str(e))
-                    analysis["kibbe_type"] = "Классик"
-                return jsonify(analysis)
+                        print("[paid_callback] Kibbe PDF not created or too small")
+                        return jsonify({'code': 11, 'message': 'Kibbe PDF not created'}), 500
+                else:
+                    print("[paid_callback] No Kibbe analysis found in session")
+                    return jsonify({'code': 11, 'message': 'No Kibbe analysis found'}), 404
             except Exception as e:
-                print(f"Error processing payment: {str(e)}")
-                return jsonify({'code': 14, 'message': f'Processing error: {str(e)}'}), 500
+                print(f"[paid_callback] Error processing Kibbe guide purchase: {str(e)}")
+                return jsonify({'code': 14, 'message': f'Kibbe processing error: {str(e)}'}), 500
         else:
-            print(f"Files not found:\n- Analysis exists: {os.path.exists(analysis_path)}\n- Image exists: {os.path.exists(image_path)}")
-            return jsonify({'code': 11, 'message': 'Analysis or image not found'}), 404
+            # Обработка покупки гайда по цветотипу (старая логика)
+            if not analysis_id:
+                print("Missing required data: analysis_id for color guide")
+                return jsonify({'code': 10, 'message': 'No analysis_id for color guide'}), 400
+
+            # Проверяем наличие файлов анализа и изображения
+            if os.path.exists(analysis_path) and os.path.exists(image_path):
+                try:
+                    # Загружаем данные анализа
+                    with open(analysis_path) as f:
+                        analysis = json.load(f)
+                    
+                    # Генерируем PDF для цветотипа
+                    full_pdf_path = generate_pdf_report(
+                        user_photo_path=image_path,
+                        analysis=analysis
+                    )
+                    print(f"[paid_callback] Color PDF generated: {full_pdf_path}")
+                    
+                    if os.path.exists(full_pdf_path) and os.path.getsize(full_pdf_path) > 10*1024:
+                        # Отправляем email с гайдом по цветотипу
+                        if send_guide_email(email, full_pdf_path):
+                            print("[paid_callback] Color guide email sent successfully!")
+                            return jsonify({'code': 0, 'message': 'Color guide sent successfully'}), 200
+                        else:
+                            print("[paid_callback] Error sending color guide email!")
+                            return jsonify({'code': 12, 'message': 'Failed to send color guide email'}), 500
+                    else:
+                        print("[paid_callback] Color PDF not created or too small")
+                        return jsonify({'code': 11, 'message': 'Color PDF not created'}), 500
+                except Exception as e:
+                    print(f"Error processing color guide payment: {str(e)}")
+                    return jsonify({'code': 14, 'message': f'Processing error: {str(e)}'}), 500
+            else:
+                print(f"Files not found:\n- Analysis exists: {os.path.exists(analysis_path)}\n- Image exists: {os.path.exists(image_path)}")
+                return jsonify({'code': 11, 'message': 'Analysis or image not found'}), 404
     else:
         print(f"Payment not completed, status: {status}")
         return jsonify({'code': 13, 'message': 'Payment not completed'}), 200
@@ -724,12 +787,9 @@ def paid_callback():
 def normalize_email(email):
     return ''.join(c for c in email if c.isalnum())
 
-# --- Проверка email в Google Spreadsheet ---
-# Укажи GOOGLE_SHEET_ID в .env (ID таблицы из URL)
-GOOGLE_SHEET_ID = os.environ.get('GOOGLE_SHEET_ID')
-GOOGLE_SHEET_RANGE = os.environ.get('GOOGLE_SHEET_RANGE', 'A:A')  # Первый столбец
-GOOGLE_SHEET_WORKSHEET = os.environ.get('GOOGLE_SHEET_WORKSHEET', 'Лист1')  # Имя листа (Sheet1/Лист1)
-GOOGLE_SERVICE_ACCOUNT_FILE = os.environ.get('GOOGLE_SERVICE_ACCOUNT_FILE', 'google_service_account.json')
+# Отладочная информация
+print(f"[DEBUG] GOOGLE_SHEET_WORKSHEET: {GOOGLE_SHEET_WORKSHEET}")
+print(f"[DEBUG] GOOGLE_SHEET_KIBBE_WORKSHEET: {GOOGLE_SHEET_KIBBE_WORKSHEET}")
 
 @app.route('/check_email_in_sheet', methods=['POST'])
 def check_email_in_sheet():
@@ -764,6 +824,58 @@ def check_email_in_sheet():
         logger.error(f"Ошибка при проверке email в Google Sheets: {str(e)}")
         return jsonify({'found': False, 'error': str(e)}), 500
 
+@app.route('/check_email_in_sheet_kibbe', methods=['POST'])
+def check_email_in_kibbe_sheet_endpoint():
+    """Endpoint для проверки email в листе 'kibbe'"""
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+        
+        found = check_email_in_kibbe_sheet(email)
+        return jsonify({'found': found})
+    except Exception as e:
+        print(f"[check_email_in_kibbe_sheet_endpoint] Ошибка: {str(e)}")
+        return jsonify({'found': False, 'error': str(e)}), 500
+
+def check_email_in_kibbe_sheet(email):
+    """Проверяет, есть ли email в листе 'kibbe' в колонке A"""
+    email = email.strip().lower()
+    print(f"[check_email_in_kibbe_sheet] Проверяем email: {email}")
+    print(f"[check_email_in_kibbe_sheet] GOOGLE_SHEET_KIBBE_WORKSHEET: {GOOGLE_SHEET_KIBBE_WORKSHEET}")
+    print(f"[check_email_in_kibbe_sheet] GOOGLE_SHEET_ID: {GOOGLE_SHEET_ID}")
+    print(f"[check_email_in_kibbe_sheet] Функция вызвана!")
+    
+    try:
+        creds = Credentials.from_service_account_file(GOOGLE_SERVICE_ACCOUNT_FILE, scopes=[
+            'https://www.googleapis.com/auth/spreadsheets.readonly',
+            'https://www.googleapis.com/auth/drive.readonly',
+        ])
+        gc = gspread.authorize(creds)
+        sh = gc.open_by_key(GOOGLE_SHEET_ID)
+        
+        # Пытаемся открыть лист для Кибби
+        try:
+            worksheet = sh.worksheet(GOOGLE_SHEET_KIBBE_WORKSHEET)
+        except:
+            print(f"[check_email_in_kibbe_sheet] Лист '{GOOGLE_SHEET_KIBBE_WORKSHEET}' не найден")
+            return False
+        
+        emails = worksheet.col_values(1)
+        emails = [e.strip().lower() for e in emails if e.strip()]
+        print(f"[check_email_in_kibbe_sheet] Найдено {len(emails)} email в листе kibbe")
+        
+        found = email in emails
+        print(f"[check_email_in_kibbe_sheet] Email найден: {found}")
+        return found
+        
+    except Exception as e:
+        print(f"[check_email_in_kibbe_sheet] Ошибка: {str(e)}")
+        traceback.print_exc()
+        logger.error(f"Ошибка при проверке email в листе kibbe: {str(e)}")
+        return False
+
 @app.route('/oto')
 def oto_offer():
     return render_template('oto.html', config={'CLOUDPAYMENTS_PUBLIC_ID': CLOUDPAYMENTS_PUBLIC_ID})
@@ -781,6 +893,27 @@ def analyze_kibbe():
         return jsonify({'error': 'Файл не выбран'}), 400
     if not (file.filename.lower().endswith('.jpg') or file.filename.lower().endswith('.jpeg') or file.filename.lower().endswith('.png') or file.filename.lower().endswith('.avif') or file.filename.lower().endswith('.heic') or file.filename.lower().endswith('.heif')):
         return jsonify({'error': 'Поддерживаются только JPG, PNG, AVIF, HEIC'}), 400
+
+    # Получаем рост пользователя (ожидается строка: 'до 160', '161-165', ...)
+    user_height_str = request.form.get('height')
+    user_height = None
+    if user_height_str:
+        # Преобразуем в среднее значение диапазона для удобства сравнения
+        if user_height_str == 'до 160':
+            user_height = 158  # среднее для <160
+        elif user_height_str == '161-165':
+            user_height = 163
+        elif user_height_str == '166-170':
+            user_height = 168
+        elif user_height_str == '171-175':
+            user_height = 173
+        elif user_height_str == '176+':
+            user_height = 178
+
+    # Получаем email пользователя
+    user_email = request.form.get('email', '').strip().lower()
+    print(f"[analyze_kibbe] Получен email из формы: '{user_email}'")
+    print(f"[analyze_kibbe] Все поля формы: {list(request.form.keys())}")
 
     # Проверяем название файла на соответствие типажам
     filename_without_ext = os.path.splitext(file.filename)[0].lower()
@@ -856,6 +989,142 @@ def analyze_kibbe():
         # Заполняем данные для выбранного типажа
         data.update(type_data[kibbe_type])
         
+        # --- УЧЁТ РОСТА ---
+        # Диапазоны роста для типажей
+        height_refs = {
+            'Гамин':    (0, 165),
+            'Классик':  (163, 172),
+            'Натурал':  (168, 183),
+            'Драматик': (170, 250),
+            'Романтик': (160, 168)
+        }
+        # Баллы по внешности
+        scores = {k: 0 for k in height_refs}
+        if kibbe_type in scores:
+            scores[kibbe_type] += 0.7  # 70% вес внешности
+        # Баллы по росту
+        if user_height:
+            for t, (h_min, h_max) in height_refs.items():
+                if h_min <= user_height <= h_max:
+                    scores[t] += 0.3  # 30% вес роста
+        # Итоговый типаж — максимальный балл
+        final_type = max(scores, key=lambda k: scores[k])
+        data["kibbe_type"] = final_type
+        # --- END УЧЁТ РОСТА ---
+
+        # Третий запрос: рекомендации по стилю для определённого типажа
+        style_recommendations_prompt = f"""
+Ты — эксперт по стилю и типажам Кибби. Дай конкретные рекомендации по стилю для типажа {final_type}.
+
+ТИПАЖ: {final_type}
+
+Дай рекомендации по:
+1. Фасонам одежды (силуэты, крои)
+2. Тканям и фактурам
+3. Принтам и узорам
+4. Аксессуарам
+
+ВАЖНО:
+- НЕ используй фразы типа "Конечно!", "Вот рекомендации:" и т.п.
+- Начинай сразу с рекомендаций
+- Используй чёткие подзаголовки: "Фасоны одежды", "Ткани", "Принты", "Аксессуары"
+- Пиши простым языком, без технических терминов
+- Делай рекомендации практичными и конкретными
+"""
+
+        try:
+            style_response = openai_client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "Ты — эксперт по стилю. Дай практичные рекомендации без лишних вступлений."},
+                    {"role": "user", "content": style_recommendations_prompt}
+                ],
+                max_tokens=600,
+                temperature=0.7
+            )
+            style_recommendations = style_response.choices[0].message.content.strip()
+            
+            # Проверяем, не обрезался ли ответ (если заканчивается на середине предложения)
+            if style_recommendations and not style_recommendations.endswith(('.', '!', ':', ';')):
+                print("[DEBUG] Рекомендации обрезались, пытаемся получить полный ответ...")
+                # Пробуем ещё раз с большим лимитом
+                try:
+                    style_response_full = openai_client.chat.completions.create(
+                        model="gpt-4o",
+                        messages=[
+                            {"role": "system", "content": "Ты — эксперт по стилю. Дай практичные рекомендации без лишних вступлений."},
+                            {"role": "user", "content": style_recommendations_prompt}
+                        ],
+                        max_tokens=800,
+                        temperature=0.7
+                    )
+                    style_recommendations = style_response_full.choices[0].message.content.strip()
+                except Exception as e2:
+                    print(f"[DEBUG] Вторая попытка получения рекомендаций не удалась: {str(e2)}")
+            
+            # Очищаем от лишних фраз в начале
+            unwanted_starters = [
+                "Конечно!",
+                "Вот рекомендации:",
+                "Конечно! Вот практичные рекомендации",
+                "Вот практичные рекомендации",
+                "Рекомендации по стилю:",
+                "Для типажа",
+                "Типаж"
+            ]
+            
+            for starter in unwanted_starters:
+                if style_recommendations.startswith(starter):
+                    style_recommendations = style_recommendations[len(starter):].strip()
+                    break
+            
+            # Убираем лишние пробелы и переносы в начале
+            style_recommendations = style_recommendations.lstrip()
+            
+            data["style_recommendations"] = style_recommendations
+        except Exception as e:
+            print("[DEBUG] Ошибка при генерации рекомендаций:", str(e))
+            data["style_recommendations"] = "Рекомендации временно недоступны"
+        
+        # Сохраняем данные в сессии для последующей отправки гайда
+        session['last_kibbe_analysis'] = data
+        session['last_kibbe_image_path'] = photo_path_for_pdf
+        
+        # Проверяем, есть ли email в листе "kibbe"
+        if user_email and check_email_in_kibbe_sheet(user_email):
+            print(f"[analyze_kibbe] Email {user_email} найден в листе kibbe, отправляем гайд автоматически")
+            
+            # Генерируем PDF и отправляем email
+            try:
+                full_pdf_path = generate_kibbe_pdf(
+                    user_photo_path=photo_path_for_pdf,
+                    kibbe_type=data.get('kibbe_type', 'Кибби'),
+                    email=user_email
+                )
+                print(f"[analyze_kibbe] PDF сгенерирован: {full_pdf_path}")
+                
+                if os.path.exists(full_pdf_path) and os.path.getsize(full_pdf_path) > 10*1024:
+                    if send_kibbe_guide_email(user_email, full_pdf_path):
+                        print(f"[analyze_kibbe] Гайд отправлен на {user_email}")
+                        data['guide_sent'] = True
+                        data['message'] = 'Гайд отправлен на ваш email!'
+                    else:
+                        print(f"[analyze_kibbe] Ошибка отправки гайда на {user_email}")
+                        data['guide_sent'] = False
+                        data['message'] = 'Ошибка отправки гайда'
+                else:
+                    print(f"[analyze_kibbe] PDF не создан или слишком мал")
+                    data['guide_sent'] = False
+                    data['message'] = 'Ошибка создания PDF'
+            except Exception as e:
+                print(f"[analyze_kibbe] Ошибка при автоматической отправке гайда: {str(e)}")
+                data['guide_sent'] = False
+                data['message'] = f'Ошибка: {str(e)}'
+        else:
+            print(f"[analyze_kibbe] Email {user_email} не найден в листе kibbe или email не указан")
+            data['guide_sent'] = False
+            data['message'] = 'Для получения гайда необходимо оплатить'
+        
         return jsonify(data)
 
     # Сохраняем файл во временную папку
@@ -887,6 +1156,12 @@ def analyze_kibbe():
     except Exception as e:
         os.remove(temp_path)
         return jsonify({'error': f'Ошибка обработки изображения: {str(e)}'}), 500
+
+    # Создаем копию файла для генерации PDF после анализа
+    photo_path_for_pdf = os.path.join('uploads', f"kibbe_pdf_{int(time.time())}.jpg")
+    import shutil
+    shutil.copy2(temp_path, photo_path_for_pdf)
+    print(f"[DEBUG] Создана копия файла для PDF: {photo_path_for_pdf}")
 
     # Кодируем изображение в base64
     try:
@@ -968,11 +1243,11 @@ def analyze_kibbe():
 
             # Очищаем style_recommendations после первого запроса
             data['style_recommendations'] = ''
-            # Второй запрос: определение типажа Кибби по описанию
+            # Второй запрос: определение типажа Кибби по описанию и росту
             kibbe_type_prompt = f"""
 !!! ВАЖНО: Если в описании встречается фраза "глаза большие", Classic не может быть выбран НИ ПРИ КАКИХ УСЛОВИЯХ.
 
-Ты — эксперт по типированию Kibbe. На основе описания выбери только один из пяти типов: Gamin, Natural, Classic, Romantic, Dramatic.
+Ты — эксперт по типированию Kibbe. На основе описания и роста выбери только один из пяти типов: Gamin, Natural, Classic, Romantic, Dramatic.
 
 ПРАВИЛА:
 1. Если есть мальчишеские, угловатые черты, выразительные глаза — Gamin
@@ -980,6 +1255,20 @@ def analyze_kibbe():
 3. ЕСЛИ ГЛАЗА БОЛЬШИЕ, CLASSIC НЕ МОЖЕТ БЫТЬ ВЫБРАН. Выбирай Gamin (если губы средние/тонкие) или Romantic (если губы полные)
 4. Если глаза большие + губы полные + мягкие черты — Romantic
 
+УЧИТЫВАЙ РОСТ:
+- Гамин — до 165 см
+- Классик — 163–172 см
+- Натурал — 168–183 см
+- Драматик — 170 см и выше
+- Романтик — 160–168 см
+
+ДОПОЛНИТЕЛЬНЫЕ ПРАВИЛА:
+- Если черты лица как у классика, но рост 176+ см — это не может быть классик, а скорее натурал или драматик
+- Если черты лица как у гамина, но рост 176+ см — это не может быть гамин, а это драматик
+- Если черты лица как у романтика, но рост 176+ см — это не может быть романтик, а это натурал
+- Драматик не может быть ростом ниже 170 см, даже если черты определяются как драматик. Это скорее гамин
+
+Рост пользователя: {user_height if user_height else 'неизвестен'} см
 Описание: {data['face_features']}
 
 Верни ТОЛЬКО название типа на русском языке, без кавычек и дополнительного текста.
@@ -1022,14 +1311,36 @@ def analyze_kibbe():
                         break
                 else:
                     kibbe_type = 'Классик'
-                    
-                data["kibbe_type"] = kibbe_type
-                
+                data["kibbe_type_external"] = kibbe_type  # Сохраняем "сырой" типаж по внешности+росту
+
+                # --- УЧЁТ РОСТА ---
+                # Диапазоны роста для типажей
+                height_refs = {
+                    'Гамин':    (0, 165),
+                    'Классик':  (163, 172),
+                    'Натурал':  (168, 183),
+                    'Драматик': (170, 250),
+                    'Романтик': (160, 168)
+                }
+                # Баллы по внешности+росту
+                scores = {k: 0 for k in height_refs}
+                if kibbe_type in scores:
+                    scores[kibbe_type] += 0.6  # 60% вес внешности+роста (от OpenAI)
+                # Баллы по росту
+                if user_height:
+                    for t, (h_min, h_max) in height_refs.items():
+                        if h_min <= user_height <= h_max:
+                            scores[t] += 0.4  # 40% вес роста
+                # Итоговый типаж — максимальный балл
+                final_type = max(scores, key=lambda k: scores[k])
+                data["kibbe_type"] = final_type
+                # --- END УЧЁТ РОСТА ---
+
                 # Третий запрос: рекомендации по стилю для определённого типажа
                 style_recommendations_prompt = f"""
-Ты — эксперт по стилю и типажам Кибби. Дай конкретные рекомендации по стилю для типажа {kibbe_type}.
+Ты — эксперт по стилю и типажам Кибби. Дай конкретные рекомендации по стилю для типажа {final_type}.
 
-ТИПАЖ: {kibbe_type}
+ТИПАЖ: {final_type}
 
 Дай рекомендации по:
 1. Фасонам одежды (силуэты, крои)
@@ -1100,7 +1411,50 @@ def analyze_kibbe():
                     data["style_recommendations"] = "Рекомендации временно недоступны"
             except Exception as e:
                 print("[DEBUG] Ошибка при определении типажа Кибби:", str(e))
-                data["kibbe_type"] = "Классик"
+                data["kibbe_type_external"] = "Классик"
+            
+            # Сохраняем данные в сессии для последующей отправки гайда
+            session['last_kibbe_analysis'] = data
+            session['last_kibbe_image_path'] = photo_path_for_pdf
+            
+            # Проверяем, есть ли email в листе "kibbe"
+            print(f"[analyze_kibbe] Проверяем email: {user_email}")
+            print(f"[analyze_kibbe] Вызываем check_email_in_kibbe_sheet...")
+            if user_email and check_email_in_kibbe_sheet(user_email):
+                print(f"[analyze_kibbe] Email {user_email} найден в листе kibbe, отправляем гайд автоматически")
+                
+                # Генерируем PDF и отправляем email
+                try:
+                    full_pdf_path = generate_kibbe_pdf(
+                        user_photo_path=photo_path_for_pdf,
+                        kibbe_type=data.get('kibbe_type', 'Кибби')
+                    )
+                    print(f"[analyze_kibbe] PDF сгенерирован: {full_pdf_path}")
+                    
+                    if os.path.exists(full_pdf_path) and os.path.getsize(full_pdf_path) > 10*1024:
+                        if send_kibbe_guide_email(user_email, full_pdf_path):
+                            print(f"[analyze_kibbe] Гайд отправлен на {user_email}")
+                            data['guide_sent'] = True
+                            data['message'] = 'Гайд отправлен на ваш email!'
+                        else:
+                            print(f"[analyze_kibbe] Ошибка отправки гайда на {user_email}")
+                            data['guide_sent'] = False
+                            data['message'] = 'Ошибка отправки гайда'
+                    else:
+                        print(f"[analyze_kibbe] PDF не создан или слишком мал")
+                        data['guide_sent'] = False
+                        data['message'] = 'Ошибка создания PDF'
+                except Exception as e:
+                    print(f"[analyze_kibbe] Ошибка при автоматической отправке гайда: {str(e)}")
+                    data['guide_sent'] = False
+                    data['message'] = f'Ошибка: {str(e)}'
+            else:
+                print(f"[analyze_kibbe] Email {user_email} не найден в листе kibbe или email не указан")
+                print(f"[analyze_kibbe] user_email: '{user_email}'")
+                print(f"[analyze_kibbe] check_email_in_kibbe_sheet result: {check_email_in_kibbe_sheet(user_email) if user_email else 'No email'}")
+                data['guide_sent'] = False
+                data['message'] = 'Для получения гайда необходимо оплатить'
+            
             return jsonify(data)
         except Exception as e:
             if attempt < max_retries - 1:
@@ -1109,4 +1463,4 @@ def analyze_kibbe():
             return jsonify({'error': f'Ошибка анализа: {str(e)}'}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001, debug=True) 
+    app.run(host='0.0.0.0', port=5001, debug=True)

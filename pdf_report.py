@@ -99,8 +99,8 @@ def generate_pdf_report(
         c.setFont('Roboto', 60)
         c.drawString(80, PDF_HEIGHT-140, 'Палитра оттенков в одежде')
 
-        # Фото пользователя (обрезка до круга)
-        circ_img = crop_to_circle(user_photo_path, size=280)
+        # Фото пользователя (обрезка до круга 456x456)
+        circ_img = crop_to_circle(user_photo_path, size=456)
         circ_img_path = user_photo_path + '_circle.png'
         circ_img.save(circ_img_path)
         temp_files.append(circ_img_path)  # Добавляем в список временных файлов
@@ -248,13 +248,12 @@ def generate_pdf_report(
                     for page in reader1.pages:
                         writer.add_page(page)
                 
-                # Остальной шаблон
-                print(f'Adding template pages from: {template_path}')
-                with open(template_path, 'rb') as f2:
-                    reader2 = PdfReader(f2)
-                    print(f'Template PDF has {len(reader2.pages)} pages')
-                    for page in reader2.pages:
-                        writer.add_page(page)
+                # Добавляем все страницы romantic.pdf (включая первую)
+                if os.path.exists(template_path):
+                    with open(template_path, 'rb') as f2:
+                        reader2 = PdfReader(f2)
+                        for page in reader2.pages:
+                            writer.add_page(page)
                 
                 # Сохраняем объединённый файл
                 print(f'Saving merged PDF to: {output_path}')
@@ -286,4 +285,155 @@ def generate_pdf_report(
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
             except Exception as e:
-                print(f'Error removing temporary file {temp_file}:', e) 
+                print(f'Error removing temporary file {temp_file}:', e)
+
+
+def normalize_email_for_filename(email):
+    """Нормализует email для использования в имени файла: убирает спецсимволы"""
+    if not email:
+        return ""
+    # Убираем @ и заменяем точки на пустую строку
+    normalized = email.replace('@', '').replace('.', '').replace('_', '').replace('-', '')
+    # Убираем все остальные спецсимволы, оставляем только буквы и цифры
+    normalized = ''.join(c for c in normalized if c.isalnum())
+    return normalized.lower()
+
+
+def generate_kibbe_pdf(user_photo_path: str, kibbe_type: str = None, output_path: str = None, email: str = None):
+    """
+    Генерирует PDF для типажа Кибби: накладывает фото пользователя на PNG-шаблон первой страницы.
+    """
+    from reportlab.lib.pagesizes import A4
+    from PIL import Image, ImageDraw
+    import uuid
+    from datetime import datetime
+    
+    PAGE_WIDTH, PAGE_HEIGHT = A4  # 595 x 842 pt
+    
+    # Генерируем уникальное имя файла на основе типажа Кибби
+    if not output_path:
+        kibbe_type_lower = kibbe_type.lower() if kibbe_type else 'romantic'
+        # Нормализуем название типажа для использования в имени файла
+        kibbe_name_mapping = {
+            'романтик': 'romantic',
+            'romantic': 'romantic',
+            'драматик': 'dramatic',
+            'dramatic': 'dramatic',
+            'классик': 'classic',
+            'classic': 'classic',
+            'натурал': 'natural',
+            'natural': 'natural',
+            'гамин': 'gamine',
+            'gamine': 'gamine'
+        }
+        normalized_kibbe = kibbe_name_mapping.get(kibbe_type_lower, 'romantic')
+        
+        # Создаем уникальное имя с timestamp и UUID
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        unique_id = str(uuid.uuid4())[:8]
+        
+        # Добавляем email в название файла, если он передан
+        email_part = ""
+        if email:
+            normalized_email = normalize_email_for_filename(email)
+            if normalized_email:
+                email_part = f"_{normalized_email}"
+        
+        filename = f'kibbe_{normalized_kibbe}_{timestamp}_{unique_id}{email_part}.pdf'
+        output_path = os.path.join(REPORTS_DIR, filename)
+    
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    
+    # Определяем шаблон на основе типажа
+    kibbe_type_lower = kibbe_type.lower() if kibbe_type else 'romantic'
+    template_aliases = {
+        'романтик': 'romantic',
+        'romantic': 'romantic',
+        'драматик': 'romantic',  # пока используем romantic как базовый
+        'dramatic': 'romantic',
+        'классик': 'romantic',
+        'classic': 'romantic',
+        'натурал': 'romantic',
+        'natural': 'romantic',
+        'гамин': 'romantic',
+        'gamin': 'romantic'
+    }
+    
+    template_key = template_aliases.get(kibbe_type_lower, 'romantic')
+    jpg_template_path = f'static/pdf_templates/{template_key}_first_page.jpg'
+    pdf_template_path = f'static/pdf_templates/{template_key}.pdf'
+    
+    print(f'Kibbe PDF: тип {kibbe_type} -> JPG шаблон {jpg_template_path}')
+    
+    if not os.path.exists(jpg_template_path):
+        print(f'JPG template not found: {jpg_template_path}, using default')
+        jpg_template_path = 'static/pdf_templates/romantic_first_page.jpg'
+
+    try:
+        # Загружаем JPG-шаблон
+        template_img = Image.open(jpg_template_path).convert('RGBA')
+        template_width, template_height = template_img.size
+        
+        # Фото пользователя (обрезка до круга 456x456)
+        circ_img = crop_to_circle(user_photo_path, size=456)
+        
+        # Создаем новое изображение с размерами шаблона
+        result_img = Image.new('RGBA', (template_width, template_height), (255, 255, 255, 0))
+        
+        # Накладываем шаблон
+        result_img.paste(template_img, (0, 0), template_img)
+        
+        # Накладываем фото пользователя (в правом верхнем углу)
+        # Координаты для размещения фото (левый верхний угол в x=121, y=151)
+        photo_x = 121
+        photo_y = 151
+        
+        # Маска для круглого фото 456x456
+        mask = Image.new('L', (456, 456), 0)
+        mask_draw = ImageDraw.Draw(mask)
+        mask_draw.ellipse((0, 0, 456, 456), fill=255)
+        result_img.paste(circ_img, (photo_x, photo_y), mask)
+        
+        # Сохраняем результат как временный PNG
+        temp_png_path = output_path + '_temp.png'
+        result_img.save(temp_png_path, 'PNG')
+        
+        # Конвертируем PNG в PDF с нужным размером страницы (первая страница)
+        temp_first_pdf = output_path + '_firstpage.pdf'
+        c = canvas.Canvas(temp_first_pdf, pagesize=(template_width, template_height))
+        c.drawImage(temp_png_path, 0, 0, width=template_width, height=template_height)
+        c.save()
+        os.remove(temp_png_path)
+
+        # Мерджим с romantic.pdf начиная со второй страницы
+        writer = PdfWriter()
+        # Добавляем первую страницу (с фото)
+        with open(temp_first_pdf, 'rb') as f1:
+            reader1 = PdfReader(f1)
+            writer.add_page(reader1.pages[0])
+        # Добавляем все страницы romantic.pdf (включая первую)
+        if os.path.exists(pdf_template_path):
+            with open(pdf_template_path, 'rb') as f2:
+                reader2 = PdfReader(f2)
+                for page in reader2.pages:
+                    writer.add_page(page)
+        # Сохраняем финальный PDF
+        with open(output_path, 'wb') as fout:
+            writer.write(fout)
+        os.remove(temp_first_pdf)
+        
+        # Проверяем, что файл создался и имеет размер
+        if os.path.exists(output_path):
+            file_size = os.path.getsize(output_path)
+            print(f'Kibbe PDF generated successfully: {output_path}')
+            print(f'Kibbe PDF file size: {file_size} bytes')
+        else:
+            print('ERROR: Kibbe PDF file was not created')
+        
+        return output_path
+        
+    except Exception as e:
+        print(f'Error generating Kibbe PDF: {str(e)}')
+        import traceback
+        print('Traceback:', traceback.format_exc())
+        raise 

@@ -1799,110 +1799,88 @@
             const messageContent = aiMessage.querySelector('.message-content');
             
             // БЕЗ ПАУЗЫ: сразу печатаем приветствие
-            typeText(messageContent, greeting, 20, () => {
-                // Создаем новое сообщение пользователя после завершения анимации текста
-                const userMessage = document.createElement('div');
-                userMessage.className = 'message user-message';
-                userMessage.style.marginTop = '20px';
-                
-                // Создаем контейнер для кнопок
-                const buttonsContainer = document.createElement('div');
-                buttonsContainer.className = 'message-content';
-                buttonsContainer.style.display = 'flex';
-                buttonsContainer.style.gap = '10px';
-                buttonsContainer.style.justifyContent = 'flex-end';
-                buttonsContainer.innerHTML = `
-                    <div class="user-buttons-row">
-                        <button class="upload-button" id="determineColorBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">Определить цветотип</button>
-                        <button class="upload-button" id="determineKibbeBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">Определить типаж внешности</button>
-                        <button class="upload-button" id="preorderBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">Предзаказ на ИИ-стилиста</button>
-            </div>
-        `;
+                typeText(messageContent, greeting, 20, () => {
+                    // Создаем новое сообщение пользователя после завершения анимации текста
+            const userMessage = document.createElement('div');
+                    userMessage.className = 'message user-message';
+                    userMessage.style.marginTop = '20px';
                     
-                // Добавляем контейнер с кнопками в сообщение пользователя
-                userMessage.appendChild(buttonsContainer);
+                    // Создаем контейнер для кнопок
+                    const buttonsContainer = document.createElement('div');
+                    buttonsContainer.className = 'message-content';
+                    buttonsContainer.style.display = 'flex';
+                    buttonsContainer.style.gap = '10px';
+                    buttonsContainer.style.justifyContent = 'flex-end';
+                    buttonsContainer.innerHTML = `
+                        <div class="user-buttons-row">
+                            <button class="upload-button" id="determineColorBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">Определить цветотип</button>
+                            <button class="upload-button" id="determineKibbeBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">Определить типаж внешности</button>
+                            <button class="upload-button" id="preorderBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">Предзаказ на ИИ-стилиста</button>
+                </div>
+            `;
+                    
+                    // Добавляем контейнер с кнопками в сообщение пользователя
+                    userMessage.appendChild(buttonsContainer);
 
-                // Добавляем сообщение пользователя в чат
-                chatMessages.appendChild(userMessage);
+                    // Добавляем сообщение пользователя в чат
+                    chatMessages.appendChild(userMessage);
 
-                // Добавляем обработчики для кнопок
-                const determineColorBtn = document.getElementById('determineColorBtn');
-                const determineKibbeBtn = document.getElementById('determineKibbeBtn');
-                const preorderBtn = document.getElementById('preorderBtn');
-                
-                if (determineColorBtn) {
-                    determineColorBtn.onclick = function() {
-                        currentAnalysisType = 'color'; // Устанавливаем тип анализа
-                        // Очищаем input файла для возможности повторной загрузки
-                        const fileInput = document.getElementById('fileInput');
-                        if (fileInput) fileInput.value = '';
-                        
-                        // Показываем зону загрузки
-                        const dropZone = document.getElementById('dropZone');
-                        if (dropZone) {
-                            dropZone.style.display = 'block';
-                            // Плавная прокрутка к зоне загрузки
-                            dropZone.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }
-                        
-                        // Создаем новое сообщение бота
-                        const aiMessage = document.createElement('div');
-                        aiMessage.className = 'message ai';
-                        aiMessage.innerHTML = `
-                            <div class="avatar">AI</div>
-                            <div class="message-content"></div>
-                        `;
-                        chatMessages.appendChild(aiMessage);
-                        const messageContent = aiMessage.querySelector('.message-content');
-                        
-                        // Плавная прокрутка к новому сообщению
-                        aiMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        
-                        // Печатаем сообщение
-                        typeText(messageContent, 'Загрузите фотографию с хорошо освещённым лицом, желательно при естественном свете 👇', 20);
-                    };
-                }
-                
-                if (determineKibbeBtn) {
-                    determineKibbeBtn.onclick = function() {
-                        currentAnalysisType = 'kibbe'; // Устанавливаем тип анализа
-                        // Очищаем input файла для возможности повторной загрузки
-                        const fileInput = document.getElementById('fileInput');
-                        if (fileInput) fileInput.value = '';
-                        
-                        // Показываем зону загрузки
-                        const dropZone = document.getElementById('dropZone');
-                        if (dropZone) {
-                            dropZone.style.display = 'block';
-                            // Плавная прокрутка к зоне загрузки
-                            dropZone.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }
-                        
-                        // Создаем новое сообщение бота
-                        const aiMessage = document.createElement('div');
-                        aiMessage.className = 'message ai';
-                        aiMessage.innerHTML = `
-                            <div class="avatar">AI</div>
-                            <div class="message-content"></div>
-                        `;
-                        chatMessages.appendChild(aiMessage);
-                        const messageContent = aiMessage.querySelector('.message-content');
-                        
-                        // Плавная прокрутка к новому сообщению
-                        aiMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        
-                        // Печатаем сообщение
-                        typeText(messageContent, 'Загрузите фотографию с хорошо освещённым лицом, желательно при естественном свете 👇', 20);
-                    };
-                }
-                
-                if (preorderBtn) {
-                    preorderBtn.onclick = function() {
-                        // Показываем информацию о подписке
-                        addSubscriptionOffer();
-                    };
-                }
-            });
+                    // Добавляем обработчики для кнопок
+                    const determineColorBtn = document.getElementById('determineColorBtn');
+                    const determineKibbeBtn = document.getElementById('determineKibbeBtn');
+                    const preorderBtn = document.getElementById('preorderBtn');
+                    
+                    if (determineColorBtn) {
+                        determineColorBtn.onclick = function() {
+                            currentAnalysisType = 'color'; // Устанавливаем тип анализа
+                            // Очищаем input файла для возможности повторной загрузки
+                            const fileInput = document.getElementById('fileInput');
+                            if (fileInput) fileInput.value = '';
+                            
+                            // Показываем зону загрузки
+                            const dropZone = document.getElementById('dropZone');
+                            if (dropZone) {
+                                dropZone.style.display = 'block';
+                                // Плавная прокрутка к зоне загрузки
+                                dropZone.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                            
+                            // Создаем новое сообщение бота
+                            const aiMessage = document.createElement('div');
+                            aiMessage.className = 'message ai';
+                            aiMessage.innerHTML = `
+                                <div class="avatar">AI</div>
+                                <div class="message-content"></div>
+                            `;
+                            chatMessages.appendChild(aiMessage);
+                            const messageContent = aiMessage.querySelector('.message-content');
+                            
+                            // Плавная прокрутка к новому сообщению
+                            aiMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            
+                            // Печатаем сообщение
+                            typeText(messageContent, 'Загрузите фотографию с хорошо освещённым лицом, желательно при естественном свете 👇', 20);
+                        };
+                    }
+                    
+                    if (determineKibbeBtn) {
+                        determineKibbeBtn.onclick = function() {
+                            currentAnalysisType = 'kibbe'; // Устанавливаем тип анализа
+                            // Очищаем input файла для возможности повторной загрузки
+                            const fileInput = document.getElementById('fileInput');
+                            if (fileInput) fileInput.value = '';
+                        // Показываем выбор роста
+                        showHeightSelection();
+                        };
+                    }
+                    
+                    if (preorderBtn) {
+                        preorderBtn.onclick = function() {
+                            // Показываем информацию о подписке
+                            addSubscriptionOffer();
+                        };
+                    }
+                });
         });
 
         // --- Модальное окно для оплаты гайда ---
@@ -2029,7 +2007,11 @@
             }
             // 1. Проверяем email через backend
             try {
-                const checkResp = await fetch('/check_email_in_sheet', {
+                // Определяем тип гайда и выбираем соответствующий эндпоинт для проверки
+                const isKibbeGuide = localStorage.getItem('currentAnalysisType') === 'kibbe';
+                const checkEndpoint = isKibbeGuide ? '/check_email_in_sheet_kibbe' : '/check_email_in_sheet';
+                
+                const checkResp = await fetch(checkEndpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email })
@@ -2040,8 +2022,13 @@
                     document.getElementById('guidePayBtn').style.display = 'none';
                     document.getElementById('guideEmail').style.display = 'none';
                     errorDiv.style.display = 'none';
-                    // Вызываем /send_guide_email
-                    const sendResp = await fetch('/send_guide_email', {
+                    
+                    // Определяем тип гайда и выбираем соответствующий эндпоинт
+                    const isKibbeGuide = localStorage.getItem('currentAnalysisType') === 'kibbe';
+                    const endpoint = isKibbeGuide ? '/send_kibbe_guide_email' : '/send_guide_email';
+                    
+                    // Вызываем соответствующий эндпоинт
+                    const sendResp = await fetch(endpoint, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email })
@@ -2069,7 +2056,7 @@
             
             // Определяем тип гайда и цену
             const isKibbeGuide = localStorage.getItem('currentAnalysisType') === 'kibbe';
-            const guidePrice = isKibbeGuide ? 1500.00 : 500.00;
+            const guidePrice = isKibbeGuide ? 1.00 : 500.00;
             const guideLabel = isKibbeGuide ? 'Персональный гайд по стилю' : 'Персональный цветовой гайд';
             
             const data = {
@@ -2296,7 +2283,7 @@
                 setTimeout(() => {
                     messageContent.innerHTML += `
                         <div class="guide-price-text" style="margin-top: 1rem; font-size: 1.1rem; color: #bb279b; line-height: 1.2;">
-                            Персональный гайд под типаж внешности — <b>1500 руб.</b><br>
+                            Персональный гайд под типаж внешности — <b>1 руб.</b><br>
                             <span style="font-size: 0.95rem;">или <b>бесплатно</b> при оформлении предзаказа на ИИ-стилиста</span>
                         </div>
                     `;
@@ -2353,6 +2340,87 @@
                     }
                 }, advantagesText.length * 20 + 500);
             }, 600);
+        }
+
+        // --- ДОБАВЛЯЕМ ВЫБОР РОСТА ПЕРЕД ЗАГРУЗКОЙ ФОТО ДЛЯ КИББИ ---
+        let selectedHeight = null;
+
+        function showHeightSelection() {
+            // Скрываем область загрузки на всякий случай
+            const dropZone = document.getElementById('dropZone');
+            if (dropZone) dropZone.style.display = 'none';
+
+            // Добавляем сообщение AI с просьбой выбрать рост
+            const aiMessage = document.createElement('div');
+            aiMessage.className = 'message ai';
+            aiMessage.innerHTML = `
+                <div class="avatar">AI</div>
+                <div class="message-content">Пожалуйста, выберите ваш рост:</div>
+            `;
+            chatMessages.appendChild(aiMessage);
+            aiMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Кнопки выбора роста
+            const heightOptions = [
+                { label: 'до 160', value: 'до 160' },
+                { label: '161-165', value: '161-165' },
+                { label: '166-170', value: '166-170' },
+                { label: '171-175', value: '171-175' },
+                { label: '176+', value: '176+' }
+            ];
+            const userMessage = document.createElement('div');
+            userMessage.className = 'message user-message';
+            userMessage.style.marginTop = '20px';
+            const buttonsContainer = document.createElement('div');
+            buttonsContainer.className = 'message-content';
+            // Внутри message-content создаём user-buttons-row
+            const row = document.createElement('div');
+            row.className = 'user-buttons-row';
+            heightOptions.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'upload-button height-btn';
+                btn.textContent = opt.label;
+                btn.style.backgroundColor = 'transparent';
+                btn.style.color = '#bb279b';
+                btn.style.border = '1px solid #bb279b';
+                btn.style.padding = '10px 20px';
+                btn.style.borderRadius = '8px';
+                btn.style.cursor = 'pointer';
+                btn.style.fontSize = '1rem';
+                btn.style.transition = 'all 0.2s';
+                btn.onmouseover = function() { btn.style.backgroundColor = 'rgba(187, 39, 155, 0.15)'; btn.style.color='#8B1B6A'; btn.style.borderColor='#8B1B6A'; };
+                btn.onmouseout = function() { btn.style.backgroundColor = 'transparent'; btn.style.color='#bb279b'; btn.style.borderColor='#bb279b'; };
+                btn.onclick = function() {
+                    selectedHeight = opt.value;
+                    // После выбора роста — сообщение AI и dropZone
+                    const aiMsg = document.createElement('div');
+                    aiMsg.className = 'message ai';
+                    aiMsg.innerHTML = `
+                        <div class="avatar">AI</div>
+                        <div class="message-content">Пожалуйста, загрузите фотографию с хорошо освещённым лицом, желательно при естественном свете 👇</div>
+                    `;
+                    chatMessages.appendChild(aiMsg);
+                    aiMsg.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    // Показываем область загрузки
+                    if (dropZone) {
+                        dropZone.style.display = 'block';
+                        dropZone.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                    // Оставляем только выбранную кнопку и выделяем её
+                    Array.from(row.children).forEach(child => {
+                        if (child !== btn) child.remove();
+                    });
+                    btn.style.backgroundColor = '#bb279b';
+                    btn.style.color = '#fff';
+                    btn.style.borderColor = '#bb279b';
+                    btn.disabled = true;
+                };
+                row.appendChild(btn);
+            });
+            buttonsContainer.appendChild(row);
+            userMessage.appendChild(buttonsContainer);
+            chatMessages.appendChild(userMessage);
+            userMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     </script>
 </body>
