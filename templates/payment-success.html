@@ -62,13 +62,24 @@
     </div>
 
     <script>
-        // Проверяем, была ли это покупка подписки
+        // Проверяем, была ли это покупка подписки или Кибби гайда
         const urlParams = new URLSearchParams(window.location.search);
         const type = urlParams.get('type');
         
         // Проверяем различные варианты написания
         if (type === 'subscription' || type === 'subsciption' || type === 'sub') {
             document.getElementById('subscriptionMessage').style.display = 'block';
+        } else if (type === 'kibbe') {
+            // Скрываем стандартное сообщение о цветовом гайде
+            const standardMessage = document.querySelector('p:contains("Ваш персональный гайд по цветотипу")');
+            if (standardMessage) {
+                standardMessage.style.display = 'none';
+            }
+            // Показываем сообщение для Кибби гайда
+            const kibbeMessage = document.createElement('div');
+            kibbeMessage.innerHTML = '<p>Ваш персональный гайд по стилю уже в пути и скоро появится в вашем email.</p><p>Проверьте папку "Входящие" или "Спам".</p>';
+            kibbeMessage.style.marginTop = '1rem';
+            document.querySelector('.success-container').insertBefore(kibbeMessage, document.querySelector('.back-button'));
         }
     </script>
 </body>

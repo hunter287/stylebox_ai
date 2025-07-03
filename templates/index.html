@@ -2079,7 +2079,9 @@
                             electronic: guidePrice
                         }
                     }
-                }
+                },
+                guideType: isKibbeGuide ? 'kibbe' : 'color',
+                analysisId: analysisId
             };
             widget.pay('charge', {
                 publicId: publicId,
@@ -2088,11 +2090,12 @@
                 currency: 'RUB',
                 skin: 'classic',
                 email: email,
+                requireEmail: false,
                 data: data
             }, {
                 onSuccess: function(options) {
                     console.log('Payment successful, redirecting to success page');
-                    window.location.href = '/payment-success';
+                    window.location.href = '/payment-success?type=kibbe';
                 },
                 onFail: function(reason) {
                     console.log('Payment failed:', reason);

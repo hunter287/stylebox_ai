@@ -676,10 +676,17 @@ def paid_callback():
         print("[paid_callback] after custom_fields_dict extraction, value:", analysis_id)
     print("[paid_callback] Email:", email)
     print("[paid_callback] Analysis ID:", analysis_id)
+    print("[paid_callback] Description:", description)
+    print("[paid_callback] Custom fields:", custom_fields)
+    print("[paid_callback] Guide type:", guide_type)
     
-    # Определяем тип покупки по описанию
+    # Определяем тип покупки по описанию и дополнительным данным
     description = data.get('Description', '').lower()
-    is_kibbe_guide = 'стиль' in description or 'типаж' in description or 'kibbe' in description
+    custom_fields = data.get('Data', {})
+    guide_type = custom_fields.get('guideType', '')
+    
+    is_kibbe_guide = ('стиль' in description or 'типаж' in description or 'kibbe' in description or 
+                     guide_type == 'kibbe')
     
     if is_kibbe_guide:
         # Для гайдов по Кибби используем данные из сессии
