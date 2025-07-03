@@ -110,7 +110,7 @@
             <p>Ваш персональный ИИ-стилист появится 1 июля.</p>
             <p>Мы пришлем всю информацию на ваш email, как только он будет готов.</p>
         </div>
-        <p>Ваш персональный гайд по цветотипу уже в пути и скоро появится в вашем email.</p>
+        <p id="guideMessage">Ваш персональный гайд по цветотипу уже в пути и скоро появится в вашем email.</p>
         <p>Проверьте папку "Входящие" или "Спам".</p>
         <a href="/" class="back-button">Вернуться на главную</a>
     </div>
@@ -124,16 +124,11 @@
         if (type === 'subscription' || type === 'subsciption' || type === 'sub') {
             document.getElementById('subscriptionMessage').style.display = 'block';
         } else if (type === 'kibbe') {
-            // Скрываем стандартное сообщение о цветовом гайде
-            const standardMessage = document.querySelector('p:contains("Ваш персональный гайд по цветотипу")');
-            if (standardMessage) {
-                standardMessage.style.display = 'none';
+            // Изменяем сообщение для Кибби гайда
+            const guideMessage = document.getElementById('guideMessage');
+            if (guideMessage) {
+                guideMessage.textContent = 'Ваш персональный гайд по типажу уже в пути и скоро появится в вашем email.';
             }
-            // Показываем сообщение для Кибби гайда
-            const kibbeMessage = document.createElement('div');
-            kibbeMessage.innerHTML = '<p>Ваш персональный гайд по стилю уже в пути и скоро появится в вашем email.</p><p>Проверьте папку "Входящие" или "Спам".</p>';
-            kibbeMessage.style.marginTop = '1rem';
-            document.querySelector('.container').insertBefore(kibbeMessage, document.querySelector('.back-button'));
         }
     </script>
 </body>
