@@ -2095,7 +2095,31 @@
                 data: data
             }, {
                 onSuccess: function(options) {
-                    console.log('Payment successful, redirecting to success page');
+                    console.log('Payment successful, options:', options);
+                    
+                    // Отправляем запрос на генерацию и отправку гайда
+                    const email = localStorage.getItem('lastGuideEmail');
+                    if (email) {
+                        fetch('/send_kibbe_guide_email', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: email })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('Guide generation response:', data);
+                            if (data.success) {
+                                console.log('Guide sent successfully');
+                            } else {
+                                console.error('Failed to send guide:', data.error);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error sending guide:', error);
+                        });
+                    }
+                    
+                    // Перенаправляем на страницу успеха
                     window.location.href = '/payment-success?type=kibbe';
                 },
                 onFail: function(reason) {
