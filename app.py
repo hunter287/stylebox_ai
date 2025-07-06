@@ -555,23 +555,12 @@ def send_kibbe_guide():
         preview_image_path = None
         if preview_image_dataurl:
             import base64, re, time
-            from PIL import Image
-            from io import BytesIO
             header, encoded = preview_image_dataurl.split(',', 1)
             ext = 'jpg' if 'jpeg' in header or 'jpg' in header else 'png'
             preview_image_path = f"uploads/kibbe_preview_{int(time.time())}.{ext}"
-            # Сохраняем файл
             with open(preview_image_path, 'wb') as f:
                 f.write(base64.b64decode(encoded))
             print(f"[send_kibbe_guide_email] Saved preview image: {preview_image_path}")
-            # Открываем и пересохраняем без EXIF и с RGB
-            try:
-                img = Image.open(preview_image_path)
-                img = img.convert('RGB')
-                img.save(preview_image_path, quality=95)
-                print(f"[send_kibbe_guide_email] Re-saved preview image as RGB: {preview_image_path}")
-            except Exception as e:
-                print(f"[send_kibbe_guide_email] Error re-saving preview image: {e}")
         # Для PDF используем превью, если оно есть
         pdf_photo_path = preview_image_path if preview_image_path else image_path
         # Генерируем PDF для Кибби
