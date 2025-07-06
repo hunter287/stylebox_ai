@@ -87,11 +87,6 @@
                 <p id="errorMessage" class="text-red-600"></p>
             </div>
         </div>
-
-        <div class="mb-4">
-            <label for="emailInput" class="block text-gray-700 font-semibold mb-2">Ваш email для получения гайда</label>
-            <input type="email" id="emailInput" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Введите ваш email" required autocomplete="off">
-        </div>
     </div>
 </div>
 
@@ -118,13 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const resultContainer = document.getElementById('resultContainer');
     const errorContainer = document.getElementById('errorContainer');
     const errorMessage = document.getElementById('errorMessage');
-    const emailInput = document.getElementById('emailInput');
 
-    // Очищаем поле email при загрузке страницы, чтобы предотвратить автозаполнение
-    emailInput.value = '';
-    emailInput.focus();
-    emailInput.blur();
-    
     // Очищаем возможные данные из sessionStorage и localStorage
     if (typeof sessionStorage !== 'undefined') {
         sessionStorage.removeItem('user_email');
@@ -135,16 +124,6 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.removeItem('email');
     }
     
-    // Добавляем обработчик для отслеживания изменений в поле email
-    emailInput.addEventListener('input', function() {
-        console.log('Email input changed:', this.value);
-    });
-    
-    // Добавляем обработчик для отслеживания автозаполнения
-    emailInput.addEventListener('change', function() {
-        console.log('Email input changed (change event):', this.value);
-    });
-
     // Обработчики для загрузки файла
     uploadButton.addEventListener('click', () => imageInput.click());
     imageInput.addEventListener('change', handleFileSelect);
@@ -199,34 +178,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     analyzeButton.addEventListener('click', async () => {
         const file = imageInput.files[0];
-        const email = document.getElementById('emailInput').value.trim();
         if (!file) {
             showError('Пожалуйста, выберите изображение');
             return;
         }
-        if (!email) {
-            showError('Пожалуйста, введите email');
-            return;
-        }
         
-        // Дополнительная проверка email
-        if (!email.includes('@') || email.length < 6) {
-            showError('Пожалуйста, введите корректный email');
-            return;
-        }
-        
-        // Проверяем, что email не является стандартным автозаполненным значением
-        const commonAutofillValues = ['', 'undefined', 'null', 'test@example.com', 'user@example.com'];
-        if (commonAutofillValues.includes(email.toLowerCase())) {
-            showError('Пожалуйста, введите ваш реальный email');
-            return;
-        }
-        
-        console.log('Sending email:', email);
+        console.log('Sending image for analysis...');
         
         const formData = new FormData();
         formData.append('image', file);
-        formData.append('email', email);
 
         try {
             loadingIndicator.classList.remove('hidden');
@@ -244,16 +204,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(data.error || 'Произошла ошибка при анализе');
             }
 
-            // Всегда показываем результаты анализа
+            if (data.guide_sent) {
+                // Если гайд отправлен, показываем сообщение и не показываем окно оплаты
+                showGuideSentMessage(data.message || 'Гайд отправлен на ваш email!');
+            } else {
             displayResults(data);
-            
-            // Старая логика (закомментирована):
-            // if (data.guide_sent) {
-            //     // Если гайд отправлен, показываем сообщение и не показываем окно оплаты
-            //     showGuideSentMessage(data.message || 'Гайд отправлен на ваш email!');
-            // } else {
-            // displayResults(data);
-            // }
+            }
         } catch (error) {
             showError(error.message);
         } finally {

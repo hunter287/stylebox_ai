@@ -701,9 +701,9 @@ def paid_callback():
         print("[paid_callback] Kibbe guide purchase detected")
     else:
         # Для цветотипов используем старую логику
-    analysis_path = f'static/reports/last_analysis_{analysis_id}.json'
-    image_path = f'static/reports/last_image_{analysis_id}.jpg'
-    pdf_path = f'static/reports/report_{normalize_email(email)}_{analysis_id}.pdf'
+        analysis_path = f'static/reports/last_analysis_{analysis_id}.json'
+        image_path = f'static/reports/last_image_{analysis_id}.jpg'
+        pdf_path = f'static/reports/report_{normalize_email(email)}_{analysis_id}.pdf'
         print("[paid_callback] Color guide purchase detected")
     
     print("[paid_callback] Analysis path:", analysis_path, "Exists:", os.path.exists(analysis_path) if analysis_path else "N/A")
@@ -743,7 +743,7 @@ def paid_callback():
                         if send_kibbe_guide_email(email, full_pdf_path):
                             print("[paid_callback] Kibbe guide email sent successfully!")
                             return jsonify({'code': 0, 'message': 'Kibbe guide sent successfully'}), 200
-                    else:
+                        else:
                             print("[paid_callback] Error sending Kibbe guide email!")
                             return jsonify({'code': 12, 'message': 'Failed to send Kibbe guide email'}), 500
                     else:
@@ -786,12 +786,12 @@ def paid_callback():
                     else:
                         print("[paid_callback] Color PDF not created or too small")
                         return jsonify({'code': 11, 'message': 'Color PDF not created'}), 500
-                    except Exception as e:
+                except Exception as e:
                     print(f"Error processing color guide payment: {str(e)}")
-                return jsonify({'code': 14, 'message': f'Processing error: {str(e)}'}), 500
-        else:
-            print(f"Files not found:\n- Analysis exists: {os.path.exists(analysis_path)}\n- Image exists: {os.path.exists(image_path)}")
-            return jsonify({'code': 11, 'message': 'Analysis or image not found'}), 404
+                    return jsonify({'code': 14, 'message': f'Processing error: {str(e)}'}), 500
+            else:
+                print(f"Files not found:\n- Analysis exists: {os.path.exists(analysis_path)}\n- Image exists: {os.path.exists(image_path)}")
+                return jsonify({'code': 11, 'message': 'Analysis or image not found'}), 404
     else:
         print(f"Payment not completed, status: {status}")
         return jsonify({'code': 13, 'message': 'Payment not completed'}), 200
@@ -922,10 +922,8 @@ def analyze_kibbe():
         elif user_height_str == '176+':
             user_height = 178
 
-    # Получаем email пользователя
-    user_email = request.form.get('email', '').strip().lower()
-    print(f"[analyze_kibbe] Получен email из формы: '{user_email}'")
-    print(f"[analyze_kibbe] Все поля формы: {list(request.form.keys())}")
+    # Email больше не получаем из формы - он будет запрашиваться только при оплате
+    print(f"[analyze_kibbe] Анализ без email - гайд будет отправлен только после оплаты")
 
     # Проверяем название файла на соответствие типажам
     filename_without_ext = os.path.splitext(file.filename)[0].lower()
@@ -1109,7 +1107,7 @@ def analyze_kibbe():
             # Генерируем PDF и отправляем email
             try:
                 full_pdf_path = generate_kibbe_pdf(
-                user_photo_path=photo_path_for_pdf, 
+                    user_photo_path=photo_path_for_pdf,
                     kibbe_type=data.get('kibbe_type', 'Кибби'),
                     email=user_email
                 )
@@ -1128,7 +1126,7 @@ def analyze_kibbe():
                     print(f"[analyze_kibbe] PDF не создан или слишком мал")
                     data['guide_sent'] = False
                     data['message'] = 'Ошибка создания PDF'
-        except Exception as e:
+            except Exception as e:
                 print(f"[analyze_kibbe] Ошибка при автоматической отправке гайда: {str(e)}")
                 data['guide_sent'] = False
                 data['message'] = f'Ошибка: {str(e)}'
@@ -1519,64 +1517,11 @@ NATURAL (Натурал):
             session['last_kibbe_analysis'] = data
             session['last_kibbe_image_path'] = photo_path_for_pdf
             
-            # ВРЕМЕННО ОТКЛЮЧАЕМ АВТОМАТИЧЕСКУЮ ОТПРАВКУ ГАЙДА
-            # Гайд будет отправляться только после оплаты
-            print(f"[analyze_kibbe] Автоматическая отправка гайда отключена")
-            print(f"[analyze_kibbe] Email: {user_email}")
+            # ОТКЛЮЧАЕМ АВТОМАТИЧЕСКУЮ ОТПРАВКУ - гайд будет отправляться только после оплаты
+            print(f"[analyze_kibbe] АВТОМАТИЧЕСКАЯ ОТПРАВКА ОТКЛЮЧЕНА")
+            print(f"[analyze_kibbe] Гайд будет отправлен только после оплаты")
             data['guide_sent'] = False
             data['message'] = 'Для получения гайда необходимо оплатить'
-            
-            # Старая логика (закомментирована):
-            # # Проверяем, есть ли email в листе "kibbe"
-            # print(f"[analyze_kibbe] Проверяем email: {user_email}")
-            # print(f"[analyze_kibbe] Вызываем check_email_in_kibbe_sheet...")
-            # 
-            # # Дополнительная проверка: email должен быть не пустым и содержать @
-            # email_is_valid = user_email and '@' in user_email and len(user_email.strip()) > 5
-            # print(f"[analyze_kibbe] Email валидный: {email_is_valid}")
-            # 
-            # # Проверяем, что email не является пустым или стандартным значением браузера
-            # common_autofill_values = ['', 'undefined', 'null', 'test@example.com', 'user@example.com']
-            # email_is_not_autofilled = user_email and user_email.strip() not in common_autofill_values
-            # print(f"[analyze_kibbe] Email не автозаполнен: {email_is_not_autofilled}")
-            # 
-            # if email_is_valid and email_is_not_autofilled and check_email_in_kibbe_sheet(user_email):
-            #     print(f"[analyze_kibbe] Email {user_email} найден в листе kibbe, отправляем гайд автоматически")
-            #     
-            #     # Генерируем PDF и отправляем email
-            #     try:
-            #         full_pdf_path = generate_kibbe_pdf(
-            #             user_photo_path=photo_path_for_pdf,
-            #             kibbe_type=data.get('kibbe_type', 'Кибби'),
-            #             email=user_email
-            #         )
-            #         print(f"[analyze_kibbe] PDF сгенерирован: {full_pdf_path}")
-            #         
-            #         if os.path.exists(full_pdf_path) and os.path.getsize(full_pdf_path) > 10*1024:
-            #             if send_kibbe_guide_email(user_email, full_pdf_path):
-            #                 print(f"[analyze_kibbe] Гайд отправлен на {user_email}")
-            #                 data['guide_sent'] = True
-            #                 data['message'] = 'Гайд отправлен на ваш email!'
-            #             else:
-            #                 print(f"[analyze_kibbe] Ошибка отправки гайда на {user_email}")
-            #                 data['guide_sent'] = False
-            #                 data['message'] = 'Ошибка отправки гайда'
-            #         else:
-            #             print(f"[analyze_kibbe] PDF не создан или слишком мал")
-            #             data['guide_sent'] = False
-            #             data['message'] = 'Ошибка создания PDF'
-            #     except Exception as e:
-            #         print(f"[analyze_kibbe] Ошибка при автоматической отправке гайда: {str(e)}")
-            #         data['guide_sent'] = False
-            #         data['message'] = f'Ошибка: {str(e)}'
-            # else:
-            #     print(f"[analyze_kibbe] Email {user_email} не найден в листе kibbe или email не валидный/автозаполнен")
-            #     print(f"[analyze_kibbe] user_email: '{user_email}'")
-            #     print(f"[analyze_kibbe] email_is_valid: {email_is_valid}")
-            #     print(f"[analyze_kibbe] email_is_not_autofilled: {email_is_not_autofilled}")
-            #     print(f"[analyze_kibbe] check_email_in_kibbe_sheet result: {check_email_in_kibbe_sheet(user_email) if email_is_valid and email_is_not_autofilled else 'Email not valid or autofilled'}")
-            #     data['guide_sent'] = False
-            #     data['message'] = 'Для получения гайда необходимо оплатить'
             
             return jsonify(data)
         except Exception as e:
