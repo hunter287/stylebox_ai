@@ -608,16 +608,33 @@
         dropZone.addEventListener('drop', handleDrop, false);
         fileInput.addEventListener('change', handlePreviewAndFiles, false);
 
-        function handleDrop(e) {
+        async function handleDrop(e) {
             const dt = e.dataTransfer;
             const files = dt.files;
-            handleFiles({ target: { files: files } });
+            const file = files[0];
+            if (file) {
+                // Сначала создаем превью с исправленной ориентацией
+                await createOrientationFixedPreview(file);
+                
+                // После превью — стандартная обработка загрузки
+                handleFiles({ target: { files: files } });
+            }
         }
 
         async function handlePreviewAndFiles(e) {
             const file = e.target.files[0];
             if (!file) return;
+            
+            // Сначала создаем превью с исправленной ориентацией
+            await createOrientationFixedPreview(file);
+            
+            // После превью — стандартная обработка загрузки
+            handleFiles(e);
+        }
+
+        async function createOrientationFixedPreview(file) {
             let dataUrl = null;
+            
             if (file.type === 'image/heic' || file.name.endsWith('.heic')) {
                 try {
                     const jpgBlob = await heic2any({
@@ -635,15 +652,25 @@
                     // Ошибка конвертации HEIC — ничего не показываем
                 }
             } else {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    dataUrl = e.target.result;
-                    showMainPreview(dataUrl); // Мгновенно показываем превью
-                };
-                reader.readAsDataURL(file);
+                // Для остальных форматов исправляем ориентацию
+                try {
+                    const fixedFile = await fixImageOrientation(file);
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        dataUrl = e.target.result;
+                        showMainPreview(dataUrl); // Показываем превью с исправленной ориентацией
+                    };
+                    reader.readAsDataURL(fixedFile);
+                } catch (e) {
+                    // В случае ошибки используем оригинальный файл
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        dataUrl = e.target.result;
+                        showMainPreview(dataUrl);
+                    };
+                    reader.readAsDataURL(file);
+                }
             }
-            // После превью — стандартная обработка загрузки
-            handleFiles(e);
         }
 
         function showMainPreview(dataUrl) {
