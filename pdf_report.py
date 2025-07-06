@@ -351,12 +351,12 @@ def generate_kibbe_pdf(user_photo_path: str, kibbe_type: str = None, output_path
         'romantic': 'romantic',
         'драматик': 'romantic',  # пока используем romantic как базовый
         'dramatic': 'romantic',
-        'классик': 'romantic',
-        'classic': 'romantic',
+        'классик': 'classic',
+        'classic': 'classic',
         'натурал': 'romantic',
         'natural': 'romantic',
-        'гамин': 'romantic',
-        'gamin': 'romantic'
+        'гамин': 'gamine',
+        'gamine': 'gamine'
     }
     
     template_key = template_aliases.get(kibbe_type_lower, 'romantic')
@@ -405,7 +405,7 @@ def generate_kibbe_pdf(user_photo_path: str, kibbe_type: str = None, output_path
         c.save()
         os.remove(temp_png_path)
 
-        # Мерджим с romantic.pdf начиная со второй страницы
+        # Мерджим с соответствующим PDF шаблоном начиная со второй страницы
         writer = PdfWriter()
         # Добавляем первую страницу (с фото)
         with open(temp_first_pdf, 'rb') as f1:
