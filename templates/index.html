@@ -316,6 +316,24 @@
             .loading {
                 padding-top: 0.5rem;
             }
+            /* Стили для сетки изображений селебрити на мобильных */
+            .message-content div[style*="grid-template-columns: repeat(3, 1fr)"] {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 0.3rem !important;
+            }
+            .message-content div[style*="grid-template-columns: repeat(3, 1fr)"] img {
+                max-width: 100% !important;
+                height: auto !important;
+                border-radius: 6px !important;
+            }
+            /* Стили для сетки изображений одежды на мобильных */
+            .outfit-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 0.3rem !important;
+            }
+            .outfit-grid img {
+                border-radius: 6px !important;
+            }
         }
 
         .svg-combos-row {
@@ -440,6 +458,28 @@
         .guide-buy-btn {
             font-size: 1rem;
             padding: 0.7rem 1.6rem;
+        }
+
+        /* Стили для сетки изображений селебрити на десктопе */
+        .message-content div[style*="grid-template-columns: repeat(3, 1fr)"] {
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 0.5rem !important;
+        }
+        .message-content div[style*="grid-template-columns: repeat(3, 1fr)"] img {
+            max-width: 100% !important;
+            height: auto !important;
+            border-radius: 8px !important;
+        }
+
+        /* Стили для сетки изображений одежды */
+        .outfit-grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 0.5rem !important;
+        }
+        .outfit-grid img {
+            max-width: 100% !important;
+            height: auto !important;
+            border-radius: 8px !important;
         }
 
         /* Стили для модального окна оплаты гайда */
@@ -920,8 +960,8 @@
                                         // Создаем контейнер для изображений
                                         const imagesGrid = document.createElement('div');
                                         imagesGrid.style.display = 'grid';
-                                        imagesGrid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(200px, 1fr))';
-                                        imagesGrid.style.gap = '1rem';
+                                        imagesGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                                        imagesGrid.style.gap = '0.5rem';
                                         imagesGrid.style.marginTop = '1rem';
                                         
                                         imagesContainer.appendChild(imagesGrid);
@@ -992,8 +1032,8 @@
                                         // Создаем контейнер для изображений
                                         const imagesGrid = document.createElement('div');
                                         imagesGrid.style.display = 'grid';
-                                        imagesGrid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(200px, 1fr))';
-                                        imagesGrid.style.gap = '1rem';
+                                        imagesGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                                        imagesGrid.style.gap = '0.5rem';
                                         imagesGrid.style.marginTop = '1rem';
                                         
                                         imagesContainer.appendChild(imagesGrid);
@@ -1064,8 +1104,8 @@
                                         // Создаем контейнер для изображений
                                         const imagesGrid = document.createElement('div');
                                         imagesGrid.style.display = 'grid';
-                                        imagesGrid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(200px, 1fr))';
-                                        imagesGrid.style.gap = '1rem';
+                                        imagesGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                                        imagesGrid.style.gap = '0.5rem';
                                         imagesGrid.style.marginTop = '1rem';
                                         
                                         imagesContainer.appendChild(imagesGrid);
@@ -1136,8 +1176,8 @@
                                         // Создаем контейнер для изображений
                                         const imagesGrid = document.createElement('div');
                                         imagesGrid.style.display = 'grid';
-                                        imagesGrid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(200px, 1fr))';
-                                        imagesGrid.style.gap = '1rem';
+                                        imagesGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                                        imagesGrid.style.gap = '0.5rem';
                                         imagesGrid.style.marginTop = '1rem';
                                         
                                         imagesContainer.appendChild(imagesGrid);
@@ -1208,8 +1248,8 @@
                                         // Создаем контейнер для изображений
                                         const imagesGrid = document.createElement('div');
                                         imagesGrid.style.display = 'grid';
-                                        imagesGrid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(200px, 1fr))';
-                                        imagesGrid.style.gap = '1rem';
+                                        imagesGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                                        imagesGrid.style.gap = '0.5rem';
                                         imagesGrid.style.marginTop = '1rem';
                                         
                                         imagesContainer.appendChild(imagesGrid);
@@ -1326,7 +1366,7 @@
                                                         'romantic_outfit8.webp'
                                                     ];
                                                     
-                                                    let imagesHTML = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">';
+                                                    let imagesHTML = '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 1rem;" class="outfit-grid">';
                                                     
                                                     romanticImages.forEach(imageName => {
                                                         imagesHTML += `
@@ -1367,7 +1407,7 @@
                                                         'gamine_outfit8.webp'
                                                     ];
                                                     
-                                                    let imagesHTML = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">';
+                                                    let imagesHTML = '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 1rem;" class="outfit-grid">';
                                                     
                                                     gamineImages.forEach(imageName => {
                                                         imagesHTML += `
@@ -1406,7 +1446,7 @@
                                                         'classic_outfit6.webp'
                                                     ];
                                                     
-                                                    let imagesHTML = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">';
+                                                    let imagesHTML = '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 1rem;" class="outfit-grid">';
                                                     
                                                     classicImages.forEach(imageName => {
                                                         imagesHTML += `
@@ -1445,7 +1485,7 @@
                                                         'natural_outfit6.webp'
                                                     ];
                                                     
-                                                    let imagesHTML = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">';
+                                                    let imagesHTML = '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 1rem;" class="outfit-grid">';
                                                     
                                                     naturalImages.forEach(imageName => {
                                                         imagesHTML += `
@@ -1484,7 +1524,7 @@
                                                         'dramatic_outfit6.webp'
                                                     ];
                                                     
-                                                    let imagesHTML = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">';
+                                                    let imagesHTML = '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 1rem;" class="outfit-grid">';
                                                     
                                                     dramaticImages.forEach(imageName => {
                                                         imagesHTML += `
