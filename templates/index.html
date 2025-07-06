@@ -1277,7 +1277,7 @@
                                             recommendationsDiv.style.transition = 'opacity 0.8s ease-in-out';
                                             recommendationsDiv.style.marginTop = '0.5rem';
                                             recommendationsDiv.style.whiteSpace = 'pre-line';
-                                            recommendationsDiv.textContent = data.style_recommendations;
+                                            recommendationsDiv.innerHTML = formatRecommendations(data.style_recommendations);
                                             recommendationsContent.appendChild(recommendationsDiv);
                                             
                                             // Плавное появление рекомендаций
@@ -2449,6 +2449,41 @@
             userMessage.appendChild(buttonsContainer);
             chatMessages.appendChild(userMessage);
             userMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Функция для форматирования рекомендаций
+        function formatRecommendations(text) {
+            if (!text) return '';
+            
+            // Сначала очищаем от Markdown-разметки
+            let formattedText = text
+                .replace(/###\s*/g, '') // Убираем ###
+                .replace(/\*\*(.*?)\*\*/g, '$1') // Убираем **
+                .replace(/\*(.*?)\*/g, '$1'); // Убираем *
+            
+            // Список заголовков для поиска
+            const headings = [
+                'Фасоны одежды',
+                'Ткани',
+                'Принты',
+                'Аксессуары',
+                'Макияж',
+                'Причёски'
+            ];
+            
+            // Добавляем эмоджи и выделяем заголовки
+            headings.forEach(heading => {
+                const regex = new RegExp(`^${heading}`, 'gm');
+                formattedText = formattedText.replace(regex, `✅ **${heading}**`);
+            });
+            
+            // Конвертируем markdown в HTML
+            formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // Добавляем классы для стилизации
+            formattedText = formattedText.replace(/✅ <strong>(.*?)<\/strong>/g, '<div style="font-weight: 600; color: #374151; margin-top: 16px; margin-bottom: 8px; font-size: 16px;">✅ <strong>$1</strong></div>');
+            
+            return formattedText;
         }
     </script>
 </body>
