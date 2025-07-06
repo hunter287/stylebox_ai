@@ -29,3 +29,7 @@ static/reports/
 Thumbs.db 
 gunicorn_config.py
 google_service_account.json
+
+# Logs
+*.log
+app.log
