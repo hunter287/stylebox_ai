@@ -712,9 +712,13 @@
             console.log("=== DEBUG: Starting fixImageOrientation ===");
             console.log("Input file type:", file.type);
             
+            // Показываем отладочную информацию на странице
+            showDebugInfo("Начинаем обработку EXIF для файла: " + file.name);
+            
             // Для HEIC файлов пропускаем обработку в браузере
             if (file.type === 'image/heic' || file.type === 'image/heif') {
                 console.log("=== DEBUG: HEIC file detected, sending to server as is ===");
+                showDebugInfo("HEIC файл - отправляем на сервер как есть");
                 return Promise.resolve(file);
             }
             
@@ -726,6 +730,7 @@
                 img.onload = function() {
                     console.log("=== DEBUG: Image loaded ===");
                     console.log("Original dimensions:", img.width, "x", img.height);
+                    showDebugInfo(`Изображение загружено. Размеры: ${img.width} x ${img.height}`);
                     
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
@@ -734,29 +739,44 @@
                     EXIF.getData(file, function() {
                         const orientation = EXIF.getTag(this, 'Orientation');
                         console.log("=== DEBUG: EXIF orientation ===", orientation);
+                        showDebugInfo(`EXIF ориентация: ${orientation}`);
                         
+                        let rotationInfo = "";
                         if (orientation === 6) {
                             canvas.width = img.height;
                             canvas.height = img.width;
                             ctx.translate(canvas.width/2, canvas.height/2);
                             ctx.rotate(Math.PI/2);
                             ctx.drawImage(img, -img.height/2, -img.width/2);
+                            rotationInfo = "Поворот на 90° вправо";
                         } else if (orientation === 8) {
                             canvas.width = img.height;
                             canvas.height = img.width;
                             ctx.translate(canvas.width/2, canvas.height/2);
                             ctx.rotate(-Math.PI/2);
                             ctx.drawImage(img, -img.height/2, -img.width/2);
+                            rotationInfo = "Поворот на 90° влево";
+                        } else if (orientation === 3) {
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            ctx.translate(canvas.width/2, canvas.height/2);
+                            ctx.rotate(Math.PI);
+                            ctx.drawImage(img, -img.width/2, -img.height/2);
+                            rotationInfo = "Поворот на 180°";
                         } else {
                             canvas.width = img.width;
                             canvas.height = img.height;
                             ctx.drawImage(img, 0, 0);
+                            rotationInfo = "Без поворота";
                         }
+                        
+                        showDebugInfo(`Применен: ${rotationInfo}. Новые размеры: ${canvas.width} x ${canvas.height}`);
                         
                         console.log("=== DEBUG: Converting canvas to blob ===");
                         // Конвертируем canvas в Blob
                         canvas.toBlob((blob) => {
                             console.log("=== DEBUG: Blob created ===");
+                            showDebugInfo("Blob создан успешно");
                             URL.revokeObjectURL(objectUrl); // Освобождаем память
                             resolve(new File([blob], file.name, {
                                 type: file.type,
@@ -768,6 +788,7 @@
                 
                 img.onerror = function(error) {
                     console.error("=== DEBUG: Image loading error ===", error);
+                    showDebugInfo("Ошибка загрузки изображения: " + error);
                     URL.revokeObjectURL(objectUrl);
                     // В случае ошибки возвращаем оригинальный файл
                     resolve(file);
@@ -775,6 +796,50 @@
                 
                 img.src = objectUrl;
             });
+        }
+
+        function showDebugInfo(message) {
+            // Создаем или находим div для отладочной информации
+            let debugDiv = document.getElementById('debugInfo');
+            if (!debugDiv) {
+                debugDiv = document.createElement('div');
+                debugDiv.id = 'debugInfo';
+                debugDiv.style.cssText = `
+                    position: fixed;
+                    top: 10px;
+                    right: 10px;
+                    background: rgba(0,0,0,0.8);
+                    color: white;
+                    padding: 10px;
+                    border-radius: 5px;
+                    font-family: monospace;
+                    font-size: 12px;
+                    max-width: 300px;
+                    z-index: 10000;
+                    max-height: 400px;
+                    overflow-y: auto;
+                `;
+                document.body.appendChild(debugDiv);
+            }
+            
+            // Добавляем новое сообщение с временной меткой
+            const timestamp = new Date().toLocaleTimeString();
+            const messageDiv = document.createElement('div');
+            messageDiv.style.marginBottom = '5px';
+            messageDiv.innerHTML = `<span style="color: #aaa;">[${timestamp}]</span> ${message}`;
+            debugDiv.appendChild(messageDiv);
+            
+            // Ограничиваем количество сообщений
+            while (debugDiv.children.length > 10) {
+                debugDiv.removeChild(debugDiv.firstChild);
+            }
+            
+            // Автоматически скрываем через 10 секунд
+            setTimeout(() => {
+                if (debugDiv.parentNode) {
+                    debugDiv.parentNode.removeChild(debugDiv);
+                }
+            }, 10000);
         }
 
         function uploadFile(file) {
