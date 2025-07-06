@@ -1593,13 +1593,13 @@
         function addSubscriptionOffer() {
             const messageContent = createAIMessage();
             const advantagesText = [
-                '🤖 Персональный ИИ-стилист появится 1 июля',
+                '🤖 Персональный ИИ-стилист появится 11 июля',
                 '📅 12 месяцев доступа + 2 месяца в подарок',
                 '🎨 Бесплатный персональный цветовой гайд',
                 '👗 Подбор вещей под ваш цветотип и фигуру',
                 '💡 Примеры стильных сочетаний одежды',
                 '💎 В 10-20 раз выгоднее услуг стилиста',
-                '💰 Сейчас всего 3990 руб/год',
+                '💰 Сейчас всего 4990 руб/год',
                 '💎 Потом будет стоить 9990 руб/год'
             ].join('\n');
 
@@ -1908,7 +1908,7 @@
                     <div id="subscriptionEmailError" style="color:#DC2626; font-size:0.95rem; margin:6px 0 0 0; display:none;"></div>
                     <button class="upload-button subscription-pay-btn" id="subscriptionPayBtn" style="margin-top:1.2rem; width:100%;">Оформить предзаказ</button>
                     <div id="subscriptionPaySuccess" style="display:none; margin-top:1.2rem; color:#059669; font-weight:500;">
-                        Спасибо за предзаказ!<br>Мы свяжемся с вами 1 июля для активации подписки.<br>Проверьте папку "Входящие" или "Спам".
+                        Спасибо за предзаказ!<br>Мы свяжемся с вами 11 июля для активации подписки.<br>Проверьте папку "Входящие" или "Спам".
                     </div>
                                 </div>
                             `;
@@ -1942,7 +1942,7 @@
                     widget.pay('charge', {
                         publicId: publicId,
                         description: 'Предзаказ на ИИ-стилиста (годовая подписка)',
-                        amount: 3990.00,
+                        amount: 4990.00,
                         currency: 'RUB',
                         skin: 'classic',
                         email: email,
@@ -2056,7 +2056,7 @@
             
             // Определяем тип гайда и цену
             const isKibbeGuide = localStorage.getItem('currentAnalysisType') === 'kibbe';
-            const guidePrice = isKibbeGuide ? 1.00 : 500.00;
+            const guidePrice = isKibbeGuide ? 1000.00 : 500.00;
             const guideLabel = isKibbeGuide ? 'Персональный гайд по стилю' : 'Персональный цветовой гайд';
             
             const data = {
@@ -2323,7 +2323,7 @@
                             </div>
                         </div>
                         <div class="guide-price-text" style="margin-top: 1rem; font-size: 1.1rem; color: #bb279b; line-height: 1.2;">
-                            Персональный гайд под типаж внешности — <b>1 руб.</b><br>
+                            Персональный гайд под типаж внешности — <b>1000 руб.</b><br>
                             <span style="font-size: 0.95rem;">или <b>бесплатно</b> при оформлении предзаказа на ИИ-стилиста</span>
                         </div>
                     `;
