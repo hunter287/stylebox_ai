@@ -373,16 +373,37 @@ def generate_kibbe_pdf(user_photo_path: str, kibbe_type: str = None, output_path
         # Загружаем JPG-шаблон
         template_img = Image.open(jpg_template_path).convert('RGBA')
         template_width, template_height = template_img.size
-        # --- ВРЕМЕННО: вставляем user_photo_path напрямую в PDF ---
-        from reportlab.pdfgen import canvas
-        temp_first_pdf = output_path + '_firstpage.pdf'
-        c = canvas.Canvas(temp_first_pdf, pagesize=(template_width, template_height))
-        c.drawImage(jpg_template_path, 0, 0, width=template_width, height=template_height)
-        # Вставляем фото пользователя (без crop, без PIL)
+        
+        # Фото пользователя (обрезка до круга 456x456)
+        circ_img = crop_to_circle(user_photo_path, size=456)
+        
+        # Создаем новое изображение с размерами шаблона
+        result_img = Image.new('RGBA', (template_width, template_height), (255, 255, 255, 0))
+        
+        # Накладываем шаблон
+        result_img.paste(template_img, (0, 0), template_img)
+        
+        # Накладываем фото пользователя (в правом верхнем углу)
+        # Координаты для размещения фото (левый верхний угол в x=121, y=151)
         photo_x = 121
         photo_y = 151
-        c.drawImage(user_photo_path, photo_x, photo_y, width=456, height=456)
+        
+        # Маска для круглого фото 456x456
+        mask = Image.new('L', (456, 456), 0)
+        mask_draw = ImageDraw.Draw(mask)
+        mask_draw.ellipse((0, 0, 456, 456), fill=255)
+        result_img.paste(circ_img, (photo_x, photo_y), mask)
+        
+        # Сохраняем результат как временный PNG
+        temp_png_path = output_path + '_temp.png'
+        result_img.save(temp_png_path, 'PNG')
+        
+        # Конвертируем PNG в PDF с нужным размером страницы (первая страница)
+        temp_first_pdf = output_path + '_firstpage.pdf'
+        c = canvas.Canvas(temp_first_pdf, pagesize=(template_width, template_height))
+        c.drawImage(temp_png_path, 0, 0, width=template_width, height=template_height)
         c.save()
+        os.remove(temp_png_path)
 
         # Мерджим с соответствующим PDF шаблоном начиная со второй страницы
         writer = PdfWriter()
