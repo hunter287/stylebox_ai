@@ -2031,7 +2031,7 @@
                     const sendResp = await fetch(endpoint, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email })
+                        body: JSON.stringify({ email, preview_image: window._lastUploadedImage })
                     });
                     const sendData = await sendResp.json();
                     if (sendData.success) {
@@ -2103,7 +2103,7 @@
                         fetch('/send_kibbe_guide_email', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email: email })
+                            body: JSON.stringify({ email: email, preview_image: window._lastUploadedImage })
                         })
                         .then(response => response.json())
                         .then(data => {

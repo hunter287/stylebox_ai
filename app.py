@@ -551,14 +551,31 @@ def send_kibbe_guide():
             send_guide_email_apology(email)
             return jsonify({'error': 'Image file not found'}), 404
         
+        preview_image_dataurl = data.get('preview_image')
+        preview_image_path = None
+        if preview_image_dataurl:
+            import base64, re, time
+            header, encoded = preview_image_dataurl.split(',', 1)
+            ext = 'jpg' if 'jpeg' in header or 'jpg' in header else 'png'
+            preview_image_path = f"uploads/kibbe_preview_{int(time.time())}.{ext}"
+            with open(preview_image_path, 'wb') as f:
+                f.write(base64.b64decode(encoded))
+            print(f"[send_kibbe_guide_email] Saved preview image: {preview_image_path}")
+        # Для PDF используем превью, если оно есть
+        pdf_photo_path = preview_image_path if preview_image_path else image_path
         # Генерируем PDF для Кибби
         try:
             full_pdf_path = generate_kibbe_pdf(
-                user_photo_path=image_path,
+                user_photo_path=pdf_photo_path,
                 kibbe_type=kibbe_type,
                 email=email
             )
             print(f"Kibbe PDF generated: {full_pdf_path}")
+            if preview_image_path:
+                try:
+                    os.remove(preview_image_path)
+                except Exception as e:
+                    print(f"[send_kibbe_guide_email] Error removing temp preview: {e}")
             
             if os.path.exists(full_pdf_path) and os.path.getsize(full_pdf_path) > 10*1024:
                 # Отправляем email с гайдом по Кибби
