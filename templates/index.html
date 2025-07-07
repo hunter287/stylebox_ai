@@ -675,41 +675,23 @@
         async function createOrientationFixedPreview(file) {
             let dataUrl = null;
             
-            if (file.type === 'image/heic' || file.name.endsWith('.heic')) {
-                try {
-                    const jpgBlob = await heic2any({
-                        blob: file,
-                        toType: 'image/jpeg',
-                        quality: 0.9
-                    });
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        dataUrl = e.target.result;
-                        showMainPreview(dataUrl); // Мгновенно показываем превью
-                    };
-                    reader.readAsDataURL(jpgBlob);
-                } catch (e) {
-                    // Ошибка конвертации HEIC — ничего не показываем
-                }
-            } else {
-                // Для остальных форматов исправляем ориентацию
-                try {
-                    const fixedFile = await fixImageOrientation(file);
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        dataUrl = e.target.result;
-                        showMainPreview(dataUrl); // Показываем превью с исправленной ориентацией
-                    };
-                    reader.readAsDataURL(fixedFile);
-                } catch (e) {
-                    // В случае ошибки используем оригинальный файл
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        dataUrl = e.target.result;
-                        showMainPreview(dataUrl);
-                    };
-                    reader.readAsDataURL(file);
-                }
+            try {
+                const fixedFile = await fixImageOrientation(file);
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    dataUrl = e.target.result;
+                    showMainPreview(dataUrl); // Показываем превью с исправленной ориентацией
+                };
+                reader.readAsDataURL(fixedFile);
+            } catch (e) {
+                console.error("=== DEBUG: Preview creation failed ===", e);
+                // В случае ошибки используем оригинальный файл
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    dataUrl = e.target.result;
+                    showMainPreview(dataUrl);
+                };
+                reader.readAsDataURL(file);
             }
         }
 
@@ -752,10 +734,23 @@
             console.log("=== DEBUG: Starting fixImageOrientation ===");
             console.log("Input file type:", file.type);
             
-            // Для HEIC файлов пропускаем обработку в браузере
-            if (file.type === 'image/heic' || file.type === 'image/heif') {
-                console.log("=== DEBUG: HEIC file detected, sending to server as is ===");
-                return Promise.resolve(file);
+            // Для HEIC файлов конвертируем в JPEG
+            if (file.type === 'image/heic' || file.type === 'image/heif' || file.name.endsWith('.heic')) {
+                console.log("=== DEBUG: HEIC file detected, converting to JPEG ===");
+                return heic2any({
+                    blob: file,
+                    toType: 'image/jpeg',
+                    quality: 0.9
+                }).then(jpgBlob => {
+                    return new File([jpgBlob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), {
+                        type: 'image/jpeg',
+                        lastModified: file.lastModified
+                    });
+                }).catch(error => {
+                    console.error("=== DEBUG: HEIC conversion failed ===", error);
+                    // В случае ошибки конвертации возвращаем оригинальный файл
+                    return file;
+                });
             }
             
             return new Promise((resolve) => {
