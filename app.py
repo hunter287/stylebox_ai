@@ -44,7 +44,7 @@ logger.info("Приложение запущено")
 pillow_heif.register_heif_opener()
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max-limit
+app.config['MAX_CONTENT_LENGTH'] = 25 * 1024 * 1024  # 25MB max-limit
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.secret_key = os.environ.get('SECRET_KEY', 'dev_secret_key')
 
@@ -203,11 +203,11 @@ def analyze():
     is_heic = file.filename.lower().endswith(('.heic', '.heif'))
     logger.info(f"Файл HEIC/HEIF: {is_heic}")
     
-    # Проверяем размер файла (максимум 10MB)
-    max_file_size = 10 * 1024 * 1024  # 10MB
+    # Проверяем размер файла (максимум 20MB)
+    max_file_size = 20 * 1024 * 1024  # 20MB
     if file_size > max_file_size:
         logger.warning(f"Файл слишком большой: {file_size} байт")
-        return jsonify({'error': 'Файл слишком большой. Максимальный размер: 10MB. Попробуйте уменьшить размер изображения.'}), 413
+        return jsonify({'error': 'Файл слишком большой. Максимальный размер: 20MB. Попробуйте уменьшить размер изображения.'}), 413
     
     if not allowed_file(file.filename):
         logger.warning(f"Неподдерживаемый формат файла: {file.filename}")
