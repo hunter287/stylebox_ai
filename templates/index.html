@@ -675,23 +675,41 @@
         async function createOrientationFixedPreview(file) {
             let dataUrl = null;
             
-            try {
-                const fixedFile = await fixImageOrientation(file);
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    dataUrl = e.target.result;
-                    showMainPreview(dataUrl); // Показываем превью с исправленной ориентацией
-                };
-                reader.readAsDataURL(fixedFile);
-            } catch (e) {
-                console.error("=== DEBUG: Preview creation failed ===", e);
-                // В случае ошибки используем оригинальный файл
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    dataUrl = e.target.result;
-                    showMainPreview(dataUrl);
-                };
-                reader.readAsDataURL(file);
+            if (file.type === 'image/heic' || file.name.endsWith('.heic')) {
+                try {
+                    const jpgBlob = await heic2any({
+                        blob: file,
+                        toType: 'image/jpeg',
+                        quality: 0.9
+                    });
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        dataUrl = e.target.result;
+                        showMainPreview(dataUrl); // Мгновенно показываем превью
+                    };
+                    reader.readAsDataURL(jpgBlob);
+                } catch (e) {
+                    // Ошибка конвертации HEIC — ничего не показываем
+                }
+            } else {
+                // Для остальных форматов исправляем ориентацию
+                try {
+                    const fixedFile = await fixImageOrientation(file);
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        dataUrl = e.target.result;
+                        showMainPreview(dataUrl); // Показываем превью с исправленной ориентацией
+                    };
+                    reader.readAsDataURL(fixedFile);
+                } catch (e) {
+                    // В случае ошибки используем оригинальный файл
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        dataUrl = e.target.result;
+                        showMainPreview(dataUrl);
+                    };
+                    reader.readAsDataURL(file);
+                }
             }
         }
 
@@ -733,24 +751,20 @@
         function fixImageOrientation(file) {
             console.log("=== DEBUG: Starting fixImageOrientation ===");
             console.log("Input file type:", file.type);
+            console.log("Input file size:", file.size);
+            console.log("Input file name:", file.name);
             
-            // Для HEIC файлов конвертируем в JPEG
-            if (file.type === 'image/heic' || file.type === 'image/heif' || file.name.endsWith('.heic')) {
-                console.log("=== DEBUG: HEIC file detected, converting to JPEG ===");
-                return heic2any({
-                    blob: file,
-                    toType: 'image/jpeg',
-                    quality: 0.9
-                }).then(jpgBlob => {
-                    return new File([jpgBlob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), {
-                        type: 'image/jpeg',
-                        lastModified: file.lastModified
-                    });
-                }).catch(error => {
-                    console.error("=== DEBUG: HEIC conversion failed ===", error);
-                    // В случае ошибки конвертации возвращаем оригинальный файл
-                    return file;
-                });
+            // Для HEIC файлов пропускаем обработку в браузере
+            if (file.type === 'image/heic' || file.type === 'image/heif') {
+                console.log("=== DEBUG: HEIC file detected, sending to server as is ===");
+                return Promise.resolve(file);
+            }
+            
+            // Проверяем размер файла - если слишком большой, сжимаем
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            if (file.size > maxSize) {
+                console.log("=== DEBUG: File too large, compressing ===");
+                return compressImage(file);
             }
             
             return new Promise((resolve) => {
@@ -792,6 +806,62 @@
                     console.error("=== DEBUG: Image loading error ===", error);
                     URL.revokeObjectURL(objectUrl);
                     // В случае ошибки возвращаем оригинальный файл
+                    resolve(file);
+                };
+                
+                img.src = objectUrl;
+            });
+        }
+
+        function compressImage(file) {
+            return new Promise((resolve) => {
+                const objectUrl = URL.createObjectURL(file);
+                const img = new Image();
+                
+                img.onload = function() {
+                    console.log("=== DEBUG: Compressing image ===");
+                    console.log("Original dimensions:", img.width, "x", img.height);
+                    
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Вычисляем новые размеры для сжатия
+                    let newWidth = img.width;
+                    let newHeight = img.height;
+                    const maxDimension = 1200; // Максимальный размер стороны
+                    
+                    if (newWidth > maxDimension || newHeight > maxDimension) {
+                        if (newWidth > newHeight) {
+                            newHeight = (newHeight * maxDimension) / newWidth;
+                            newWidth = maxDimension;
+                        } else {
+                            newWidth = (newWidth * maxDimension) / newHeight;
+                            newHeight = maxDimension;
+                        }
+                    }
+                    
+                    canvas.width = newWidth;
+                    canvas.height = newHeight;
+                    
+                    // Рисуем изображение с новыми размерами
+                    ctx.drawImage(img, 0, 0, newWidth, newHeight);
+                    
+                    console.log("=== DEBUG: Compressed dimensions:", newWidth, "x", newHeight);
+                    
+                    // Конвертируем в Blob с меньшим качеством
+                    canvas.toBlob((blob) => {
+                        console.log("=== DEBUG: Compressed blob size:", blob.size);
+                        URL.revokeObjectURL(objectUrl);
+                        resolve(new File([blob], file.name, {
+                            type: 'image/jpeg',
+                            lastModified: file.lastModified
+                        }));
+                    }, 'image/jpeg', 0.8); // Качество 80%
+                };
+                
+                img.onerror = function(error) {
+                    console.error("=== DEBUG: Image compression error ===", error);
+                    URL.revokeObjectURL(objectUrl);
                     resolve(file);
                 };
                 
@@ -1549,6 +1619,7 @@
                 .catch(error => {
                     console.error("=== DEBUG: Upload error ===");
                     console.error("Error details:", error);
+                    console.error("Error stack:", error.stack);
                     loading.style.display = 'none';
                     
                     // Скрываем зону загрузки при ошибке
@@ -1561,12 +1632,25 @@
                     const fileInput = document.getElementById('fileInput');
                     if (fileInput) fileInput.value = '';
                     
-                    errorMessage.textContent = 'Произошла ошибка при загрузке файла. Пожалуйста, попробуйте еще раз.';
+                    // Более информативное сообщение об ошибке
+                    let errorText = 'Произошла ошибка при загрузке файла. ';
+                    if (error.message.includes('413')) {
+                        errorText += 'Файл слишком большой. Попробуйте уменьшить размер изображения.';
+                    } else if (error.message.includes('415')) {
+                        errorText += 'Неподдерживаемый формат файла. Используйте JPG, PNG или HEIC.';
+                    } else if (error.message.includes('500')) {
+                        errorText += 'Ошибка сервера. Попробуйте еще раз через несколько минут.';
+                    } else {
+                        errorText += 'Пожалуйста, попробуйте еще раз.';
+                    }
+                    
+                    errorMessage.textContent = errorText;
                     errorMessage.style.display = 'block';
                 });
             }).catch(error => {
                 console.error("=== DEBUG: Orientation fix error ===");
                 console.error("Error details:", error);
+                console.error("Error stack:", error.stack);
                 loading.style.display = 'none';
                 
                 // Скрываем зону загрузки при ошибке обработки изображения
@@ -1579,7 +1663,7 @@
                 const fileInput = document.getElementById('fileInput');
                 if (fileInput) fileInput.value = '';
                 
-                errorMessage.textContent = 'Ошибка при обработке изображения. Пожалуйста, попробуйте еще раз.';
+                errorMessage.textContent = 'Ошибка при обработке изображения. Попробуйте выбрать другое фото или уменьшить его размер.';
                 errorMessage.style.display = 'block';
             });
         }

@@ -193,9 +193,21 @@ def analyze():
     logger.info(f"Получен файл: {file.filename}")
     logger.info(f"Тип файла: {file.content_type}")
     
+    # Проверяем размер файла
+    file_content = file.read()
+    file_size = len(file_content)
+    logger.info(f"Размер файла: {file_size} байт")
+    file.seek(0)  # Возвращаем указатель в начало файла
+    
     # Проверяем, является ли файл HEIC
     is_heic = file.filename.lower().endswith(('.heic', '.heif'))
     logger.info(f"Файл HEIC/HEIF: {is_heic}")
+    
+    # Проверяем размер файла (максимум 10MB)
+    max_file_size = 10 * 1024 * 1024  # 10MB
+    if file_size > max_file_size:
+        logger.warning(f"Файл слишком большой: {file_size} байт")
+        return jsonify({'error': 'Файл слишком большой. Максимальный размер: 10MB. Попробуйте уменьшить размер изображения.'}), 413
     
     if not allowed_file(file.filename):
         logger.warning(f"Неподдерживаемый формат файла: {file.filename}")
@@ -211,9 +223,7 @@ def analyze():
         logger.info(f"Исходное имя файла: {file.filename}")
         logger.info(f"Безопасное имя файла: {filename}")
         logger.info(f"Тип файла: {file.content_type}")
-        file_content = file.read()
-        logger.info(f"Размер файла: {len(file_content)} байт")
-        file.seek(0)  # Возвращаем указатель в начало файла
+        logger.info(f"Размер файла: {file_size} байт")
         
         # Проверяем, что это действительно HEIC файл
         if is_heic:
