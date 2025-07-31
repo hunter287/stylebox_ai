@@ -212,8 +212,13 @@ def list_pre_subscriptions():
             print(f"📝 Найдено {len(subscriptions)} предварительных подписок:")
             print("-" * 80)
             for sub in subscriptions:
-                end_date = sub['subscription_end'].strftime('%Y-%m-%d')
-                created = sub['created_at'].strftime('%Y-%m-%d %H:%M')
+                # subscription_end уже хранится как строка в формате ISO
+                end_date = sub['subscription_end']
+                # created_at может быть datetime объектом или строкой
+                if hasattr(sub['created_at'], 'strftime'):
+                    created = sub['created_at'].strftime('%Y-%m-%d %H:%M')
+                else:
+                    created = str(sub['created_at'])
                 print(f"📧 {sub['email']}")
                 print(f"   Действует до: {end_date}")
                 print(f"   Источник: {sub.get('source', 'manual')}")
