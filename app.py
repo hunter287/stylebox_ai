@@ -3096,7 +3096,6 @@ def get_filtered_products(survey_data, limit=100):
                 print(f"🔍 DEBUG: no mapping found for '{clothing_type}'")
         
         print(f"🔍 DEBUG: final target_categories = {target_categories}")
-        
         if not target_categories:
             print("🔍 DEBUG: No valid categories found!")
             return []
@@ -4120,6 +4119,145 @@ def group_products_by_category(products):
             result.append(groups[group_key])
     
     return result
+
+# API для управления предварительными подписками
+@app.route('/admin/pre_subscriptions', methods=['POST'])
+def add_pre_subscription():
+    """Добавляет предварительную подписку (только для админов)"""
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip()
+        subscription_end_str = data.get('subscription_end', '').strip()
+        source = data.get('source', 'manual')
+        notes = data.get('notes')
+        
+        if not email or not subscription_end_str:
+            return jsonify({'error': 'Email и дата окончания подписки обязательны'}), 400
+        
+        # Парсим дату окончания подписки
+        try:
+            subscription_end = datetime.strptime(subscription_end_str, '%Y-%m-%d')
+        except ValueError:
+            return jsonify({'error': 'Неверный формат даты. Используйте YYYY-MM-DD'}), 400
+        
+        # Подключаемся к MongoDB
+        if not user_auth.connect():
+            return jsonify({'error': 'Ошибка подключения к базе данных'}), 500
+        
+        # Добавляем предварительную подписку
+        result = user_auth.add_pre_subscription(email, subscription_end, source, notes)
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'message': 'Предварительная подписка добавлена',
+                'subscription_id': result['subscription_id']
+            })
+        else:
+            return jsonify({'error': result['error']}), 400
+            
+    except Exception as e:
+        logger.error(f"Ошибка добавления предварительной подписки: {str(e)}")
+        return jsonify({'error': 'Внутренняя ошибка сервера'}), 500
+
+@app.route('/admin/pre_subscriptions', methods=['GET'])
+def list_pre_subscriptions():
+    """Получает список предварительных подписок (только для админов)"""
+    try:
+        active_only = request.args.get('active_only', 'true').lower() == 'true'
+        
+        # Подключаемся к MongoDB
+        if not user_auth.connect():
+            return jsonify({'error': 'Ошибка подключения к базе данных'}), 500
+        
+        # Получаем список предварительных подписок
+        result = user_auth.list_pre_subscriptions(active_only)
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'subscriptions': result['subscriptions'],
+                'count': result['count']
+            })
+        else:
+            return jsonify({'error': result['error']}), 400
+            
+    except Exception as e:
+        logger.error(f"Ошибка получения списка предварительных подписок: {str(e)}")
+        return jsonify({'error': 'Внутренняя ошибка сервера'}), 500
+
+@app.route('/admin/pre_subscriptions/<email>', methods=['DELETE'])
+def remove_pre_subscription(email):
+    """Удаляет предварительную подписку (только для админов)"""
+    try:
+        # Подключаемся к MongoDB
+        if not user_auth.connect():
+            return jsonify({'error': 'Ошибка подключения к базе данных'}), 500
+        
+        # Удаляем предварительную подписку
+        result = user_auth.remove_pre_subscription(email)
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'message': 'Предварительная подписка удалена'
+            })
+        else:
+            return jsonify({'error': result['error']}), 400
+            
+    except Exception as e:
+        logger.error(f"Ошибка удаления предварительной подписки: {str(e)}")
+        return jsonify({'error': 'Внутренняя ошибка сервера'}), 500
+
+@app.route('/admin/pre_subscriptions/cleanup', methods=['POST'])
+def cleanup_expired_pre_subscriptions():
+    """Очищает истекшие предварительные подписки (только для админов)"""
+    try:
+        # Подключаемся к MongoDB
+        if not user_auth.connect():
+            return jsonify({'error': 'Ошибка подключения к базе данных'}), 500
+        
+        # Очищаем истекшие предварительные подписки
+        result = user_auth.cleanup_expired_pre_subscriptions()
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'message': f'Очищено {result["cleaned_count"]} истекших предварительных подписок',
+                'cleaned_count': result['cleaned_count']
+            })
+        else:
+            return jsonify({'error': result['error']}), 400
+            
+    except Exception as e:
+        logger.error(f"Ошибка очистки истекших предварительных подписок: {str(e)}")
+        return jsonify({'error': 'Внутренняя ошибка сервера'}), 500
+
+@app.route('/admin/pre_subscriptions/check/<email>', methods=['GET'])
+def check_pre_subscription(email):
+    """Проверяет наличие предварительной подписки для email (только для админов)"""
+    try:
+        # Подключаемся к MongoDB
+        if not user_auth.connect():
+            return jsonify({'error': 'Ошибка подключения к базе данных'}), 500
+        
+        # Проверяем предварительную подписку
+        result = user_auth.get_pre_subscription(email)
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'subscription': result['subscription']
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result['error']
+            })
+            
+    except Exception as e:
+        logger.error(f"Ошибка проверки предварительной подписки: {str(e)}")
+        return jsonify({'error': 'Внутренняя ошибка сервера'}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)

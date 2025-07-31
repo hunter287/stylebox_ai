@@ -18,6 +18,7 @@ class UserAuth:
         self.db = None
         self.users_collection = None
         self.sessions_collection = None
+        self.pre_subscriptions_collection = None
         
     def connect(self):
         """Подключается к MongoDB"""
@@ -26,6 +27,7 @@ class UserAuth:
             self.db = self.client[self.database_name]
             self.users_collection = self.db['users']
             self.sessions_collection = self.db['sessions']
+            self.pre_subscriptions_collection = self.db['pre_subscriptions']
             
             # Создаем индексы
             self._create_indexes()
@@ -51,13 +53,23 @@ class UserAuth:
             self.sessions_collection.create_index("expires_at")
             
             # TTL индекс для автоматического удаления истекших сессий
-            self.sessions_collection.create_index("expires_at", expireAfterSeconds=0)
+            try:
+                self.sessions_collection.create_index("expires_at", expireAfterSeconds=0)
+            except Exception as e:
+                # Если индекс уже существует с другими параметрами, игнорируем ошибку
+                logger.warning(f"TTL индекс для сессий уже существует: {e}")
             
             # Индексы для токенов сброса пароля
             self.db.password_reset_tokens.create_index("token", unique=True)
             self.db.password_reset_tokens.create_index("email")
             self.db.password_reset_tokens.create_index("expires_at")
             self.db.password_reset_tokens.create_index("used")
+            
+            # Индексы для предварительных подписок
+            self.pre_subscriptions_collection.create_index("email", unique=True)
+            self.pre_subscriptions_collection.create_index("subscription_end")
+            self.pre_subscriptions_collection.create_index("is_active")
+            self.pre_subscriptions_collection.create_index("created_at")
             
             logger.info("✅ Индексы для пользователей созданы")
             
@@ -101,6 +113,14 @@ class UserAuth:
                 if existing_username:
                     return {"success": False, "error": "Пользователь с таким именем уже существует"}
             
+            # Проверяем наличие предварительной подписки
+            pre_subscription_result = self.get_pre_subscription(email)
+            subscription_end = None
+            
+            if pre_subscription_result["success"]:
+                subscription_end = pre_subscription_result["subscription"]["subscription_end"]
+                logger.info(f"🔑 Найдена предварительная подписка для {email}, действует до {subscription_end}")
+            
             # Создаем пользователя
             user_data = {
                 "email": email,
@@ -109,7 +129,7 @@ class UserAuth:
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow(),
                 "is_active": True,
-                "subscription_end": None,  # Будет заполнено при покупке подписки
+                "subscription_end": subscription_end,  # Автоматически присваиваем подписку если есть
                 "profile": {
                     "color_type": None,
                     "kibbe_type": None,
@@ -121,11 +141,17 @@ class UserAuth:
             
             result = self.users_collection.insert_one(user_data)
             
+            # Если была предварительная подписка, удаляем её из коллекции предварительных подписок
+            if subscription_end:
+                self.remove_pre_subscription(email)
+                logger.info(f"✅ Предварительная подписка перенесена в аккаунт пользователя: {email}")
+            
             logger.info(f"✅ Пользователь зарегистрирован: {email}")
             return {
                 "success": True, 
                 "user_id": str(result.inserted_id),
-                "message": "Регистрация успешна"
+                "message": "Регистрация успешна" + (" (подписка активирована)" if subscription_end else ""),
+                "has_subscription": subscription_end is not None
             }
             
         except Exception as e:
@@ -407,6 +433,133 @@ class UserAuth:
             
         except Exception as e:
             logger.error(f"Ошибка сброса пароля: {e}")
+            return {"success": False, "error": "Внутренняя ошибка сервера"}
+
+    def add_pre_subscription(self, email, subscription_end, source="manual", notes=None):
+        """Добавляет предварительную подписку"""
+        try:
+            email = email.strip().lower()
+            
+            # Проверяем, что email не занят
+            existing_subscription = self.pre_subscriptions_collection.find_one({"email": email})
+            if existing_subscription:
+                return {"success": False, "error": "Предварительная подписка для этого email уже существует"}
+            
+            # Создаем предварительную подписку
+            subscription_data = {
+                "email": email,
+                "subscription_end": subscription_end,
+                "is_active": True,
+                "source": source,
+                "notes": notes,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            }
+            
+            result = self.pre_subscriptions_collection.insert_one(subscription_data)
+            
+            logger.info(f"✅ Предварительная подписка добавлена: {email}")
+            return {
+                "success": True,
+                "subscription_id": str(result.inserted_id),
+                "message": "Предварительная подписка добавлена"
+            }
+            
+        except Exception as e:
+            logger.error(f"Ошибка добавления предварительной подписки: {e}")
+            return {"success": False, "error": "Внутренняя ошибка сервера"}
+
+    def get_pre_subscription(self, email):
+        """Получает предварительную подписку по email"""
+        try:
+            email = email.strip().lower()
+            
+            subscription = self.pre_subscriptions_collection.find_one({
+                "email": email,
+                "is_active": True
+            })
+            
+            if not subscription:
+                return {"success": False, "error": "Предварительная подписка не найдена"}
+            
+            # Проверяем, не истекла ли подписка
+            if subscription["subscription_end"] < datetime.utcnow():
+                return {"success": False, "error": "Предварительная подписка истекла"}
+            
+            return {
+                "success": True,
+                "subscription": {
+                    "id": str(subscription["_id"]),
+                    "email": subscription["email"],
+                    "subscription_end": subscription["subscription_end"],
+                    "source": subscription.get("source", "manual"),
+                    "notes": subscription.get("notes")
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Ошибка получения предварительной подписки: {e}")
+            return {"success": False, "error": "Внутренняя ошибка сервера"}
+
+    def remove_pre_subscription(self, email):
+        """Удаляет предварительную подписку"""
+        try:
+            email = email.strip().lower()
+            
+            result = self.pre_subscriptions_collection.delete_one({"email": email})
+            
+            if result.deleted_count > 0:
+                logger.info(f"✅ Предварительная подписка удалена: {email}")
+                return {"success": True, "message": "Предварительная подписка удалена"}
+            else:
+                return {"success": False, "error": "Предварительная подписка не найдена"}
+            
+        except Exception as e:
+            logger.error(f"Ошибка удаления предварительной подписки: {e}")
+            return {"success": False, "error": "Внутренняя ошибка сервера"}
+
+    def list_pre_subscriptions(self, active_only=True):
+        """Получает список предварительных подписок"""
+        try:
+            filter_query = {}
+            if active_only:
+                filter_query["is_active"] = True
+            
+            subscriptions = list(self.pre_subscriptions_collection.find(filter_query).sort("created_at", -1))
+            
+            # Преобразуем ObjectId в строки
+            for sub in subscriptions:
+                sub["_id"] = str(sub["_id"])
+            
+            return {
+                "success": True,
+                "subscriptions": subscriptions,
+                "count": len(subscriptions)
+            }
+            
+        except Exception as e:
+            logger.error(f"Ошибка получения списка предварительных подписок: {e}")
+            return {"success": False, "error": "Внутренняя ошибка сервера"}
+
+    def cleanup_expired_pre_subscriptions(self):
+        """Очищает истекшие предварительные подписки"""
+        try:
+            result = self.pre_subscriptions_collection.update_many(
+                {
+                    "subscription_end": {"$lt": datetime.utcnow()},
+                    "is_active": True
+                },
+                {"$set": {"is_active": False, "updated_at": datetime.utcnow()}}
+            )
+            
+            logger.info(f"✅ Очищено {result.modified_count} истекших предварительных подписок")
+            return {
+                "success": True,
+                "cleaned_count": result.modified_count
+            }
+            
+        except Exception as e:
+            logger.error(f"Ошибка очистки истекших предварительных подписок: {e}")
             return {"success": False, "error": "Внутренняя ошибка сервера"}
 
 # Создаем глобальный экземпляр

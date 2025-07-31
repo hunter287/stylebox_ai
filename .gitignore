@@ -33,3 +33,7 @@ google_service_account.json
 # Logs
 *.log
 app.log
+
+# MongoDB exports
+mongo_export_*/
+*.tar.gz
