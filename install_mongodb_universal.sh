@@ -29,6 +29,7 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         sudo yum install -y mongodb-org
     elif command -v dnf &> /dev/null; then
         echo "📦 Fedora система - устанавливаем через dnf..."
+        sudo dnf update -y
         sudo dnf install -y mongodb-org
     else
         echo "❌ Неизвестная Linux система"
