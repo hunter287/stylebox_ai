@@ -581,8 +581,15 @@
             
             /* Мобильные стили для рекомендаций */
             .recommendations-container div[style*="grid-template-columns: repeat(2, 1fr)"] {
-                grid-template-columns: 1fr !important; /* 1 товар в ряд на мобильных */
+                grid-template-columns: 1fr !important; /* 1 товар в ряд на очень маленьких экранах */
                 gap: 15px !important;
+            }
+            
+            /* Стили для планшетов */
+            @media (min-width: 481px) and (max-width: 768px) {
+                .recommendations-container div[style*="grid-template-columns: repeat(2, 1fr)"] {
+                    grid-template-columns: repeat(2, 1fr) !important; /* 2 товара в ряд на планшетах */
+                }
             }
             
             .product-card {
@@ -4493,15 +4500,7 @@
                     grid.style.maxWidth = '1200px';
                     
                     // Адаптивность для мобильных устройств
-                    if (window.innerWidth <= 768) {
-                        grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
-                        grid.style.maxWidth = '600px';
-                    }
-                    
-                    if (window.innerWidth <= 480) {
-                        grid.style.gridTemplateColumns = '1fr';
-                        grid.style.maxWidth = '400px';
-                    }
+                    // setupResponsiveGrid(grid) уже вызывается выше
                     
                     group.products.forEach(product => {
                         const productCard = createProductCard(product);
@@ -5623,13 +5622,13 @@
         // Функция для адаптивной сетки товаров
         function setupResponsiveGrid(grid) {
             if (window.innerWidth <= 480) {
-                grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
-                grid.style.maxWidth = '600px';
+                grid.style.gridTemplateColumns = '1fr'; // 1 колонка на очень маленьких экранах
+                grid.style.maxWidth = '400px';
             } else if (window.innerWidth <= 768) {
-                grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+                grid.style.gridTemplateColumns = 'repeat(2, 1fr)'; // 2 колонки на мобильных
                 grid.style.maxWidth = '600px';
             } else {
-                grid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                grid.style.gridTemplateColumns = 'repeat(3, 1fr)'; // 3 колонки на десктопе
                 grid.style.maxWidth = '1200px';
             }
         }
