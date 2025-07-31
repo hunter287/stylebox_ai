@@ -115,9 +115,9 @@ class UserAuth:
             
             # Проверяем наличие предварительной подписки
             pre_subscription_result = self.get_pre_subscription(email)
-            subscription_end = None
+            has_pre_subscription = pre_subscription_result["success"]
             
-            if pre_subscription_result["success"]:
+            if has_pre_subscription:
                 subscription_end = pre_subscription_result["subscription"]["subscription_end"]
                 logger.info(f"🔑 Найдена предварительная подписка для {email}, действует до {subscription_end}")
             
@@ -129,7 +129,6 @@ class UserAuth:
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow(),
                 "is_active": True,
-                "subscription_end": subscription_end,  # Автоматически присваиваем подписку если есть
                 "profile": {
                     "color_type": None,
                     "kibbe_type": None,
@@ -141,17 +140,17 @@ class UserAuth:
             
             result = self.users_collection.insert_one(user_data)
             
-            # Если была предварительная подписка, удаляем её из коллекции предварительных подписок
-            if subscription_end:
-                self.remove_pre_subscription(email)
-                logger.info(f"✅ Предварительная подписка перенесена в аккаунт пользователя: {email}")
+            # Предварительная подписка остается в коллекции pre_subscriptions
+            # и будет проверяться при каждом обращении к check_subscription
+            if has_pre_subscription:
+                logger.info(f"✅ Пользователь зарегистрирован с предварительной подпиской: {email}")
             
             logger.info(f"✅ Пользователь зарегистрирован: {email}")
             return {
                 "success": True, 
                 "user_id": str(result.inserted_id),
-                "message": "Регистрация успешна" + (" (подписка активирована)" if subscription_end else ""),
-                "has_subscription": subscription_end is not None
+                "message": "Регистрация успешна" + (" (подписка активирована)" if has_pre_subscription else ""),
+                "has_subscription": has_pre_subscription
             }
             
         except Exception as e:
@@ -286,7 +285,7 @@ class UserAuth:
             return False
     
     def check_subscription(self, user_id):
-        """Проверяет активность подписки пользователя"""
+        """Проверяет активность подписки пользователя через предварительные подписки"""
         try:
             user_id = ObjectId(user_id)
             user = self.users_collection.find_one({"_id": user_id})
@@ -294,11 +293,22 @@ class UserAuth:
             if not user:
                 return False
             
-            subscription_end = user.get("subscription_end")
-            if not subscription_end:
+            email = user.get("email")
+            if not email:
                 return False
             
-            return subscription_end > datetime.utcnow()
+            # Проверяем активную предварительную подписку
+            pre_sub_result = self.get_pre_subscription(email)
+            
+            if pre_sub_result['success']:
+                subscription = pre_sub_result['subscription']
+                subscription_end = subscription.get('subscription_end')
+                
+                if subscription_end:
+                    # Проверяем, что подписка еще действует
+                    return subscription_end > datetime.utcnow()
+            
+            return False
             
         except Exception as e:
             logger.error(f"Ошибка проверки подписки: {e}")
@@ -328,9 +338,20 @@ class UserAuth:
         try:
             total_users = self.users_collection.count_documents({})
             active_users = self.users_collection.count_documents({"is_active": True})
-            users_with_subscription = self.users_collection.count_documents({
-                "subscription_end": {"$gt": datetime.utcnow()}
-            })
+            
+            # Подсчитываем пользователей с активными предварительными подписками
+            users_with_subscription = 0
+            users = self.users_collection.find({})
+            
+            for user in users:
+                email = user.get("email")
+                if email:
+                    pre_sub_result = self.get_pre_subscription(email)
+                    if pre_sub_result['success']:
+                        subscription = pre_sub_result['subscription']
+                        subscription_end = subscription.get('subscription_end')
+                        if subscription_end and subscription_end > datetime.utcnow():
+                            users_with_subscription += 1
             
             return {
                 "total_users": total_users,
