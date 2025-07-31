@@ -11528,3 +11528,8 @@
 2025-07-31 01:37:01,094 - __main__ - INFO - 📦 Fallback: выбрано 20 товаров
 2025-07-31 01:37:01,100 - werkzeug - INFO - 127.0.0.1 - - [31/Jul/2025 01:37:01] "POST /start_recommendations HTTP/1.1" 200 -
 2025-07-31 01:38:47,614 - werkzeug - INFO - 127.0.0.1 - - [31/Jul/2025 01:38:47] "POST /logout HTTP/1.1" 200 -
+2025-07-31 03:20:36,622 - werkzeug - INFO -  * Detected change in '/Users/sergeikim/Projects/stylist_ai/app.py', reloading
+2025-07-31 03:20:36,995 - werkzeug - INFO -  * Restarting with stat
+2025-07-31 03:20:38,157 - __main__ - INFO - Приложение запущено
+2025-07-31 03:20:38,171 - werkzeug - WARNING -  * Debugger is active!
+2025-07-31 03:20:38,181 - werkzeug - INFO -  * Debugger PIN: 526-125-974
