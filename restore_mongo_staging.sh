@@ -13,18 +13,8 @@ fi
 # Устанавливаем MongoDB если её нет
 if ! command -v mongod &> /dev/null; then
     echo "📦 Устанавливаем MongoDB..."
-    
-    # Для Ubuntu/Debian
-    if command -v apt-get &> /dev/null; then
-        wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
-        echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
-        sudo apt-get update
-        sudo apt-get install -y mongodb-org
-    else
-        echo "❌ Не поддерживаемая система для автоматической установки"
-        echo "💡 Установите MongoDB вручную: https://docs.mongodb.com/manual/installation/"
-        exit 1
-    fi
+    chmod +x install_mongodb_universal.sh
+    ./install_mongodb_universal.sh
 fi
 
 # Запускаем MongoDB
