@@ -522,7 +522,6 @@ class UserAuth:
             # Если subscription_end - строка, конвертируем в datetime
             if isinstance(subscription_end, str):
                 try:
-                    from datetime import datetime
                     subscription_end = datetime.fromisoformat(subscription_end.replace('Z', '+00:00'))
                 except ValueError:
                     return {"success": False, "error": "Неверный формат даты окончания подписки"}
@@ -579,7 +578,6 @@ class UserAuth:
                         # Если subscription_end - строка, конвертируем в datetime
                         if isinstance(subscription_end, str):
                             try:
-                                from datetime import datetime
                                 subscription_end = datetime.fromisoformat(subscription_end.replace('Z', '+00:00'))
                             except ValueError:
                                 # Если не удается распарсить, пропускаем
