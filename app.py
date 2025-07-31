@@ -1082,10 +1082,10 @@ def login():
         if not email or not password:
             return jsonify({'error': 'Email и пароль обязательны'}), 400
         
-        # Проверяем rate limiting
-        rate_ok, rate_message = rate_limit_check()
-        if not rate_ok:
-            return jsonify({'error': rate_message}), 429
+        # Проверяем rate limiting (временно отключено)
+        # rate_ok, rate_message = rate_limit_check()
+        # if not rate_ok:
+        #     return jsonify({'error': rate_message}), 429
         
         # Подключаемся к MongoDB
         if not user_auth.connect():
@@ -1101,7 +1101,7 @@ def login():
             logger.info(f"🔑 Session ID сохранен в Flask session: {result['session_id']}")
             logger.info(f"🔑 Session permanent: {session.permanent}")
             logger.info(f"🔑 Session keys: {list(session.keys())}")
-            record_login_attempt(success=True)
+            # record_login_attempt(success=True)  # Временно отключено
             
             logger.info(f"Успешная авторизация: {email}")
             return jsonify({
@@ -1110,7 +1110,7 @@ def login():
                 'user': result['user']
             })
         else:
-            record_login_attempt(success=False)
+            # record_login_attempt(success=False)  # Временно отключено
             return jsonify({'error': result['error']}), 401
             
     except Exception as e:

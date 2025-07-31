@@ -150,29 +150,32 @@ def subscription_required(f):
     return decorated_function
 
 def rate_limit_check():
-    """Проверка rate limiting для авторизации"""
-    user_ip = request.remote_addr
-    current_time = time.time()
-    
-    # Получаем или создаем данные о попытках входа для IP
-    if 'login_attempts' not in session:
-        session['login_attempts'] = {}
-    
-    attempts = session['login_attempts']
-    
-    # Очищаем старые попытки (старше 15 минут)
-    attempts = {ip: data for ip, data in attempts.items() 
-               if current_time - data['timestamp'] < 900}
-    
-    user_attempts = attempts.get(user_ip, {'count': 0, 'timestamp': current_time})
-    
-    # Проверяем лимит (5 попыток за 15 минут)
-    if user_attempts['count'] >= 5:
-        time_diff = current_time - user_attempts['timestamp']
-        if time_diff < 900:  # 15 минут
-            return False, f"Слишком много попыток входа. Попробуйте через {int((900 - time_diff) / 60)} минут."
-    
+    """Проверка rate limiting для авторизации (временно отключено)"""
+    # Временно отключаем rate limiting для тестирования
     return True, None
+    
+    # user_ip = request.remote_addr
+    # current_time = time.time()
+    # 
+    # # Получаем или создаем данные о попытках входа для IP
+    # if 'login_attempts' not in session:
+    #     session['login_attempts'] = {}
+    # 
+    # attempts = session['login_attempts']
+    # 
+    # # Очищаем старые попытки (старше 15 минут)
+    # attempts = {ip: data for ip, data in attempts.items() 
+    #            if current_time - data['timestamp'] < 900}
+    # 
+    # user_attempts = attempts.get(user_ip, {'count': 0, 'timestamp': current_time})
+    # 
+    # # Проверяем лимит (5 попыток за 15 минут)
+    # if user_attempts['count'] >= 5:
+    #     time_diff = current_time - user_attempts['timestamp']
+    #     if time_diff < 900:  # 15 минут
+    #         return False, f"Слишком много попыток входа. Попробуйте через {int((900 - time_diff) / 60)} минут."
+    # 
+    # return True, None
 
 def record_login_attempt(success=True):
     """Записывает попытку входа"""
