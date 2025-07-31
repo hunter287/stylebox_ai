@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, render_template, send_file, session, redirect
+from flask_session import Session
 import os
 from werkzeug.utils import secure_filename
 from color_analysis import ColorAnalyzer
@@ -65,6 +66,9 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 app.config['SESSION_COOKIE_SECURE'] = False  # True для HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+# Инициализация Flask-Session
+Session(app)
 
 # Список доступных пресетов цветотипов
 PRESET_COLOR_TYPES = [
