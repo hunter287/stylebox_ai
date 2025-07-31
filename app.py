@@ -791,7 +791,12 @@ def paid_callback():
     # Определяем тип покупки по описанию и дополнительным данным
     description = data.get('Description', '').lower()
     custom_fields = data.get('Data', {})
-    guide_type = custom_fields.get('guideType', '')
+    
+    # Проверяем, что custom_fields - это словарь
+    if isinstance(custom_fields, dict):
+        guide_type = custom_fields.get('guideType', '')
+    else:
+        guide_type = ''
     
     print("[paid_callback] Email:", email)
     print("[paid_callback] Analysis ID:", analysis_id)
@@ -1235,11 +1240,23 @@ def profile():
         profile_data = user.get('profile', {})
         survey_data = profile_data.get('survey_data', {})
         
+        # Проверяем подписку через pre_subscriptions
+        subscription_active = user_auth.check_subscription(str(user['_id']))
+        
+        # Получаем информацию о подписке
+        subscription_info = None
+        if subscription_active:
+            pre_sub_result = user_auth.get_pre_subscription(user.get('email', ''))
+            if pre_sub_result['success']:
+                subscription_info = pre_sub_result['subscription']
+        
         from datetime import datetime
         
         return render_template('profile.html', 
                              user=user, 
                              survey_data=survey_data,
+                             subscription_active=subscription_active,
+                             subscription_info=subscription_info,
                              now=datetime.utcnow())
         
     except Exception as e:

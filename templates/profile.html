@@ -368,9 +368,9 @@
                     </div>
                     <div class="info-item">
                         <h3>Статус подписки</h3>
-                        {% if user.subscription_end and user.subscription_end > now %}
+                        {% if subscription_active and subscription_info %}
                             <div class="subscription-status subscription-active">
-                                ✅ Активна до {{ user.subscription_end.strftime('%d.%m.%Y') }}
+                                ✅ Активна до {{ subscription_info.subscription_end.strftime('%d.%m.%Y') }}
                             </div>
                         {% else %}
                             <div class="subscription-status subscription-inactive">
