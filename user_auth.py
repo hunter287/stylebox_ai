@@ -508,16 +508,18 @@ class UserAuth:
         try:
             email = email.strip().lower()
             
-            subscription = self.pre_subscriptions_collection.find_one({
-                "email": email,
-                "is_active": True
-            })
+            # Ищем подписку без фильтра is_active, так как поле может не быть установлено
+            subscription = self.pre_subscriptions_collection.find_one({"email": email})
             
             if not subscription:
                 return {"success": False, "error": "Предварительная подписка не найдена"}
             
             # Проверяем, не истекла ли подписка
-            if subscription["subscription_end"] < datetime.utcnow():
+            subscription_end = subscription.get("subscription_end")
+            if not subscription_end:
+                return {"success": False, "error": "У предварительной подписки нет даты окончания"}
+            
+            if subscription_end < datetime.utcnow():
                 return {"success": False, "error": "Предварительная подписка истекла"}
             
             return {
@@ -525,9 +527,10 @@ class UserAuth:
                 "subscription": {
                     "id": str(subscription["_id"]),
                     "email": subscription["email"],
-                    "subscription_end": subscription["subscription_end"],
+                    "subscription_end": subscription_end,
                     "source": subscription.get("source", "manual"),
-                    "notes": subscription.get("notes")
+                    "notes": subscription.get("notes"),
+                    "created_at": subscription.get("created_at")
                 }
             }
             
@@ -555,11 +558,19 @@ class UserAuth:
     def list_pre_subscriptions(self, active_only=True):
         """Получает список предварительных подписок"""
         try:
-            filter_query = {}
-            if active_only:
-                filter_query["is_active"] = True
+            subscriptions = list(self.pre_subscriptions_collection.find({}).sort("created_at", -1))
             
-            subscriptions = list(self.pre_subscriptions_collection.find(filter_query).sort("created_at", -1))
+            # Если нужны только активные, фильтруем по дате
+            if active_only:
+                current_time = datetime.utcnow()
+                active_subscriptions = []
+                
+                for sub in subscriptions:
+                    subscription_end = sub.get("subscription_end")
+                    if subscription_end and subscription_end > current_time:
+                        active_subscriptions.append(sub)
+                
+                subscriptions = active_subscriptions
             
             # Преобразуем ObjectId в строки
             for sub in subscriptions:
