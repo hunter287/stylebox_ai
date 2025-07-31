@@ -8,8 +8,20 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     # Linux
     if command -v apt-get &> /dev/null; then
         echo "📦 Ubuntu/Debian система - устанавливаем через apt..."
+        
+        # Обновляем пакеты
+        sudo apt-get update
+        
+        # Устанавливаем зависимости
+        sudo apt-get install -y wget gnupg
+        
+        # Добавляем ключ MongoDB
         wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
+        
+        # Добавляем репозиторий MongoDB
         echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
+        
+        # Обновляем пакеты и устанавливаем MongoDB
         sudo apt-get update
         sudo apt-get install -y mongodb-org
     elif command -v yum &> /dev/null; then
