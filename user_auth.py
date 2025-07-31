@@ -519,6 +519,14 @@ class UserAuth:
             if not subscription_end:
                 return {"success": False, "error": "У предварительной подписки нет даты окончания"}
             
+            # Если subscription_end - строка, конвертируем в datetime
+            if isinstance(subscription_end, str):
+                try:
+                    from datetime import datetime
+                    subscription_end = datetime.fromisoformat(subscription_end.replace('Z', '+00:00'))
+                except ValueError:
+                    return {"success": False, "error": "Неверный формат даты окончания подписки"}
+            
             if subscription_end < datetime.utcnow():
                 return {"success": False, "error": "Предварительная подписка истекла"}
             
@@ -567,8 +575,18 @@ class UserAuth:
                 
                 for sub in subscriptions:
                     subscription_end = sub.get("subscription_end")
-                    if subscription_end and subscription_end > current_time:
-                        active_subscriptions.append(sub)
+                    if subscription_end:
+                        # Если subscription_end - строка, конвертируем в datetime
+                        if isinstance(subscription_end, str):
+                            try:
+                                from datetime import datetime
+                                subscription_end = datetime.fromisoformat(subscription_end.replace('Z', '+00:00'))
+                            except ValueError:
+                                # Если не удается распарсить, пропускаем
+                                continue
+                        
+                        if subscription_end > current_time:
+                            active_subscriptions.append(sub)
                 
                 subscriptions = active_subscriptions
             
