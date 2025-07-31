@@ -3149,38 +3149,38 @@ def get_filtered_products(survey_data, limit=100):
             if body_type and body_type != 'Не указан':
                 if isinstance(body_type, dict):
                     body_type_value = body_type.get('value', body_type.get('label', ''))
-                else:
-                    body_type_value = str(body_type)
+            else:
+                body_type_value = str(body_type)
                 
-                if body_type_value:
-                    # Маппинг типов фигуры
-                    body_type_mapping = {
-                        'груша': ['Груша'],
-                        'pear': ['Груша'],
-                        'Груша': ['Груша'],
-                        'Pear': ['Груша'],
-                        'яблоко': ['Яблоко'],
-                        'apple': ['Яблоко'],
-                        'Яблоко': ['Яблоко'],
-                        'Apple': ['Яблоко'],
-                        'песочные часы': ['Песочные часы'],
-                        'hourglass': ['Песочные часы'],
-                        'Песочные часы': ['Песочные часы'],
-                        'Hourglass': ['Песочные часы'],
-                        'прямоугольник': ['Прямоугольник (до 46)', 'Прямоугольник (от 48)'],
-                        'rectangle': ['Прямоугольник (до 46)', 'Прямоугольник (от 48)'],
-                        'Прямоугольник': ['Прямоугольник (до 46)', 'Прямоугольник (от 48)'],
-                        'Rectangle': ['Прямоугольник (до 46)', 'Прямоугольник (от 48)'],
-                        'перевернутый треугольник': ['Перевернутый треугольник'],
-                        'inverted triangle': ['Перевернутый треугольник'],
-                        'Перевернутый треугольник': ['Перевернутый треугольник'],
-                        'Inverted Triangle': ['Перевернутый треугольник']
-                    }
-                    
-                    mapped_body_types = body_type_mapping.get(body_type_value.lower(), [body_type_value])
-                    clothing_filter['bodyTypes'] = {'$in': mapped_body_types}
-                    print(f"🔍 DEBUG: added body type filter = {mapped_body_types}")
-            
+            if body_type_value:
+                # Маппинг типов фигуры
+                body_type_mapping = {
+                    'груша': ['Груша'],
+                    'pear': ['Груша'],
+                    'Груша': ['Груша'],
+                    'Pear': ['Груша'],
+                    'яблоко': ['Яблоко'],
+                    'apple': ['Яблоко'],
+                    'Яблоко': ['Яблоко'],
+                    'Apple': ['Яблоко'],
+                    'песочные часы': ['Песочные часы'],
+                    'hourglass': ['Песочные часы'],
+                    'Песочные часы': ['Песочные часы'],
+                    'Hourglass': ['Песочные часы'],
+                    'прямоугольник': ['Прямоугольник (до 46)', 'Прямоугольник (от 48)'],
+                    'rectangle': ['Прямоугольник (до 46)', 'Прямоугольник (от 48)'],
+                    'Прямоугольник': ['Прямоугольник (до 46)', 'Прямоугольник (от 48)'],
+                    'Rectangle': ['Прямоугольник (до 46)', 'Прямоугольник (от 48)'],
+                    'перевернутый треугольник': ['Перевернутый треугольник'],
+                    'inverted triangle': ['Перевернутый треугольник'],
+                    'Перевернутый треугольник': ['Перевернутый треугольник'],
+                    'Inverted Triangle': ['Перевернутый треугольник']
+                }
+                
+                mapped_body_types = body_type_mapping.get(body_type_value.lower(), [body_type_value])
+                clothing_filter['bodyTypes'] = {'$in': mapped_body_types}
+                print(f"🔍 DEBUG: added body type filter = {mapped_body_types}")
+        
             print(f"🔍 DEBUG: clothing_filter = {clothing_filter}")
             
             # Выполняем запрос для одежды
@@ -3235,7 +3235,7 @@ def get_filtered_products(survey_data, limit=100):
                 print("🔍 DEBUG: Размер обуви не указан - показываем всю обувь и сумки")
             
             print(f"🔍 DEBUG: accessory_filter = {accessory_filter}")
-            
+        
             # Выполняем запрос для аксессуаров
             accessory_products = list(products_collection.find(accessory_filter).limit(limit))
             print(f"🔍 DEBUG: Найдено товаров аксессуаров: {len(accessory_products)}")
@@ -3247,9 +3247,9 @@ def get_filtered_products(survey_data, limit=100):
             for product in all_products:
                 category = product.get('category', 'Неизвестно')
                 category_counts[category] = category_counts.get(category, 0) + 1
-            
+        
             print(f"🔍 Найденные категории товаров: {category_counts}")
-            
+        
             # Получаем все категории в базе данных для отладки
             all_categories = products_collection.distinct('category')
             print(f"🔍 Все категории в базе данных: {all_categories}")
