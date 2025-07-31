@@ -580,15 +580,44 @@
             }
             
             /* Мобильные стили для рекомендаций */
-            .recommendations-container div[style*="grid-template-columns: repeat(2, 1fr)"] {
-                grid-template-columns: 1fr !important; /* 1 товар в ряд на очень маленьких экранах */
+            .recommendations-container div[style*="display: grid"] {
                 gap: 15px !important;
             }
             
-            /* Стили для планшетов */
-            @media (min-width: 481px) and (max-width: 768px) {
-                .recommendations-container div[style*="grid-template-columns: repeat(2, 1fr)"] {
-                    grid-template-columns: repeat(2, 1fr) !important; /* 2 товара в ряд на планшетах */
+            /* На мобильных устройствах убираем отступы у message-content */
+            @media (max-width: 900px) {
+                .message.ai .message-content {
+                    padding-left: 0 !important;
+                    padding-right: 0 !important;
+                    margin-left: 0 !important;
+                    margin-right: 0 !important;
+                    width: 100% !important;
+                }
+                
+                /* Убираем отступы у контейнера рекомендаций */
+                .recommendations-container {
+                    padding-left: 0 !important;
+                    padding-right: 0 !important;
+                    margin-left: 0 !important;
+                    margin-right: 0 !important;
+                    width: 100% !important;
+                }
+            }
+            
+            /* ПРИНУДИТЕЛЬНО 2 колонки для мобильных устройств */
+            @media (max-width: 900px) {
+                .recommendations-container div[style*="display: grid"] {
+                    grid-template-columns: repeat(2, 1fr) !important;
+                    gap: 6px !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
+                }
+                
+                /* Принудительно для всех grid элементов */
+                div[style*="display: grid"] {
+                    grid-template-columns: repeat(2, 1fr) !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
                 }
             }
             
@@ -4494,13 +4523,7 @@
                     
                     // Создаем сетку для товаров группы
                     const grid = document.createElement('div');
-                    grid.style.display = 'grid';
-                    grid.style.gap = '15px';
                     setupResponsiveGrid(grid);
-                    grid.style.maxWidth = '1200px';
-                    
-                    // Адаптивность для мобильных устройств
-                    // setupResponsiveGrid(grid) уже вызывается выше
                     
                     group.products.forEach(product => {
                         const productCard = createProductCard(product);
@@ -4540,8 +4563,6 @@
                     
                     // Создаем сетку для товаров группы
                     const grid = document.createElement('div');
-                    grid.style.display = 'grid';
-                    grid.style.gap = '15px';
                     setupResponsiveGrid(grid);
                     
                     group.products.forEach(product => {
@@ -4794,12 +4815,17 @@
             card.className = 'product-card';
             card.style.border = '1px solid #e5e7eb';
             card.style.borderRadius = '12px';
-            card.style.padding = '15px';
+            // Адаптивный padding для мобильных устройств
+            if (window.innerWidth <= 900) {
+                card.style.padding = '8px'; // Меньший padding для мобильных
+            } else {
+                card.style.padding = '15px';
+            }
             card.style.backgroundColor = '#fff';
             card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
             card.style.transition = 'transform 0.2s, box-shadow 0.2s';
             card.style.cursor = 'pointer';
-            card.style.width = '200px'; // Уменьшаем ширину для 3 колонок
+            card.style.width = 'auto'; // Убираем фиксированную ширину, пусть grid сам управляет
             card.style.display = 'flex';
             card.style.flexDirection = 'column';
             card.style.height = '100%';
@@ -4823,7 +4849,12 @@
             // Клик для перехода на страницу товара
             card.onclick = function() {
                 if (product.url) {
-                    window.open(product.url, '_blank');
+                    // Убираем referrer для внешних ссылок
+                    const link = document.createElement('a');
+                    link.href = product.url;
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                    link.click();
                 }
             };
             
@@ -4832,27 +4863,34 @@
                 const image = document.createElement('img');
                 image.src = product.imageUrl;
                 image.alt = product.name || 'Товар';
-                image.style.width = '180px';
-                image.style.height = '260px';
+                image.style.width = '100%';
+                image.style.height = 'auto';
+                // Адаптивный aspect ratio для мобильных устройств
+                if (window.innerWidth <= 900) {
+                    image.style.aspectRatio = '1/1.2'; // Более квадратное соотношение для мобильных
+                } else {
+                    image.style.aspectRatio = '600/866';
+                }
                 image.style.objectFit = 'cover';
                 image.style.borderRadius = '8px';
                 image.style.marginBottom = '10px';
                 image.style.display = 'block';
                 image.style.margin = '0 auto 10px auto'; // Центрируем изображение
                 
-                // Адаптивность для мобильных устройств
-                if (window.innerWidth <= 768) {
-                    image.style.width = '100%';
-                    image.style.height = 'auto';
-                    image.style.aspectRatio = '600/866';
-                }
+                // Адаптивность уже настроена выше
                 
                 // Обработка ошибки загрузки изображения
                 image.onerror = function() {
                     image.style.display = 'none';
                     const placeholder = document.createElement('div');
-                    placeholder.style.width = '180px';
-                    placeholder.style.height = '260px';
+                    placeholder.style.width = '100%';
+                    placeholder.style.height = 'auto';
+                    // Адаптивный aspect ratio для мобильных устройств
+                    if (window.innerWidth <= 900) {
+                        placeholder.style.aspectRatio = '1/1.2'; // Более квадратное соотношение для мобильных
+                    } else {
+                        placeholder.style.aspectRatio = '600/866';
+                    }
                     placeholder.style.backgroundColor = '#f3f4f6';
                     placeholder.style.borderRadius = '8px';
                     placeholder.style.marginBottom = '10px';
@@ -4864,12 +4902,7 @@
                     placeholder.textContent = 'Изображение недоступно';
                     placeholder.style.margin = '0 auto 10px auto'; // Центрируем placeholder
                     
-                    // Адаптивность для мобильных устройств
-                    if (window.innerWidth <= 768) {
-                        placeholder.style.width = '100%';
-                        placeholder.style.height = 'auto';
-                        placeholder.style.aspectRatio = '600/866';
-                    }
+                    // Адаптивность уже настроена выше
                     card.insertBefore(placeholder, card.firstChild);
                 };
                 
@@ -4887,7 +4920,12 @@
                 const name = document.createElement('h3');
                 name.textContent = product.name;
                 name.style.margin = '0 0 5px 0';
-                name.style.fontSize = '1rem';
+                // Адаптивный размер шрифта для мобильных устройств
+                if (window.innerWidth <= 900) {
+                    name.style.fontSize = '0.9rem';
+                } else {
+                    name.style.fontSize = '1rem';
+                }
                 name.style.fontWeight = '600';
                 name.style.color = '#1f2937';
                 contentContainer.appendChild(name);
@@ -4898,7 +4936,12 @@
                 const brand = document.createElement('p');
                 brand.textContent = product.brand;
                 brand.style.margin = '0 0 5px 0';
-                brand.style.fontSize = '0.9rem';
+                // Адаптивный размер шрифта для мобильных устройств
+                if (window.innerWidth <= 900) {
+                    brand.style.fontSize = '0.8rem';
+                } else {
+                    brand.style.fontSize = '0.9rem';
+                }
                 brand.style.color = '#6b7280';
                 contentContainer.appendChild(brand);
             }
@@ -4908,7 +4951,12 @@
                 const price = document.createElement('p');
                 price.textContent = `${product.price} ₽`;
                 price.style.margin = '0 0 5px 0';
-                price.style.fontSize = '1.1rem';
+                // Адаптивный размер шрифта для мобильных устройств
+                if (window.innerWidth <= 900) {
+                    price.style.fontSize = '1rem';
+                } else {
+                    price.style.fontSize = '1.1rem';
+                }
                 price.style.fontWeight = '600';
                 price.style.color = '#bb279b';
                 contentContainer.appendChild(price);
@@ -4947,9 +4995,9 @@
             // Добавляем контейнер контента в карточку
             card.appendChild(contentContainer);
             
-            // Кнопка "Перейти к товару"
+            // Кнопка "Перейти"
             const button = document.createElement('button');
-            button.textContent = 'Перейти к товару';
+            button.textContent = 'Перейти';
             button.style.width = '100%';
             button.style.padding = '8px 12px';
             button.style.backgroundColor = '#bb279b';
@@ -5621,16 +5669,28 @@
 
         // Функция для адаптивной сетки товаров
         function setupResponsiveGrid(grid) {
-            if (window.innerWidth <= 480) {
-                grid.style.gridTemplateColumns = '1fr'; // 1 колонка на очень маленьких экранах
-                grid.style.maxWidth = '400px';
-            } else if (window.innerWidth <= 768) {
-                grid.style.gridTemplateColumns = 'repeat(2, 1fr)'; // 2 колонки на мобильных
-                grid.style.maxWidth = '600px';
+            // Устанавливаем базовые стили
+            grid.style.display = 'grid';
+            grid.style.gap = '8px';
+            
+            // ПРИНУДИТЕЛЬНО 2 колонки для всех экранов до 900px
+            if (window.innerWidth <= 900) {
+                grid.style.gridTemplateColumns = 'repeat(2, 1fr) !important';
+                grid.style.maxWidth = '100%';
+                grid.style.width = '100%';
+                grid.style.gap = '6px';
+                
+                // Дополнительно принуждаем через CSS
+                grid.style.setProperty('grid-template-columns', 'repeat(2, 1fr)', 'important');
+                
+                console.log('🔍 DEBUG: Mobile layout - 2 columns, full width');
             } else {
-                grid.style.gridTemplateColumns = 'repeat(3, 1fr)'; // 3 колонки на десктопе
+                grid.style.gridTemplateColumns = 'repeat(3, 1fr)';
                 grid.style.maxWidth = '1200px';
+                console.log('🔍 DEBUG: Desktop layout - 3 columns');
             }
+            
+            console.log('🔍 DEBUG: Screen width:', window.innerWidth, 'px, Grid columns:', grid.style.gridTemplateColumns);
         }
 
         // ...
