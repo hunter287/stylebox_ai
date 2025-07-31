@@ -2877,14 +2877,8 @@ def check_survey_status():
     survey_data = user.get('profile', {}).get('survey_data', {})
     has_survey = len(survey_data) > 0
     
-    # Проверяем статус подписки
-    from datetime import datetime
-    now = datetime.utcnow()
-    subscription_end = user.get('subscription_end')
-    
-    subscription_active = False
-    if subscription_end and subscription_end > now:
-        subscription_active = True
+    # Проверяем статус подписки через предварительные подписки
+    subscription_active = user_auth.check_subscription(str(user['_id']))
     
     return jsonify({
         'authenticated': True,
