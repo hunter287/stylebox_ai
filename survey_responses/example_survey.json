@@ -1,0 +1,42 @@
+{
+  "timestamp": "2024-01-15T14:30:25.123Z",
+  "survey_data": {
+    "style_preferences": ["casual", "smart_casual"],
+    "color_preferences": ["neutral", "soft"],
+    "height": "165",
+    "top_size": "M",
+    "bottom_size": "42",
+    "foot_size": "38",
+    "body_type": "hourglass",
+    "top_clothing": ["dresses", "blouses", "sweaters"],
+    "bottom_clothing": ["jeans", "skirts"],
+    "additional_items": ["shoes", "bags"],
+    "fit": ["slightly_loose", "oversized"],
+    "photo_analysis": {
+      "color_analysis": {
+        "color_type": "мягкое лето",
+        "explanation": "Ваш цветотип характеризуется мягкими, приглушенными тонами...",
+        "dark_colors_hex": ["#2C3E50", "#34495E", "#5D6D7E"],
+        "bright_colors_hex": ["#F39C12", "#E67E22", "#D35400"],
+        "light_colors_hex": ["#F8F9FA", "#E9ECEF", "#DEE2E6"]
+      },
+      "kibbe_analysis": {
+        "kibbe_type": "Романтик",
+        "vertical_lines": "умеренно выражены",
+        "horizontal_lines": "мягкие, округлые",
+        "face_features": "мягкие черты лица, округлые формы",
+        "body_features": "мягкие линии, округлые формы",
+        "description": "Ваш типаж характеризуется мягкими, округлыми линиями...",
+        "style_recommendations": "Фасоны одежды: мягкие силуэты, драпировки...\nТкани: мягкие, струящиеся материалы...\nПринты: цветочные, волнистые узоры...\nАксессуары: округлые формы, мягкие материалы..."
+      },
+      "photo_uploaded": true
+    }
+  },
+  "metadata": {
+    "total_questions": 16,
+    "completed_at": "15.01.2024, 17:30:25",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "screen_resolution": "1920x1080",
+    "timezone": "Europe/Moscow"
+  }
+} 

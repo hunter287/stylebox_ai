@@ -7,13 +7,11 @@ from PIL import Image
 import io
 import base64
 import time
-from face_parser import FaceParser
 import random
 
 class ColorAnalyzer:
     def __init__(self):
         self.openai_client = OpenAI(api_key=OPENAI_API_KEY)
-        self.face_parser = FaceParser()
         
         # Пороговые значения для определения характеристик
         self.THRESHOLDS = {

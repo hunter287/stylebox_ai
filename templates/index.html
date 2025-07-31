@@ -142,10 +142,10 @@
             flex-direction: row-reverse;
             margin-left: 2rem;
             margin-right: 2rem;
-            background: #f9f9fb;
+            background: transparent;
             padding: 1rem;
             border-radius: 1rem;
-            box-shadow: 0 2px 8px #0001;
+            box-shadow: none;
         }
 
         .avatar {
@@ -317,14 +317,60 @@
                 padding-top: 0.5rem;
             }
             /* Стили для сетки изображений селебрити на мобильных */
-            .message-content div[style*="grid-template-columns: repeat(3, 1fr)"] {
-                grid-template-columns: repeat(2, 1fr) !important;
-                gap: 0.3rem !important;
+            .message-content div[style*="justify-content: flex-end"] {
+                gap: 8px !important;
+                flex-wrap: wrap !important; /* Добавляем перенос на новую строку */
+                justify-content: center !important; /* Центрируем элементы */
             }
             .message-content div[style*="grid-template-columns: repeat(3, 1fr)"] img {
                 max-width: 100% !important;
                 height: auto !important;
                 border-radius: 6px !important;
+            }
+            /* Стили для изображений на мобильных - перенос на новую строку */
+            .image-choice-btn {
+                min-height: 180px !important;
+                width: 150px !important; /* Возвращаем оригинальный размер */
+            }
+            .image-choice-btn img {
+                width: 150px !important; /* Возвращаем оригинальный размер */
+                height: 215px !important; /* Возвращаем оригинальный размер */
+            }
+            .image-choice-btn div {
+                font-size: 0.8rem !important;
+                padding: 6px !important;
+            }
+            /* Специальные стили для квадратных изображений на мобильных */
+            .image-choice-btn[data-field="color_preferences"],
+            .image-choice-btn[data-field="top_clothing"],
+            .image-choice-btn[data-field="bottom_clothing"],
+            .image-choice-btn[data-field="additional_items"] {
+                min-height: 160px !important;
+                width: 125px !important; /* Возвращаем оригинальный размер */
+            }
+            .image-choice-btn[data-field="color_preferences"] img,
+            .image-choice-btn[data-field="top_clothing"] img,
+            .image-choice-btn[data-field="bottom_clothing"] img,
+            .image-choice-btn[data-field="additional_items"] img {
+                width: 125px !important; /* Возвращаем оригинальный размер */
+                height: 125px !important; /* Возвращаем оригинальный размер */
+            }
+            /* Специальные стили для типа фигуры на мобильных */
+            .image-choice-btn[data-field="body_type"] {
+                min-height: 250px !important;
+                width: 96px !important; /* Возвращаем оригинальный размер */
+            }
+            .image-choice-btn[data-field="body_type"] img {
+                width: 96px !important; /* Возвращаем оригинальный размер */
+                height: 250px !important; /* Возвращаем оригинальный размер */
+            }
+            /* Стили для рекомендаций на мобильных */
+            .recommendations-container .product-card {
+                margin-bottom: 15px !important;
+            }
+            .recommendations-container div[style*="grid-template-columns: repeat(2, 1fr)"] {
+                grid-template-columns: 1fr !important;
+                gap: 15px !important;
             }
             /* Стили для сетки изображений одежды на мобильных */
             .outfit-grid {
@@ -532,6 +578,20 @@
                 padding: 1.2rem 0.7rem 1rem 0.7rem;
                 max-width: 98vw;
             }
+            
+            /* Мобильные стили для рекомендаций */
+            .recommendations-container div[style*="grid-template-columns: repeat(2, 1fr)"] {
+                grid-template-columns: 1fr !important; /* 1 товар в ряд на мобильных */
+                gap: 15px !important;
+            }
+            
+            .product-card {
+                margin-bottom: 15px !important;
+            }
+            
+            .product-card img {
+                height: 180px !important; /* Уменьшаем высоту изображения */
+            }
         }
 
         p {
@@ -547,6 +607,24 @@
 <body>
     <div class="container">
         <div class="header">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div style="flex: 1;"></div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div id="user-info" style="display: none; font-size: 14px;"></div>
+                    <button id="auth-button" onclick="showAuthModal()" 
+                            style="padding: 8px 16px; background: transparent; color: #bb279b; border: 1px solid #bb279b; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: 500; transition: all 0.2s;" 
+                            onmouseover="this.style.backgroundColor='rgba(187, 39, 155, 0.1)';" 
+                            onmouseout="this.style.backgroundColor='transparent';">
+                        🔐 Войти
+                    </button>
+                    <button id="register-button" onclick="showRegisterModal()" 
+                            style="padding: 8px 16px; background: #bb279b; color: white; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: 500; transition: all 0.2s;" 
+                            onmouseover="this.style.backgroundColor='#8B1B6A';" 
+                            onmouseout="this.style.backgroundColor='#bb279b';">
+                        📝 Регистрация
+                    </button>
+                </div>
+            </div>
             <h1>Style Box AI</h1>
             <p class="subtitle">ИИ-стилист, который подбирает подходящую вам одежду 24/7</p>
         </div>
@@ -1915,13 +1993,22 @@
             window.location.href = '/analyze?pdf=1';
         }
 
-        // Варианты приветствия
-        const greetingVariants = [
+        // Варианты приветствия для пользователей без подписки
+        const greetingVariantsWithoutSubscription = [
             'Привет! Я могу помочь вам определить ваш цветотип, типаж внешности или оформить предзаказ на персонального ИИ-стилиста. Что вас интересует?',
             'Здравствуйте! Выберите, что вас интересует: определение цветотипа, анализ типажа внешности или предзаказ на персонального ИИ-стилиста.',
             'Добро пожаловать! Я могу определить ваш цветотип, типаж внешности или рассказать о предзаказе на ИИ-стилиста. Что предпочитаете?',
             'Приветствую! Выберите, что вас интересует: анализ цветотипа, определение типажа внешности или предзаказ на персонального ИИ-стилиста.',
             'Здравствуйте! Я могу помочь с определением цветотипа, типажа внешности или рассказать о предзаказе на ИИ-стилиста. Что выберете?'
+        ];
+
+        // Варианты приветствия для пользователей с активной подпиской
+        const greetingVariantsWithSubscription = [
+            'Привет! Я могу помочь вам определить ваш цветотип, типаж внешности или подобрать вещи по вашим параметрам. Что вас интересует?',
+            'Здравствуйте! Выберите, что вас интересует: определение цветотипа, анализ типажа внешности или подбор вещей.',
+            'Добро пожаловать! Я могу определить ваш цветотип, типаж внешности или подобрать идеальные вещи для вас. Что предпочитаете?',
+            'Приветствую! Выберите, что вас интересует: анализ цветотипа, определение типажа внешности или подбор вещей.',
+            'Здравствуйте! Я могу помочь с определением цветотипа, типажа внешности или подбором вещей. Что выберете?'
         ];
 
         // Анимированное приветствие при загрузке
@@ -1930,7 +2017,34 @@
             const uploadArea = document.getElementById('dropZone');
             uploadArea.style.display = 'none';
 
-            const greeting = greetingVariants[Math.floor(Math.random() * greetingVariants.length)];
+            // Сначала проверяем статус подписки для выбора правильного приветствия
+            fetch('/check_auth', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                let greeting;
+                if (data.authenticated && data.subscription_active) {
+                    // Пользователь с активной подпиской
+                    greeting = greetingVariantsWithSubscription[Math.floor(Math.random() * greetingVariantsWithSubscription.length)];
+                } else {
+                    // Пользователь без подписки
+                    greeting = greetingVariantsWithoutSubscription[Math.floor(Math.random() * greetingVariantsWithoutSubscription.length)];
+                }
+                
+                showGreeting(greeting);
+            })
+            .catch(error => {
+                console.error('❌ Ошибка проверки авторизации для приветствия:', error);
+                // В случае ошибки используем приветствие без подписки
+                const greeting = greetingVariantsWithoutSubscription[Math.floor(Math.random() * greetingVariantsWithoutSubscription.length)];
+                showGreeting(greeting);
+            });
+            
+            function showGreeting(greeting) {
             const aiMessage = document.createElement('div');
             aiMessage.className = 'message ai';
             aiMessage.innerHTML = `
@@ -1957,6 +2071,8 @@
                         <div class="user-buttons-row">
                             <button class="upload-button" id="determineColorBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">Определить цветотип</button>
                             <button class="upload-button" id="determineKibbeBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">Определить типаж внешности</button>
+                            <button class="upload-button" id="fillSurveyBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s; display: none;">📝 Заполнить анкету</button>
+                            <button class="upload-button" id="get-recommendations-btn" style="background-color: #bb279b; color: white; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s; display: none;">🎯 Подобрать вещи</button>
                             <button class="upload-button" id="preorderBtn" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">Предзаказ на ИИ-стилиста</button>
                 </div>
             `;
@@ -1970,7 +2086,39 @@
                     // Добавляем обработчики для кнопок
                     const determineColorBtn = document.getElementById('determineColorBtn');
                     const determineKibbeBtn = document.getElementById('determineKibbeBtn');
+                    const fillSurveyBtn = document.getElementById('fillSurveyBtn');
+                    const getRecommendationsBtn = document.getElementById('get-recommendations-btn');
                     const preorderBtn = document.getElementById('preorderBtn');
+                    
+                    // Проверяем авторизацию и показываем/скрываем кнопки в зависимости от статуса подписки
+                    console.log('🔍 Проверяем авторизацию для кнопок...');
+                    // Проверяем авторизацию через API
+                    fetch('/check_auth', {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('📊 Результат проверки авторизации:', data);
+                        if (data.authenticated && data.subscription_active) {
+                            console.log('✅ Показываем кнопку подбора, скрываем кнопки анкеты и предзаказа');
+                            if (fillSurveyBtn) fillSurveyBtn.style.display = 'none'; // Скрываем кнопку анкеты на первом экране
+                            if (getRecommendationsBtn) getRecommendationsBtn.style.display = 'inline-block';
+                            if (preorderBtn) preorderBtn.style.display = 'none'; // Скрываем кнопку предзаказа при активной подписке
+                        } else {
+                            console.log('❌ Скрываем кнопки анкеты и подбора, показываем кнопку предзаказа');
+                            if (fillSurveyBtn) fillSurveyBtn.style.display = 'none';
+                            if (getRecommendationsBtn) getRecommendationsBtn.style.display = 'none';
+                            if (preorderBtn) preorderBtn.style.display = 'inline-block';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('❌ Ошибка проверки авторизации:', error);
+                        // В случае ошибки показываем кнопку предзаказа
+                        if (preorderBtn) preorderBtn.style.display = 'inline-block';
+                    });
                     
                     if (determineColorBtn) {
                         determineColorBtn.onclick = function() {
@@ -2016,6 +2164,70 @@
                         };
                     }
                     
+                    if (fillSurveyBtn) {
+                        fillSurveyBtn.onclick = function() {
+                            // Проверяем авторизацию перед запуском анкеты
+                            if (!isAuthenticated) {
+                                showAuthModal();
+                                return;
+                            }
+                            
+                            // Проверяем подписку
+                            fetch('/check_auth', {
+                                method: 'GET',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                }
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.authenticated && data.subscription_active) {
+                                    // Начинаем заполнение анкеты
+                                    startSurvey();
+                                } else {
+                                    // Показываем сообщение о необходимости подписки
+                                    addBotMessage("❌ Для заполнения анкеты требуется активная подписка. Пожалуйста, приобретите подписку для доступа к персональным рекомендациям.");
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Ошибка проверки подписки:', error);
+                                addBotMessage("❌ Ошибка проверки подписки. Пожалуйста, попробуйте позже.");
+                            });
+                        };
+                    }
+                    
+                    if (getRecommendationsBtn) {
+                        getRecommendationsBtn.onclick = function() {
+                            // Проверяем авторизацию перед подбором
+                            if (!isAuthenticated) {
+                                showAuthModal();
+                                return;
+                            }
+                            
+                            // Проверяем подписку
+                            fetch('/check_auth', {
+                                method: 'GET',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                }
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.authenticated && data.subscription_active) {
+                                    // Запускаем подбор рекомендаций
+                                    getRecommendationsWithAuth();
+                                } else {
+                                    // Показываем сообщение о необходимости подписки
+                                    addBotMessage("❌ Для подбора вещей требуется активная подписка. Пожалуйста, приобретите подписку для доступа к персональным рекомендациям.");
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Ошибка проверки подписки:', error);
+                                addBotMessage("❌ Ошибка проверки подписки. Пожалуйста, попробуйте позже.");
+                            });
+                        };
+                    }
+                    
                     if (preorderBtn) {
                         preorderBtn.onclick = function() {
                             // Показываем информацию о подписке
@@ -2023,6 +2235,7 @@
                         };
                     }
                 });
+            }
         });
 
         // --- Модальное окно для оплаты гайда ---
@@ -2638,6 +2851,3006 @@
             formattedText = formattedText.replace(/✅ <strong>(.*?)<\/strong>/g, '<div style="font-weight: 600; color: #374151; margin-top: 16px; margin-bottom: 8px; font-size: 16px;">✅ <strong>$1</strong></div>');
             
             return formattedText;
+        }
+
+        // ===== СИСТЕМА АНКЕТЫ =====
+        
+        // Глобальные переменные для анкеты
+        let surveyData = {};
+        let currentSurveyStep = 0;
+        let surveySteps = [];
+
+        // Инициализация шагов анкеты
+        function initializeSurveySteps() {
+            surveySteps = [
+                // 1. Предпочтения стиля
+                {
+                    question: "Какие стили вам нравятся? (можно выбрать несколько)",
+                    type: "image_choice",
+                    options: [
+                        { 
+                            label: "Кэжуал", 
+                            value: "casual",
+                            image: "/static/survey_images/casual_style.jpg"
+                        },
+                        { 
+                            label: "Смарт-кэжуал", 
+                            value: "smart_casual",
+                            image: "/static/survey_images/smart_casual_style.jpg"
+                        },
+                        { 
+                            label: "Женственный", 
+                            value: "feminine",
+                            image: "/static/survey_images/feminine_style.jpg"
+                        },
+                        { 
+                            label: "Спортивный", 
+                            value: "sport",
+                            image: "/static/survey_images/sport_style.jpg"
+                        }
+                    ],
+                    field: "style_preferences"
+                },
+                // 2. Цветовая гамма
+                {
+                    question: "Какую цветовую гамму вы предпочитаете? (можно выбрать несколько)",
+                    type: "image_choice",
+                    options: [
+                        { 
+                            label: "Нежные", 
+                            value: "soft",
+                            image: "/static/survey_images/soft_colors.jpg"
+                        },
+                        { 
+                            label: "Нейтральные", 
+                            value: "neutral",
+                            image: "/static/survey_images/neutral_colors.jpg"
+                        },
+                        { 
+                            label: "Черно-белые", 
+                            value: "black_white",
+                            image: "/static/survey_images/black_white_colors.jpg"
+                        },
+                        { 
+                            label: "Глубокие", 
+                            value: "deep",
+                            image: "/static/survey_images/deep_colors.jpg"
+                        },
+                        { 
+                            label: "Яркие", 
+                            value: "bright",
+                            image: "/static/survey_images/bright_colors.jpg"
+                        }
+                    ],
+                    field: "color_preferences"
+                },
+                // 3. Верхняя одежда
+                {
+                    question: "Какие вещи нужны (верха)? (можно выбрать несколько)",
+                    type: "image_choice",
+                    options: [
+                        { 
+                            label: "Платья", 
+                            value: "dresses",
+                            image: "/static/survey_images/dresses.jpg"
+                        },
+                        { 
+                            label: "Блузки", 
+                            value: "blouses",
+                            image: "/static/survey_images/blouses.jpg"
+                        },
+                        { 
+                            label: "Рубашки", 
+                            value: "shirts",
+                            image: "/static/survey_images/shirts.jpg"
+                        },
+                        { 
+                            label: "Свитеры", 
+                            value: "sweaters",
+                            image: "/static/survey_images/sweaters.jpg"
+                        },
+                        { 
+                            label: "Свитшоты", 
+                            value: "sweatshirts",
+                            image: "/static/survey_images/sweatshirts.jpg"
+                        },
+                        { 
+                            label: "Лонгсливы", 
+                            value: "longsleeves",
+                            image: "/static/survey_images/longsleeves.jpg"
+                        },
+                        { 
+                            label: "Футболки", 
+                            value: "tshirts",
+                            image: "/static/survey_images/tshirts.jpg"
+                        },
+                        { 
+                            label: "Пиджаки", 
+                            value: "jackets",
+                            image: "/static/survey_images/jackets.jpg"
+                        },
+                        { 
+                            label: "Худи", 
+                            value: "hoodies",
+                            image: "/static/survey_images/hoodies.jpg"
+                        },
+                        { 
+                            label: "Кардиганы", 
+                            value: "cardigans",
+                            image: "/static/survey_images/cardigans.jpg"
+                        },
+                        { 
+                            label: "Водолазки", 
+                            value: "turtlenecks",
+                            image: "/static/survey_images/turtlenecks.jpg"
+                        }
+                    ],
+                    field: "top_clothing"
+                },
+                // 4. Нижняя одежда
+                {
+                    question: "Какие вещи нужны (низы)? (можно выбрать несколько)",
+                    type: "image_choice",
+                    options: [
+                        { 
+                            label: "Брюки", 
+                            value: "pants",
+                            image: "/static/survey_images/pants.jpg"
+                        },
+                        { 
+                            label: "Джинсы", 
+                            value: "jeans",
+                            image: "/static/survey_images/jeans.jpg"
+                        },
+                        { 
+                            label: "Юбки", 
+                            value: "skirts",
+                            image: "/static/survey_images/skirts.jpg"
+                        },
+                        { 
+                            label: "Шорты", 
+                            value: "shorts",
+                            image: "/static/survey_images/shorts.jpg"
+                        }
+                    ],
+                    field: "bottom_clothing"
+                },
+                // 5. Дополнительные вещи
+                {
+                    question: "Нужны ли еще? (можно выбрать несколько)",
+                    type: "image_choice",
+                    options: [
+                        { 
+                            label: "Обувь", 
+                            value: "shoes",
+                            image: "/static/survey_images/shoes.jpg"
+                        },
+                        { 
+                            label: "Сумки", 
+                            value: "bags",
+                            image: "/static/survey_images/bags.jpg"
+                        },
+                        { 
+                            label: "Украшения", 
+                            value: "jewelry",
+                            image: "/static/survey_images/jewelry.jpg"
+                        }
+                    ],
+                    field: "additional_items"
+                },
+                // 6. Рост
+                {
+                    question: "Какой у вас рост?",
+                    type: "single_choice",
+                    options: [
+                        { label: "до 160 см", value: "до 160" },
+                        { label: "161-164 см", value: "161-164" },
+                        { label: "165-169 см", value: "165-169" },
+                        { label: "170-174 см", value: "170-174" },
+                        { label: "175-179 см", value: "175-179" },
+                        { label: "180+ см", value: "180+" }
+                    ],
+                    field: "height"
+                },
+                // 7. Размер верха
+                {
+                    question: "Какой у вас размер верха? (можно выбрать несколько)",
+                    type: "multiple_choice",
+                    options: [
+                        { label: "40", value: "40" },
+                        { label: "42", value: "42" },
+                        { label: "44", value: "44" },
+                        { label: "46", value: "46" },
+                        { label: "48", value: "48" },
+                        { label: "50", value: "50" },
+                        { label: "52", value: "52" },
+                        { label: "54", value: "54" },
+                        { label: "56", value: "56" },
+                        { label: "60", value: "60" },
+                        { label: "62", value: "62" }
+                    ],
+                    field: "top_size"
+                },
+                // 8. Размер низа
+                {
+                    question: "Какой у вас размер низа? (можно выбрать несколько)",
+                    type: "multiple_choice",
+                    options: [
+                        { label: "40", value: "40" },
+                        { label: "42", value: "42" },
+                        { label: "44", value: "44" },
+                        { label: "46", value: "46" },
+                        { label: "48", value: "48" },
+                        { label: "50", value: "50" },
+                        { label: "52", value: "52" },
+                        { label: "54", value: "54" },
+                        { label: "56", value: "56" },
+                        { label: "60", value: "60" },
+                        { label: "62", value: "62" }
+                    ],
+                    field: "bottom_size"
+                },
+                // 9. Тип фигуры
+                {
+                    question: "Какой у вас тип фигуры?",
+                    type: "single_choice",
+                    options: [
+                        { 
+                            label: "Яблоко", 
+                            value: "apple",
+                            image: "/static/survey_images/apple_body_type.jpg"
+                        },
+                        { 
+                            label: "Груша", 
+                            value: "pear",
+                            image: "/static/survey_images/pear_body_type.jpg"
+                        },
+                        { 
+                            label: "Треугольник", 
+                            value: "triangle",
+                            image: "/static/survey_images/triangle_body_type.jpg"
+                        },
+                        { 
+                            label: "Прямоугольник", 
+                            value: "rectangle",
+                            image: "/static/survey_images/rectangle_body_type.jpg"
+                        },
+                        { 
+                            label: "Песочные часы", 
+                            value: "hourglass",
+                            image: "/static/survey_images/hourglass_body_type.jpg"
+                        }
+                    ],
+                    field: "body_type"
+                },
+                // 10. Размер ноги
+                {
+                    question: "Какой у вас размер ноги?",
+                    type: "single_choice",
+                    options: [
+                        { label: "35", value: "35" },
+                        { label: "36", value: "36" },
+                        { label: "37", value: "37" },
+                        { label: "38", value: "38" },
+                        { label: "39", value: "39" },
+                        { label: "40", value: "40" },
+                        { label: "41", value: "41" },
+                        { label: "42", value: "42" },
+                        { label: "43", value: "43" }
+                    ],
+                    field: "foot_size"
+                },
+
+                // 11. Бюджет одной вещи
+                {
+                    question: "Какой у вас бюджет на одну вещь? (можно выбрать несколько)",
+                    type: "multiple_choice",
+                    options: [
+                        { label: "до 5000 руб", value: "до 5000" },
+                        { label: "5000-10000 руб", value: "5000-10000" },
+                        { label: "10000-20000 руб", value: "10000-20000" },
+                        { label: "20000+ руб", value: "20000+" }
+                    ],
+                    field: "budget"
+                },
+                // 12. Принты
+                {
+                    question: "Какие принты вы предпочитаете? (можно выбрать несколько)",
+                    type: "multiple_choice",
+                    options: [
+                        { label: "Без принтов", value: "без принтов" },
+                        { label: "Мелкий принт", value: "мелкий принт" },
+                        { label: "Крупный принт", value: "крупный принт" }
+                    ],
+                    field: "prints"
+                },
+                // 13. Тип одежды
+                {
+                    question: "Какую одежду вы предпочитаете?",
+                    type: "single_choice",
+                    options: [
+                        { label: "Базовую", value: "базовая" },
+                        { label: "Трендовую", value: "трендовая" }
+                    ],
+                    field: "clothing_type"
+                },
+                // 14. Сезон
+                {
+                    question: "На какой сезон вам нужна одежда? (можно выбрать несколько)",
+                    type: "multiple_choice",
+                    options: [
+                        { label: "Осень", value: "осень" },
+                        { label: "Зима", value: "зима" },
+                        { label: "Лето", value: "лето" },
+                        { label: "Весна", value: "весна" }
+                    ],
+                    field: "season"
+                },
+                // 15. Посадка
+                {
+                    question: "Какую посадку вы предпочитаете? (можно выбрать несколько)",
+                    type: "multiple_choice",
+                    options: [
+                        { label: "Облегающая", value: "облегающая" },
+                        { label: "Слегка свободная", value: "слегка свободная" },
+                        { label: "Оверсайз", value: "оверсайз" }
+                    ],
+                    field: "fit"
+                },
+                // 16. Загрузка фото для анализа
+                {
+                    question: "Загрузите ваше фото для анализа цветотипа и типажа внешности",
+                    type: "photo_upload",
+                    field: "photo_analysis"
+                }
+            ];
+        }
+
+        // Начало заполнения анкеты
+        function startSurvey() {
+            // Проверяем авторизацию
+            if (!isAuthenticated) {
+                showAuthModal();
+                return;
+            }
+            
+            // Проверяем подписку
+            fetch('/check_auth', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.authenticated && data.subscription_active) {
+                    // Инициализируем шаги
+                    initializeSurveySteps();
+                    
+                    // Сбрасываем данные
+                    surveyData = {};
+                    currentSurveyStep = 0;
+                    
+                    // Добавляем сообщение бота
+                    addBotMessage("Отлично! Давайте заполним анкету для персональных рекомендаций. Это поможет мне подобрать идеальные вещи именно для вас! 👗✨");
+                    
+                    // Показываем первый вопрос
+                    showSurveyQuestion();
+                } else {
+                    addBotMessage("❌ Для заполнения анкеты требуется активная подписка. Пожалуйста, приобретите подписку для доступа к персональным рекомендациям.");
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка проверки подписки:', error);
+                addBotMessage("❌ Ошибка проверки подписки. Пожалуйста, попробуйте позже.");
+            });
+        }
+
+        // Редактирование существующей анкеты
+        function editSurvey() {
+            // Проверяем авторизацию
+            if (!isAuthenticated) {
+                showAuthModal();
+                return;
+            }
+            
+            // Проверяем подписку
+            fetch('/check_auth', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.authenticated && data.subscription_active) {
+                    // Загружаем существующие данные анкеты
+                    loadExistingSurvey();
+                } else {
+                    addBotMessage("❌ Для редактирования анкеты требуется активная подписка. Пожалуйста, приобретите подписку для доступа к персональным рекомендациям.");
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка проверки подписки:', error);
+                addBotMessage("❌ Ошибка проверки подписки. Пожалуйста, попробуйте позже.");
+            });
+        }
+
+        // Загрузка существующей анкеты
+        function loadExistingSurvey() {
+            fetch('/get_profile_survey', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.has_survey) {
+                    // Инициализируем шаги
+                    initializeSurveySteps();
+                    
+                    // Загружаем существующие данные
+                    surveyData = data.survey_data;
+                    currentSurveyStep = 0;
+                    
+                    // Добавляем сообщение бота
+                    addBotMessage("📝 Загружаю вашу существующую анкету для редактирования...");
+                    
+                    // Показываем первый вопрос с предзаполненными данными
+                    showSurveyQuestion();
+                } else {
+                    addBotMessage("❌ У вас нет сохраненной анкеты. Давайте создадим новую!");
+                    startSurvey();
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки анкеты:', error);
+                addBotMessage("❌ Ошибка загрузки анкеты. Давайте создадим новую!");
+                startSurvey();
+            });
+        }
+
+        // Показать текущий вопрос анкеты
+        function showSurveyQuestion() {
+            if (currentSurveyStep >= surveySteps.length) {
+                // Анкета завершена
+                completeSurvey();
+                return;
+            }
+
+            const step = surveySteps[currentSurveyStep];
+            
+            // Создаем сообщение бота с вопросом
+            const aiMessage = document.createElement('div');
+            aiMessage.className = 'message ai';
+            aiMessage.innerHTML = `
+                <div class="avatar">AI</div>
+                <div class="message-content"></div>
+            `;
+            chatMessages.appendChild(aiMessage);
+            const messageContent = aiMessage.querySelector('.message-content');
+            
+            // Печатаем вопрос
+            typeText(messageContent, step.question, 20);
+            
+            // После печати показываем варианты ответов
+            setTimeout(() => {
+                showSurveyOptions(step);
+            }, step.question.length * 50 + 500);
+        }
+
+        // Показать варианты ответов для вопроса
+        function showSurveyOptions(step) {
+            const userMessage = document.createElement('div');
+            userMessage.className = 'message user-message';
+            userMessage.style.marginTop = '20px';
+            
+            const buttonsContainer = document.createElement('div');
+            buttonsContainer.className = 'message-content survey-buttons-container';
+            
+            // Проверяем, есть ли сохраненные данные для этого поля
+            const savedValue = surveyData[step.field];
+            console.log(`Поле ${step.field}: сохраненное значение =`, savedValue);
+            
+            if (step.type === 'single_choice') {
+                // Проверяем, есть ли изображения в опциях
+                const hasImages = step.options.some(opt => opt.image);
+                
+                if (hasImages) {
+                    // Один выбор с изображениями
+                    const row = document.createElement('div');
+                    row.className = 'user-buttons-row';
+                    row.style.display = 'flex';
+                    row.style.justifyContent = 'flex-end';
+                    row.style.gap = '8px';
+                    row.style.width = '100%';
+                    row.style.flexWrap = 'wrap'; // Добавляем перенос на новую строку
+                    
+                    step.options.forEach(opt => {
+                        const btn = document.createElement('div');
+                        btn.className = 'upload-button survey-btn image-choice-btn';
+                        btn.setAttribute('data-field', step.field);
+                        btn.style.backgroundColor = 'transparent';
+                        btn.style.color = '#bb279b';
+                        btn.style.border = 'none';
+                        btn.style.borderRadius = '12px';
+                        btn.style.cursor = 'pointer';
+                        btn.style.transition = 'all 0.2s';
+                        btn.style.padding = '0';
+                        btn.style.overflow = 'hidden';
+                        btn.style.display = 'flex';
+                        btn.style.flexDirection = 'column';
+                        btn.style.alignItems = 'center';
+                        
+                        // Определяем размеры контейнера в зависимости от типа изображения
+                        if (step.field === 'body_type') {
+                            // Для типа фигуры - вертикальные изображения
+                            btn.style.width = '96px';
+                            btn.style.minHeight = '250px';
+                        }
+                        
+                        // Создаем изображение
+                        const img = document.createElement('img');
+                        img.src = opt.image;
+                        img.alt = opt.label;
+                        
+                        // Определяем размеры в зависимости от типа изображения
+                        if (step.field === 'body_type') {
+                            // Для типа фигуры - вертикальные изображения (274x715 -> 96x250)
+                            img.style.width = '96px';
+                            img.style.height = '250px';
+                        }
+                        img.style.objectFit = 'cover';
+                        img.style.borderRadius = '10px 10px 0 0';
+                        
+                        // Создаем подпись
+                        const label = document.createElement('div');
+                        label.textContent = opt.label;
+                        label.style.padding = '8px';
+                        label.style.fontSize = '0.9rem';
+                        label.style.fontWeight = '500';
+                        label.style.textAlign = 'center';
+                        label.style.width = '100%';
+                        label.style.backgroundColor = 'transparent';
+                        
+                        btn.appendChild(img);
+                        btn.appendChild(label);
+                        
+                        btn.onmouseover = function() { 
+                            if (!btn.classList.contains('selected')) {
+                                btn.style.backgroundColor = 'rgba(187, 39, 155, 0.1)'; 
+                            }
+                        };
+                        btn.onmouseout = function() { 
+                            if (!btn.classList.contains('selected')) {
+                                btn.style.backgroundColor = 'transparent'; 
+                            }
+                        };
+                        
+                        // Проверяем, нужно ли предзаполнить эту кнопку
+                        if (savedValue && (savedValue.value === opt.value || savedValue === opt.value)) {
+                            btn.classList.add('selected');
+                            btn.style.backgroundColor = 'rgba(187, 39, 155, 0.15)';
+                            btn.style.border = '1px solid #bb279b';
+                            label.style.color = '#8B1B6A';
+                        }
+                        
+                        btn.onclick = function() {
+                            // Убираем выделение со всех кнопок
+                            row.querySelectorAll('.image-choice-btn').forEach(b => {
+                                b.classList.remove('selected');
+                                b.style.backgroundColor = 'transparent';
+                                b.style.border = 'none';
+                                b.querySelector('div').style.color = '#bb279b';
+                            });
+                            
+                            // Выделяем выбранную кнопку
+                            btn.classList.add('selected');
+                            btn.style.backgroundColor = 'rgba(187, 39, 155, 0.15)';
+                            btn.style.border = '1px solid #bb279b';
+                            label.style.color = '#8B1B6A';
+                            
+                            // Сохраняем полную информацию о выбранном варианте
+                            surveyData[step.field] = {
+                                value: opt.value,
+                                label: opt.label,
+                                image: opt.image,
+                                type: 'single_choice_with_image'
+                            };
+                            
+                            // Сохраняем прогресс в профиле
+                            saveSurveyProgress();
+                            
+                            // Показываем выбранный ответ
+                            showSelectedAnswer(opt.label);
+                            
+                            // Переходим к следующему вопросу
+                            setTimeout(() => {
+                                currentSurveyStep++;
+                                showSurveyQuestion();
+                            }, 1000);
+                        };
+                        
+                        row.appendChild(btn);
+                    });
+                    
+                    buttonsContainer.appendChild(row);
+                    
+                } else {
+                    // Обычный один выбор без изображений
+                    const row = document.createElement('div');
+                    row.className = 'user-buttons-row';
+                    
+                    step.options.forEach(opt => {
+                        const btn = document.createElement('button');
+                        btn.className = 'upload-button survey-btn';
+                        btn.textContent = opt.label;
+                        btn.style.backgroundColor = 'transparent';
+                        btn.style.color = '#bb279b';
+                        btn.style.border = '1px solid #bb279b';
+                        btn.style.padding = '10px 20px';
+                        btn.style.borderRadius = '8px';
+                        btn.style.cursor = 'pointer';
+                        btn.style.fontSize = '1rem';
+                        btn.style.transition = 'all 0.2s';
+                        btn.style.margin = '5px';
+                        
+                        btn.onmouseover = function() { 
+                            btn.style.backgroundColor = 'rgba(187, 39, 155, 0.15)'; 
+                            btn.style.color='#8B1B6A'; 
+                            btn.style.borderColor='#8B1B6A'; 
+                        };
+                        btn.onmouseout = function() { 
+                            btn.style.backgroundColor = 'transparent'; 
+                            btn.style.color='#bb279b'; 
+                            btn.style.borderColor='#bb279b'; 
+                        };
+                        
+                        // Проверяем, нужно ли предзаполнить эту кнопку
+                        if (savedValue && (savedValue.value === opt.value || savedValue === opt.value)) {
+                            btn.classList.add('selected');
+                            btn.style.backgroundColor = 'rgba(187, 39, 155, 0.15)';
+                            btn.style.color = '#8B1B6A';
+                            btn.style.borderColor = '#8B1B6A';
+                        }
+                        
+                        btn.onclick = function() {
+                            // Сохраняем полную информацию о выбранном варианте
+                            surveyData[step.field] = {
+                                value: opt.value,
+                                label: opt.label,
+                                type: 'single_choice'
+                            };
+                            
+                            // Сохраняем прогресс в профиле
+                            saveSurveyProgress();
+                            
+                            // Показываем выбранный ответ
+                            showSelectedAnswer(opt.label);
+                            
+                            // Переходим к следующему вопросу
+                            setTimeout(() => {
+                                currentSurveyStep++;
+                                showSurveyQuestion();
+                            }, 1000);
+                        };
+                        
+                        row.appendChild(btn);
+                    });
+                    
+                    buttonsContainer.appendChild(row);
+                }
+                
+            } else if (step.type === 'multiple_choice') {
+                // Множественный выбор
+                const row = document.createElement('div');
+                row.className = 'user-buttons-row';
+                
+                step.options.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'upload-button survey-btn';
+                    btn.textContent = opt.label;
+                    btn.style.backgroundColor = 'transparent';
+                    btn.style.color = '#bb279b';
+                    btn.style.border = '1px solid #bb279b';
+                    btn.style.padding = '10px 20px';
+                    btn.style.borderRadius = '8px';
+                    btn.style.cursor = 'pointer';
+                    btn.style.fontSize = '1rem';
+                    btn.style.transition = 'all 0.2s';
+                    btn.style.margin = '5px';
+                    
+                    btn.onmouseover = function() { 
+                        if (!btn.classList.contains('selected')) {
+                            btn.style.backgroundColor = 'rgba(187, 39, 155, 0.15)'; 
+                            btn.style.color='#8B1B6A'; 
+                            btn.style.borderColor='#8B1B6A'; 
+                        }
+                    };
+                    btn.onmouseout = function() { 
+                        if (!btn.classList.contains('selected')) {
+                            btn.style.backgroundColor = 'transparent'; 
+                            btn.style.color='#bb279b'; 
+                            btn.style.borderColor='#bb279b'; 
+                        }
+                    };
+                    
+                    // Проверяем, нужно ли предзаполнить эту кнопку
+                    if (savedValue) {
+                        let shouldSelect = false;
+                        if (Array.isArray(savedValue) && savedValue.includes(opt.value)) {
+                            shouldSelect = true;
+                        } else if (savedValue.values && Array.isArray(savedValue.values)) {
+                            shouldSelect = savedValue.values.some(val => val.value === opt.value);
+                        }
+                        if (shouldSelect) {
+                            btn.classList.add('selected');
+                            btn.style.backgroundColor = '#bb279b';
+                            btn.style.color = '#fff';
+                            btn.style.borderColor = '#bb279b';
+                        }
+                    }
+                    
+                    btn.onclick = function() {
+                        // Переключаем состояние кнопки
+                        if (btn.classList.contains('selected')) {
+                            btn.classList.remove('selected');
+                            btn.style.backgroundColor = 'transparent';
+                            btn.style.color = '#bb279b';
+                            btn.style.borderColor = '#bb279b';
+                        } else {
+                            btn.classList.add('selected');
+                            btn.style.backgroundColor = '#bb279b';
+                            btn.style.color = '#fff';
+                            btn.style.borderColor = '#bb279b';
+                        }
+                        
+                        console.log('Кнопка нажата, обновляем состояние "Далее"');
+                        console.log('Выбранных кнопок:', document.querySelectorAll('.survey-btn.selected').length);
+                        // Обновляем состояние кнопки "Далее" напрямую
+                        updateNextButtonStateDirect(nextBtn);
+                    };
+                    
+                    row.appendChild(btn);
+                });
+                
+                // Кнопка "Далее"
+                const nextBtn = document.createElement('button');
+                nextBtn.className = 'upload-button';
+                nextBtn.textContent = 'Далее';
+                nextBtn.setAttribute('data-survey-next', 'true');
+                nextBtn.style.backgroundColor = 'transparent';
+                nextBtn.style.color = '#9ca3af';
+                nextBtn.style.border = '1px solid #e5e7eb';
+                nextBtn.style.padding = '10px 20px';
+                nextBtn.style.borderRadius = '8px';
+                nextBtn.style.cursor = 'not-allowed';
+                nextBtn.style.fontSize = '1rem';
+                nextBtn.style.marginTop = '10px';
+                nextBtn.style.marginLeft = 'auto';
+                nextBtn.style.marginRight = '5px';
+                nextBtn.style.display = 'block';
+                nextBtn.style.width = 'fit-content';
+                nextBtn.disabled = true;
+                
+                // Начальное состояние - кнопка неактивна
+                console.log('Создана кнопка "Далее" в неактивном состоянии');
+                console.log('Состояние кнопки при создании:', {
+                    disabled: nextBtn.disabled,
+                    backgroundColor: nextBtn.style.backgroundColor,
+                    color: nextBtn.style.color,
+                    cursor: nextBtn.style.cursor
+                });
+                
+                // Добавляем hover эффекты для кнопки "Далее"
+                nextBtn.onmouseover = function() { 
+                    if (!nextBtn.disabled) {
+                        nextBtn.style.backgroundColor = '#8B1B6A'; 
+                        nextBtn.style.color='#fff'; 
+                        nextBtn.style.borderColor='#8B1B6A'; 
+                    }
+                };
+                nextBtn.onmouseout = function() { 
+                    if (!nextBtn.disabled) {
+                        nextBtn.style.backgroundColor = '#bb279b'; 
+                        nextBtn.style.color='#fff'; 
+                        nextBtn.style.borderColor='#bb279b'; 
+                    }
+                };
+                
+                nextBtn.onclick = function() {
+                    // Проверяем, что кнопка активна
+                    if (nextBtn.disabled) {
+                        console.log('Кнопка "Далее" заблокирована, клик игнорируется');
+                        return;
+                    }
+                    
+                    console.log('Кнопка "Далее" нажата, обрабатываем выбор');
+                    
+                    // Собираем выбранные значения
+                    const selectedValues = [];
+                    row.querySelectorAll('.survey-btn.selected').forEach(btn => {
+                        const option = step.options.find(opt => opt.label === btn.textContent);
+                        if (option) {
+                            selectedValues.push({
+                                value: option.value,
+                                label: option.label,
+                                type: 'multiple_choice'
+                            });
+                        }
+                    });
+                    
+                    if (selectedValues.length === 0) {
+                        // Показываем предупреждение
+                        addBotMessage("Пожалуйста, выберите хотя бы один вариант.");
+                        return;
+                    }
+                    
+                    // Сохраняем полную информацию о выбранных вариантах
+                    surveyData[step.field] = {
+                        values: selectedValues,
+                        type: 'multiple_choice'
+                    };
+                    
+                    // Показываем выбранные ответы
+                    showSelectedAnswer(selectedValues.map(val => val.label).join(', '));
+                    
+                    // Переходим к следующему вопросу
+                    setTimeout(() => {
+                        currentSurveyStep++;
+                        showSurveyQuestion();
+                    }, 1000);
+                };
+                
+                buttonsContainer.appendChild(row);
+                buttonsContainer.appendChild(nextBtn);
+                
+                // Кнопка уже создана в неактивном состоянии, дополнительная инициализация не нужна
+                console.log('Кнопка "Далее" оставлена в неактивном состоянии');
+                
+            } else if (step.type === 'image_choice') {
+                // Выбор с картинками
+                const row = document.createElement('div');
+                row.className = 'user-buttons-row';
+                row.style.display = 'flex';
+                row.style.justifyContent = 'flex-end';
+                row.style.gap = '8px';
+                row.style.width = '100%';
+                row.style.flexWrap = 'wrap'; // Добавляем перенос на новую строку
+                
+                step.options.forEach(opt => {
+                    const btn = document.createElement('div');
+                    btn.className = 'upload-button survey-btn image-choice-btn';
+                    btn.setAttribute('data-field', step.field);
+                    btn.style.backgroundColor = 'transparent';
+                    btn.style.color = '#bb279b';
+                    btn.style.border = 'none';
+                    btn.style.borderRadius = '12px';
+                    btn.style.cursor = 'pointer';
+                    btn.style.transition = 'all 0.2s';
+                    btn.style.padding = '0';
+                    btn.style.overflow = 'hidden';
+                    btn.style.display = 'flex';
+                    btn.style.flexDirection = 'column';
+                    btn.style.alignItems = 'center';
+                    // Определяем размеры контейнера в зависимости от типа изображения
+                    if (step.field === 'style_preferences') {
+                        // Для стилей - вертикальные изображения
+                        btn.style.width = '150px';
+                        btn.style.minHeight = '250px';
+                    } else if (step.field === 'color_preferences' || step.field === 'top_clothing' || step.field === 'bottom_clothing' || step.field === 'additional_items') {
+                        // Для цветов и одежды - квадратные изображения
+                        btn.style.width = '125px';
+                        btn.style.minHeight = '160px';
+                    } else if (step.field === 'body_type') {
+                        // Для типа фигуры - вертикальные изображения
+                        btn.style.width = '96px';
+                        btn.style.minHeight = '250px';
+                    }
+                    
+                    // Создаем изображение
+                    const img = document.createElement('img');
+                    img.src = opt.image;
+                    img.alt = opt.label;
+                    // Определяем размеры в зависимости от типа изображения
+                    if (step.field === 'style_preferences') {
+                        // Для стилей - вертикальные изображения
+                        img.style.width = '150px';
+                        img.style.height = '215px';
+                    } else if (step.field === 'color_preferences' || step.field === 'top_clothing' || step.field === 'bottom_clothing' || step.field === 'additional_items') {
+                        // Для цветов и одежды - квадратные изображения
+                        img.style.width = '125px';
+                        img.style.height = '125px';
+                    } else if (step.field === 'body_type') {
+                        // Для типа фигуры - вертикальные изображения (274x715 -> 96x250)
+                        img.style.width = '96px';
+                        img.style.height = '250px';
+                    }
+                    img.style.objectFit = 'cover';
+                    img.style.borderRadius = '10px 10px 0 0';
+                    
+                    // Создаем подпись
+                    const label = document.createElement('div');
+                    label.textContent = opt.label;
+                    label.style.padding = '8px';
+                    label.style.fontSize = '0.9rem';
+                    label.style.fontWeight = '500';
+                    label.style.textAlign = 'center';
+                    label.style.width = '100%';
+                    label.style.backgroundColor = 'transparent';
+                    
+                    btn.appendChild(img);
+                    btn.appendChild(label);
+                    
+                    // Проверяем, нужно ли предзаполнить эту кнопку
+                    if (savedValue) {
+                        let shouldSelect = false;
+                        if (Array.isArray(savedValue) && savedValue.includes(opt.value)) {
+                            shouldSelect = true;
+                        } else if (savedValue.values && Array.isArray(savedValue.values)) {
+                            shouldSelect = savedValue.values.some(val => val.value === opt.value);
+                        }
+                        if (shouldSelect) {
+                            btn.classList.add('selected');
+                            btn.style.backgroundColor = 'rgba(187, 39, 155, 0.15)';
+                            btn.style.border = '1px solid #bb279b';
+                            label.style.color = '#8B1B6A';
+                        }
+                    }
+                    
+                    btn.onmouseover = function() { 
+                        if (!btn.classList.contains('selected')) {
+                            btn.style.backgroundColor = 'rgba(187, 39, 155, 0.1)'; 
+                        }
+                    };
+                    btn.onmouseout = function() { 
+                        if (!btn.classList.contains('selected')) {
+                            btn.style.backgroundColor = 'transparent'; 
+                        }
+                    };
+                    
+                    btn.onclick = function() {
+                        // Переключаем состояние кнопки
+                        if (btn.classList.contains('selected')) {
+                            btn.classList.remove('selected');
+                            btn.style.backgroundColor = 'transparent';
+                            btn.style.border = 'none';
+                            label.style.color = '#bb279b';
+                        } else {
+                            btn.classList.add('selected');
+                            btn.style.backgroundColor = 'rgba(187, 39, 155, 0.15)';
+                            btn.style.border = '1px solid #bb279b';
+                            label.style.color = '#8B1B6A';
+                        }
+                        
+                        console.log('Выбранных кнопок:', document.querySelectorAll('.image-choice-btn.selected').length);
+                        // Обновляем состояние кнопки "Далее" напрямую
+                        updateNextButtonStateDirect(nextBtn);
+                    };
+                    
+                    row.appendChild(btn);
+                });
+                
+                // Кнопка "Далее"
+                const nextBtn = document.createElement('button');
+                nextBtn.className = 'upload-button';
+                nextBtn.textContent = 'Далее';
+                nextBtn.setAttribute('data-survey-next', 'true');
+                nextBtn.style.backgroundColor = 'transparent';
+                nextBtn.style.color = '#9ca3af';
+                nextBtn.style.border = '1px solid #e5e7eb';
+                nextBtn.style.padding = '10px 20px';
+                nextBtn.style.borderRadius = '8px';
+                nextBtn.style.cursor = 'not-allowed';
+                nextBtn.style.fontSize = '1rem';
+                nextBtn.style.marginTop = '15px';
+                nextBtn.style.marginLeft = 'auto';
+                nextBtn.style.marginRight = '5px';
+                nextBtn.style.display = 'block';
+                nextBtn.style.width = 'fit-content';
+                nextBtn.disabled = true;
+                
+                // Добавляем hover эффекты для кнопки "Далее"
+                nextBtn.onmouseover = function() { 
+                    if (!nextBtn.disabled) {
+                        nextBtn.style.backgroundColor = '#8B1B6A'; 
+                        nextBtn.style.color='#fff'; 
+                        nextBtn.style.borderColor='#8B1B6A'; 
+                    }
+                };
+                nextBtn.onmouseout = function() { 
+                    if (!nextBtn.disabled) {
+                        nextBtn.style.backgroundColor = '#bb279b'; 
+                        nextBtn.style.color='#fff'; 
+                        nextBtn.style.borderColor='#bb279b'; 
+                    }
+                };
+                
+                nextBtn.onclick = function() {
+                    // Проверяем, что кнопка активна
+                    if (nextBtn.disabled) {
+                        console.log('Кнопка "Далее" заблокирована, клик игнорируется');
+                        return;
+                    }
+                    
+                    console.log('Кнопка "Далее" нажата, обрабатываем выбор');
+                    
+                    // Собираем выбранные значения
+                    const selectedValues = [];
+                    row.querySelectorAll('.image-choice-btn.selected').forEach(btn => {
+                        const label = btn.querySelector('div').textContent;
+                        const option = step.options.find(opt => opt.label === label);
+                        if (option) {
+                            selectedValues.push({
+                                value: option.value,
+                                label: option.label,
+                                image: option.image,
+                                type: 'image_choice'
+                            });
+                        }
+                    });
+                    
+                    if (selectedValues.length === 0) {
+                        // Показываем предупреждение
+                        addBotMessage("Пожалуйста, выберите хотя бы один стиль.");
+                        return;
+                    }
+                    
+                    // Сохраняем полную информацию о выбранных вариантах
+                    surveyData[step.field] = {
+                        values: selectedValues,
+                        type: 'image_choice'
+                    };
+                    
+                    // Сохраняем прогресс в профиле
+                    saveSurveyProgress();
+                    
+                    // Показываем выбранные ответы
+                    showSelectedAnswer(selectedValues.map(val => val.label).join(', '));
+                    
+                    // Переходим к следующему вопросу
+                    setTimeout(() => {
+                        currentSurveyStep++;
+                        showSurveyQuestion();
+                    }, 1000);
+                };
+                
+                buttonsContainer.appendChild(row);
+                buttonsContainer.appendChild(nextBtn);
+                
+            } else if (step.type === 'number_input') {
+                // Числовой ввод
+                const inputContainer = document.createElement('div');
+                inputContainer.style.display = 'flex';
+                inputContainer.style.gap = '10px';
+                inputContainer.style.alignItems = 'center';
+                inputContainer.style.justifyContent = 'flex-end';
+                inputContainer.style.width = '100%';
+                
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.placeholder = 'Введите число';
+                input.style.padding = '10px';
+                input.style.border = '1px solid #bb279b';
+                input.style.borderRadius = '8px';
+                input.style.fontSize = '1rem';
+                input.style.width = '150px';
+                
+                // Предзаполняем значение, если есть сохраненные данные
+                if (savedValue !== undefined && savedValue !== null) {
+                    if (typeof savedValue === 'object' && savedValue.value !== undefined) {
+                        input.value = savedValue.value;
+                    } else {
+                        input.value = savedValue;
+                    }
+                }
+                
+                const submitBtn = document.createElement('button');
+                submitBtn.className = 'upload-button';
+                submitBtn.textContent = 'Отправить';
+                submitBtn.style.backgroundColor = '#bb279b';
+                submitBtn.style.color = '#fff';
+                submitBtn.style.border = '1px solid #bb279b';
+                submitBtn.style.padding = '10px 20px';
+                submitBtn.style.borderRadius = '8px';
+                submitBtn.style.cursor = 'pointer';
+                submitBtn.style.fontSize = '1rem';
+                
+                submitBtn.onclick = function() {
+                    const value = input.value.trim();
+                    if (!value || isNaN(value)) {
+                        addBotMessage("Пожалуйста, введите корректное число.");
+                        return;
+                    }
+                    
+                    // Сохраняем ответ
+                    surveyData[step.field] = parseInt(value);
+                    
+                    // Сохраняем прогресс в профиле
+                    saveSurveyProgress();
+                    
+                    // Показываем введенный ответ
+                    showSelectedAnswer(value);
+                    
+                    // Переходим к следующему вопросу
+                    setTimeout(() => {
+                        currentSurveyStep++;
+                        showSurveyQuestion();
+                    }, 1000);
+                };
+                
+                inputContainer.appendChild(input);
+                inputContainer.appendChild(submitBtn);
+                buttonsContainer.appendChild(inputContainer);
+                
+                // Фокус на поле ввода
+                setTimeout(() => input.focus(), 100);
+            } else if (step.type === 'photo_upload') {
+                // Загрузка фото для анализа
+                const uploadContainer = document.createElement('div');
+                uploadContainer.style.display = 'flex';
+                uploadContainer.style.flexDirection = 'column';
+                uploadContainer.style.alignItems = 'center';
+                uploadContainer.style.gap = '15px';
+                uploadContainer.style.width = '100%';
+                
+                // Создаем зону загрузки
+                const dropZone = document.createElement('div');
+                dropZone.className = 'upload-area';
+                dropZone.style.display = 'block';
+                dropZone.style.width = '300px';
+                dropZone.style.height = '200px';
+                dropZone.style.border = '2px dashed #bb279b';
+                dropZone.style.borderRadius = '12px';
+                dropZone.style.display = 'flex';
+                dropZone.style.flexDirection = 'column';
+                dropZone.style.alignItems = 'center';
+                dropZone.style.justifyContent = 'center';
+                dropZone.style.cursor = 'pointer';
+                dropZone.style.transition = 'all 0.2s';
+                dropZone.style.backgroundColor = 'rgba(187, 39, 155, 0.05)';
+                
+                dropZone.innerHTML = `
+                    <div style="font-size: 1.2rem; color: #bb279b; margin-bottom: 0.5rem;">📸</div>
+                    <div style="font-size: 1rem; color: #bb279b; text-align: center;">
+                        Перетащите фото сюда<br>или нажмите для выбора
+                    </div>
+                `;
+                
+                // Создаем скрытый input для файлов
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = 'image/jpeg,image/png,image/heic,image/heif';
+                fileInput.style.display = 'none';
+                
+                // Обработчик клика по зоне загрузки
+                dropZone.onclick = function() {
+                    fileInput.click();
+                };
+                
+                // Обработчик выбора файла
+                fileInput.onchange = function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        handleSurveyPhotoUpload(file, step);
+                    }
+                };
+                
+                // Drag and drop обработчики
+                dropZone.ondragover = function(e) {
+                    e.preventDefault();
+                    dropZone.style.backgroundColor = 'rgba(187, 39, 155, 0.1)';
+                    dropZone.style.borderColor = '#8B1B6A';
+                };
+                
+                dropZone.ondragleave = function(e) {
+                    e.preventDefault();
+                    dropZone.style.backgroundColor = 'rgba(187, 39, 155, 0.05)';
+                    dropZone.style.borderColor = '#bb279b';
+                };
+                
+                dropZone.ondrop = function(e) {
+                    e.preventDefault();
+                    dropZone.style.backgroundColor = 'rgba(187, 39, 155, 0.05)';
+                    dropZone.style.borderColor = '#bb279b';
+                    
+                    const file = e.dataTransfer.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                        handleSurveyPhotoUpload(file, step);
+                    }
+                };
+                
+                uploadContainer.appendChild(dropZone);
+                uploadContainer.appendChild(fileInput);
+                buttonsContainer.appendChild(uploadContainer);
+            }
+            
+            userMessage.appendChild(buttonsContainer);
+            chatMessages.appendChild(userMessage);
+            userMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Показать выбранный ответ
+        function showSelectedAnswer(answer) {
+            const userMessage = document.createElement('div');
+            userMessage.className = 'message user-message';
+            userMessage.innerHTML = `
+                <div class="message-content" style="display: flex; justify-content: flex-end; width: 100%;">
+                    <div style="padding: 10px; border-radius: 8px; text-align: right;">
+                        ${answer}
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(userMessage);
+            userMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Обработка загрузки фото в анкете
+        function handleSurveyPhotoUpload(file, step) {
+            console.log("=== DEBUG: Starting survey photo upload ===");
+            
+            // Сначала исправляем ориентацию изображения
+            fixImageOrientation(file).then(fixedFile => {
+                console.log("=== DEBUG: File after orientation fix ===");
+                console.log("Fixed file name:", fixedFile.name);
+                console.log("Fixed file type:", fixedFile.type);
+                console.log("Fixed file size:", fixedFile.size);
+                
+                const formData = new FormData();
+                formData.append('image', fixedFile);
+                
+                // Показываем индикатор загрузки
+                addBotMessage("🔍 Анализирую ваше фото...");
+                
+                console.log("=== DEBUG: Sending file to server for analysis ===");
+                
+                // Анализируем и цветотип, и типаж
+                Promise.all([
+                    // Анализ цветотипа
+                    fetch('/analyze', {
+                        method: 'POST',
+                        body: formData
+                    }).then(response => response.json()),
+                    
+                    // Анализ типажа
+                    fetch('/analyze_kibbe', {
+                        method: 'POST',
+                        body: formData
+                    }).then(response => response.json())
+                ])
+                .then(([colorData, kibbeData]) => {
+                    console.log("=== DEBUG: Analysis results ===");
+                    console.log("Color analysis:", colorData);
+                    console.log("Kibbe analysis:", kibbeData);
+                    
+                    // Сохраняем результаты в сессии
+                    surveyData[step.field] = {
+                        color_analysis: colorData,
+                        kibbe_analysis: kibbeData,
+                        photo_uploaded: true
+                    };
+                    
+                    // Сохраняем прогресс в профиле
+                    saveSurveyProgress();
+                    
+                    // Показываем выбранный ответ
+                    showSelectedAnswer("Фото загружено и проанализировано ✅");
+                    
+                    // Переходим к следующему вопросу
+                    setTimeout(() => {
+                        currentSurveyStep++;
+                        showSurveyQuestion();
+                    }, 1000);
+                })
+                .catch(error => {
+                    console.error("=== DEBUG: Analysis error ===", error);
+                    addBotMessage("❌ Произошла ошибка при анализе фото. Попробуйте еще раз.");
+                });
+            });
+        }
+
+        // Завершение анкеты
+        function completeSurvey() {
+            addBotMessage("Отлично! Анкета заполнена. Спасибо за предоставленную информацию! 📝✨");
+            
+            // Показываем собранные данные (для отладки)
+            console.log('Собранные данные анкеты:', surveyData);
+            
+            // Сохраняем анкету в профиле пользователя
+            saveSurveyToProfile();
+            
+            addBotMessage("Теперь я готов подобрать для вас персональные рекомендации на основе ваших предпочтений! 🎯");
+            
+            // Получаем рекомендации (с проверкой авторизации)
+            getRecommendationsWithAuth();
+        }
+
+        // Сохранение анкеты в профиле пользователя
+        function saveSurveyToProfile() {
+            // Отправляем данные на сервер для сохранения в профиле
+            fetch('/save_profile_survey', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    survey_data: surveyData
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    console.log('✅ Анкета успешно сохранена в профиле');
+                    addBotMessage("✅ Анкета сохранена в вашем профиле! Вы можете просмотреть и отредактировать её в разделе 'Профиль'.");
+                } else {
+                    console.error('❌ Ошибка сохранения анкеты в профиле:', result.error);
+                    addBotMessage("❌ Ошибка сохранения анкеты в профиле. Попробуйте еще раз.");
+                }
+            })
+            .catch(error => {
+                console.error('❌ Ошибка при сохранении анкеты в профиле:', error);
+                addBotMessage("❌ Ошибка при сохранении анкеты в профиле. Попробуйте еще раз.");
+            });
+        }
+
+        // Промежуточное сохранение данных анкеты
+        function saveSurveyProgress() {
+            // Сохраняем только если есть данные
+            if (Object.keys(surveyData).length > 0) {
+                fetch('/save_profile_survey', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        survey_data: surveyData
+                    })
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        console.log('💾 Прогресс анкеты сохранен:', Object.keys(surveyData));
+                    } else {
+                        console.error('❌ Ошибка сохранения прогресса:', result.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Ошибка при сохранении прогресса:', error);
+                });
+            }
+        }
+
+        // Сохранение анкеты в JSON файл (для совместимости)
+        function saveSurveyToFile() {
+            // Создаем объект с полными данными анкеты
+            const surveyResponse = {
+                timestamp: new Date().toISOString(),
+                survey_data: surveyData,
+                metadata: {
+                    total_questions: surveySteps.length,
+                    completed_at: new Date().toLocaleString('ru-RU'),
+                    user_agent: navigator.userAgent,
+                    screen_resolution: `${screen.width}x${screen.height}`,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                }
+            };
+
+            // Создаем имя файла с датой и временем
+            const now = new Date();
+            const dateStr = now.toISOString().replace(/[:.]/g, '-').split('T')[0];
+            const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+            const fileName = `survey_${dateStr}_${timeStr}.json`;
+
+            // Отправляем данные на сервер для сохранения
+            fetch('/save_survey', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    filename: fileName,
+                    data: surveyResponse
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    console.log('✅ Анкета успешно сохранена:', fileName);
+                    console.log('📁 Путь к файлу:', result.filepath);
+                } else {
+                    console.error('❌ Ошибка сохранения анкеты:', result.error);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Ошибка при сохранении анкеты:', error);
+            });
+        }
+
+        // Вспомогательная функция для добавления сообщения бота
+        function addBotMessage(text) {
+            const aiMessage = document.createElement('div');
+            aiMessage.className = 'message ai';
+            aiMessage.innerHTML = `
+                <div class="avatar">AI</div>
+                <div class="message-content"></div>
+            `;
+            chatMessages.appendChild(aiMessage);
+            const messageContent = aiMessage.querySelector('.message-content');
+            
+            typeText(messageContent, text, 20);
+            aiMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Вспомогательная функция для добавления сообщения пользователя
+        function addUserMessage(text) {
+            const userMessage = document.createElement('div');
+            userMessage.className = 'message user';
+            userMessage.style.marginTop = '20px';
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            messageContent.textContent = text;
+            userMessage.appendChild(messageContent);
+            
+            chatMessages.appendChild(userMessage);
+            userMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Функция для обновления состояния кнопки "Далее"
+        function updateNextButtonState() {
+            const selectedButtons = document.querySelectorAll('.survey-btn.selected, .image-choice-btn.selected');
+            
+            // Ищем кнопку "Далее" - самый простой способ
+            const nextBtn = document.querySelector('button[data-survey-next="true"]');
+            
+            if (nextBtn) {
+                console.log('Найдена кнопка "Далее", выбранных вариантов:', selectedButtons.length);
+                if (selectedButtons.length > 0) {
+                    // Есть выбранные варианты - активируем кнопку
+                    nextBtn.style.backgroundColor = '#bb279b';
+                    nextBtn.style.color = '#fff';
+                    nextBtn.style.borderColor = '#bb279b';
+                    nextBtn.style.cursor = 'pointer';
+                    nextBtn.disabled = false;
+                    console.log('Кнопка "Далее" активирована');
+                } else {
+                    // Нет выбранных вариантов - деактивируем кнопку
+                    nextBtn.style.backgroundColor = 'transparent';
+                    nextBtn.style.color = '#9ca3af';
+                    nextBtn.style.borderColor = '#e5e7eb';
+                    nextBtn.style.cursor = 'not-allowed';
+                    nextBtn.disabled = true;
+                    console.log('Кнопка "Далее" деактивирована');
+                }
+            } else {
+                console.log('Кнопка "Далее" не найдена');
+                console.log('Все кнопки на странице:', document.querySelectorAll('.upload-button').length);
+                console.log('Все кнопки с текстом "Далее":', Array.from(document.querySelectorAll('.upload-button')).filter(btn => btn.textContent === 'Далее').length);
+                console.log('Все кнопки с data-survey-next:', document.querySelectorAll('[data-survey-next="true"]').length);
+                
+                // Показываем все кнопки с data-атрибутом
+                const allButtonsWithData = document.querySelectorAll('[data-survey-next="true"]');
+                console.log('Кнопки с data-survey-next:', allButtonsWithData);
+            }
+        }
+
+        // Функция для обновления состояния кнопки "Далее" с прямой ссылкой
+        function updateNextButtonStateDirect(nextBtnElement) {
+            const selectedButtons = document.querySelectorAll('.survey-btn.selected, .image-choice-btn.selected');
+            
+            if (nextBtnElement) {
+                console.log('Обновляем кнопку "Далее" напрямую, выбранных вариантов:', selectedButtons.length);
+                console.log('Текущее состояние кнопки перед обновлением:', {
+                    disabled: nextBtnElement.disabled,
+                    backgroundColor: nextBtnElement.style.backgroundColor
+                });
+                
+                if (selectedButtons.length > 0) {
+                    // Есть выбранные варианты - активируем кнопку
+                    nextBtnElement.style.backgroundColor = '#bb279b';
+                    nextBtnElement.style.color = '#fff';
+                    nextBtnElement.style.borderColor = '#bb279b';
+                    nextBtnElement.style.cursor = 'pointer';
+                    nextBtnElement.disabled = false;
+                    console.log('Кнопка "Далее" активирована напрямую');
+                } else {
+                    // Нет выбранных вариантов - деактивируем кнопку
+                    nextBtnElement.style.backgroundColor = 'transparent';
+                    nextBtnElement.style.color = '#9ca3af';
+                    nextBtnElement.style.borderColor = '#e5e7eb';
+                    nextBtnElement.style.cursor = 'not-allowed';
+                    nextBtnElement.disabled = true;
+                    console.log('Кнопка "Далее" деактивирована напрямую');
+                }
+            } else {
+                console.log('Кнопка "Далее" не передана в функцию');
+            }
+        }
+
+        // Получение рекомендаций
+        function getRecommendations() {
+            // Показываем индикатор загрузки
+            const loadingMessage = addBotMessage("🔍 Подбираю для вас идеальные вещи...");
+            
+            // Отправляем запрос на получение рекомендаций
+            fetch('/get_recommendations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    survey_data: surveyData
+                })
+            })
+            .then(response => {
+                if (response.status === 401) {
+                    // Пользователь не авторизован
+                    if (loadingMessage) {
+                        loadingMessage.remove();
+                    }
+                    showAuthModal();
+                    return response.json();
+                } else if (response.status === 403) {
+                    // Нет активной подписки
+                    if (loadingMessage) {
+                        loadingMessage.remove();
+                    }
+                    addBotMessage("❌ У вас нет активной подписки. Пожалуйста, приобретите подписку для доступа к рекомендациям.");
+                    return response.json();
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success && data.recommendations) {
+                    // Удаляем сообщение о загрузке
+                    if (loadingMessage) {
+                        loadingMessage.remove();
+                    }
+                    
+                    // Показываем рекомендации
+                    showRecommendations(data.recommendations);
+                } else if (data.error) {
+                    // Удаляем сообщение о загрузке
+                    if (loadingMessage) {
+                        loadingMessage.remove();
+                    }
+                    
+                    addBotMessage(`❌ ${data.error}`);
+                } else {
+                    // Удаляем сообщение о загрузке
+                    if (loadingMessage) {
+                        loadingMessage.remove();
+                    }
+                    
+                    addBotMessage("❌ К сожалению, не удалось подобрать рекомендации. Попробуйте позже.");
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка получения рекомендаций:', error);
+                
+                // Удаляем сообщение о загрузке
+                if (loadingMessage) {
+                    loadingMessage.remove();
+                }
+                
+                addBotMessage("❌ Произошла ошибка при получении рекомендаций.");
+            });
+        }
+
+        // Счетчик рекомендаций
+        let recommendationsCount = 0;
+        
+        // Отображение рекомендаций
+        function showRecommendations(recommendations) {
+            console.log('🔍 DEBUG: showRecommendations called with:', recommendations);
+            console.log('🔍 DEBUG: recommendations type:', typeof recommendations);
+            
+            recommendationsCount++;
+            const message = recommendationsCount === 1 
+                ? "✨ Вот ваши персональные рекомендации:" 
+                : `✨ Вот ваши дополнительные рекомендации (${recommendationsCount}-й набор):`;
+            addBotMessage(message);
+            
+            const recommendationsContainer = document.createElement('div');
+            recommendationsContainer.className = 'recommendations-container';
+            recommendationsContainer.style.marginTop = '20px';
+            
+            // Проверяем, является ли recommendations массивом групп
+            if (Array.isArray(recommendations)) {
+                // Новый формат с группами в массиве
+                recommendations.forEach(group => {
+                    
+                    // Создаем заголовок группы
+                    const groupHeader = document.createElement('div');
+                    groupHeader.style.marginBottom = '20px';
+                    groupHeader.style.marginTop = '30px';
+                    groupHeader.style.borderBottom = '2px solid #e5e7eb';
+                    groupHeader.style.paddingBottom = '10px';
+                    
+                    const groupTitle = document.createElement('h3');
+                    groupTitle.textContent = group.title;
+                    groupTitle.style.margin = '0 0 5px 0';
+                    groupTitle.style.fontSize = '1.5rem';
+                    groupTitle.style.fontWeight = '700';
+                    groupTitle.style.color = '#1f2937';
+                    
+                    const groupDescription = document.createElement('p');
+                    groupDescription.textContent = group.description;
+                    groupDescription.style.margin = '0';
+                    groupDescription.style.fontSize = '1rem';
+                    groupDescription.style.color = '#6b7280';
+                    
+                    groupHeader.appendChild(groupTitle);
+                    groupHeader.appendChild(groupDescription);
+                    recommendationsContainer.appendChild(groupHeader);
+                    
+                    // Создаем сетку для товаров группы
+                    const grid = document.createElement('div');
+                    grid.style.display = 'grid';
+                    grid.style.gap = '15px';
+                    setupResponsiveGrid(grid);
+                    grid.style.maxWidth = '1200px';
+                    
+                    // Адаптивность для мобильных устройств
+                    if (window.innerWidth <= 768) {
+                        grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+                        grid.style.maxWidth = '600px';
+                    }
+                    
+                    if (window.innerWidth <= 480) {
+                        grid.style.gridTemplateColumns = '1fr';
+                        grid.style.maxWidth = '400px';
+                    }
+                    
+                    group.products.forEach(product => {
+                        const productCard = createProductCard(product);
+                        grid.appendChild(productCard);
+                    });
+                    
+                    recommendationsContainer.appendChild(grid);
+                });
+            } else if (typeof recommendations === 'object' && !Array.isArray(recommendations)) {
+                // Старый формат - объект с группами
+                Object.keys(recommendations).forEach(groupKey => {
+                    const group = recommendations[groupKey];
+                    
+                    // Создаем заголовок группы
+                    const groupHeader = document.createElement('div');
+                    groupHeader.style.marginBottom = '20px';
+                    groupHeader.style.marginTop = '30px';
+                    groupHeader.style.borderBottom = '2px solid #e5e7eb';
+                    groupHeader.style.paddingBottom = '10px';
+                    
+                    const groupTitle = document.createElement('h3');
+                    groupTitle.textContent = group.title;
+                    groupTitle.style.margin = '0 0 5px 0';
+                    groupTitle.style.fontSize = '1.5rem';
+                    groupTitle.style.fontWeight = '700';
+                    groupTitle.style.color = '#1f2937';
+                    
+                    const groupDescription = document.createElement('p');
+                    groupDescription.textContent = group.description;
+                    groupDescription.style.margin = '0';
+                    groupDescription.style.fontSize = '1rem';
+                    groupDescription.style.color = '#6b7280';
+                    
+                    groupHeader.appendChild(groupTitle);
+                    groupHeader.appendChild(groupDescription);
+                    recommendationsContainer.appendChild(groupHeader);
+                    
+                    // Создаем сетку для товаров группы
+                    const grid = document.createElement('div');
+                    grid.style.display = 'grid';
+                    grid.style.gap = '15px';
+                    setupResponsiveGrid(grid);
+                    
+                    group.products.forEach(product => {
+                        const productCard = createProductCard(product);
+                        grid.appendChild(productCard);
+                    });
+                    
+                    recommendationsContainer.appendChild(grid);
+                });
+            } else {
+                // Старый формат - простой массив
+                const grid = document.createElement('div');
+                grid.style.display = 'grid';
+                grid.style.gap = '15px';
+                setupResponsiveGrid(grid);
+                
+                recommendations.forEach(product => {
+                    const productCard = createProductCard(product);
+                    grid.appendChild(productCard);
+                });
+                
+                recommendationsContainer.appendChild(grid);
+            }
+            
+
+            
+            // Добавляем кнопку "Сделать новый подбор"
+            const moreButton = document.createElement('button');
+            const remainingAttempts = 5 - recommendationsCount;
+            moreButton.textContent = '🔄 Сделать новый подбор';
+            moreButton.style.padding = '10px 20px';
+            moreButton.style.backgroundColor = 'transparent';
+            moreButton.style.color = '#bb279b';
+            moreButton.style.border = '1px solid #bb279b';
+            moreButton.style.borderRadius = '8px';
+            moreButton.style.fontSize = '1rem';
+            moreButton.style.fontWeight = '600';
+            moreButton.style.cursor = 'pointer';
+            moreButton.style.transition = 'background-color 0.2s, transform 0.2s';
+            
+
+            
+            // Hover эффект для кнопки "Сделать новый подбор"
+            moreButton.onmouseover = function() {
+                moreButton.style.backgroundColor = '#bb279b';
+                moreButton.style.color = '#fff';
+                moreButton.style.transform = 'translateY(-2px)';
+            };
+            
+            moreButton.onmouseout = function() {
+                moreButton.style.backgroundColor = 'transparent';
+                moreButton.style.color = '#bb279b';
+                moreButton.style.transform = 'translateY(0)';
+            };
+            
+
+            
+            // Обработчик клика для получения новых рекомендаций
+            moreButton.onclick = function() {
+                            // Ограничиваем количество запросов
+            if (recommendationsCount >= 5) {
+                addBotMessage("⚠️ Вы уже получили максимальное количество подборов (5). Попробуйте изменить параметры анкеты для новых вариантов.");
+                return;
+            }
+                
+                // Добавляем анимацию нажатия
+                moreButton.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    moreButton.style.transform = 'translateY(-2px)';
+                }, 150);
+                
+                // Показываем индикатор загрузки
+                const loadingMessage = addBotMessage("🔍 Делаю новый подбор вещей...");
+                
+                // Отправляем запрос на получение новых рекомендаций
+                fetch('/get_recommendations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.recommendations) {
+                        // Удаляем сообщение о загрузке
+                        if (loadingMessage) {
+                            loadingMessage.remove();
+                        }
+                        
+                        // Показываем новые рекомендации
+                        showRecommendations(data.recommendations);
+                        
+                        // Обновляем состояние кнопки
+                        const newRemainingAttempts = 5 - recommendationsCount;
+                        if (newRemainingAttempts <= 0) {
+                            moreButton.textContent = '🔄 Сделать новый подбор (лимит исчерпан)';
+                            moreButton.style.backgroundColor = 'transparent';
+                            moreButton.style.color = '#9ca3af';
+                            moreButton.style.border = '1px solid #9ca3af';
+                            moreButton.style.cursor = 'not-allowed';
+                            // Скрываем кнопку через 3 секунды
+                            setTimeout(() => {
+                                moreButton.style.display = 'none';
+                            }, 3000);
+                        }
+                    } else if (data.type === 'limit_reached') {
+                        // Удаляем сообщение о загрузке
+                        if (loadingMessage) {
+                            loadingMessage.remove();
+                        }
+                        
+                        // Показываем сообщение с таймером
+                        showLimitReachedMessage(data.message, data.time_remaining);
+                    } else {
+                        // Удаляем сообщение о загрузке
+                        if (loadingMessage) {
+                            loadingMessage.remove();
+                        }
+                        
+                        addBotMessage("❌ К сожалению, не удалось сделать новый подбор. Попробуйте позже.");
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка получения дополнительных рекомендаций:', error);
+                    
+                    // Удаляем сообщение о загрузке
+                    if (loadingMessage) {
+                        loadingMessage.remove();
+                    }
+                    
+                    addBotMessage("❌ Произошла ошибка при получении дополнительных рекомендаций.");
+                });
+            };
+            
+
+            
+            // Убираем кнопку из контейнера рекомендаций, так как она будет отдельно
+            // buttonsContainer.appendChild(moreButton);
+            // recommendationsContainer.appendChild(buttonsContainer);
+            
+            // Добавляем контейнер в чат
+            const aiMessage = document.createElement('div');
+            aiMessage.className = 'message ai';
+            aiMessage.innerHTML = `
+                <div class="avatar">AI</div>
+                <div class="message-content"></div>
+            `;
+            const messageContent = aiMessage.querySelector('.message-content');
+            messageContent.appendChild(recommendationsContainer);
+            
+            chatMessages.appendChild(aiMessage);
+            aiMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Добавляем кнопку "Сделать новый подбор" отдельно после сообщения
+            const moreButtonOutside = moreButton.cloneNode(true);
+            moreButtonOutside.onclick = moreButton.onclick;
+            moreButtonOutside.onmouseover = moreButton.onmouseover;
+            moreButtonOutside.onmouseout = moreButton.onmouseout;
+            
+            // Обновляем текст кнопки без количества попыток
+            moreButtonOutside.textContent = '🔄 Сделать новый подбор';
+            
+            // Создаем контейнер для кнопки с выравниванием по правому краю
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.display = 'flex';
+            buttonContainer.style.justifyContent = 'flex-end';
+            buttonContainer.style.marginTop = '15px';
+            buttonContainer.style.marginBottom = '15px';
+            buttonContainer.appendChild(moreButtonOutside);
+            
+            chatMessages.appendChild(buttonContainer);
+            buttonContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Функция для отображения сообщения о достижении лимита с таймером
+        function showLimitReachedMessage(message, timeRemaining) {
+            const aiMessage = document.createElement('div');
+            aiMessage.className = 'message ai';
+            aiMessage.innerHTML = `
+                <div class="avatar">AI</div>
+                <div class="message-content">
+                    <div style="margin-bottom: 15px;">${message}</div>
+                    <div id="timer-container" style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                        <div style="font-size: 1.2rem; font-weight: 600; color: #bb279b; margin-bottom: 10px;">⏰ Таймер до следующего подбора</div>
+                        <div id="timer-display" style="font-size: 2rem; font-weight: bold; color: #495057; font-family: monospace;">
+                            ${String(timeRemaining.hours).padStart(2, '0')}:${String(timeRemaining.minutes).padStart(2, '0')}:00
+                        </div>
+                        <div style="font-size: 0.9rem; color: #6c757d; margin-top: 5px;">часы:минуты:секунды</div>
+                    </div>
+                </div>
+            `;
+            
+            chatMessages.appendChild(aiMessage);
+            aiMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Запускаем таймер
+            startTimer(timeRemaining.total_seconds, 'timer-display');
+        }
+
+        // Функция для запуска таймера
+        function startTimer(totalSeconds, elementId) {
+            let remainingSeconds = totalSeconds;
+            const timerElement = document.getElementById(elementId);
+            
+            const updateTimer = () => {
+                if (remainingSeconds <= 0) {
+                    timerElement.textContent = '00:00:00';
+                    timerElement.style.color = '#28a745';
+                    return;
+                }
+                
+                const hours = Math.floor(remainingSeconds / 3600);
+                const minutes = Math.floor((remainingSeconds % 3600) / 60);
+                const seconds = remainingSeconds % 60;
+                
+                timerElement.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                
+                remainingSeconds--;
+                setTimeout(updateTimer, 1000);
+            };
+            
+            updateTimer();
+        }
+
+        // Функция для настройки адаптивной сетки
+        function setupResponsiveGrid(grid) {
+            // Мобильные устройства (≤480px): 2 колонки
+            if (window.innerWidth <= 480) {
+                grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+                grid.style.maxWidth = '600px';
+            }
+            // Планшеты (≤768px): 3 колонки
+            else if (window.innerWidth <= 768) {
+                grid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                grid.style.maxWidth = '900px';
+            }
+            // Десктоп (>768px): 3 колонки
+            else {
+                grid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                grid.style.maxWidth = '1200px';
+            }
+        }
+
+        // Создание карточки продукта
+        function createProductCard(product) {
+            console.log('🔍 DEBUG: createProductCard called with:', product);
+            
+            const card = document.createElement('div');
+            card.className = 'product-card';
+            card.style.border = '1px solid #e5e7eb';
+            card.style.borderRadius = '12px';
+            card.style.padding = '15px';
+            card.style.backgroundColor = '#fff';
+            card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+            card.style.transition = 'transform 0.2s, box-shadow 0.2s';
+            card.style.cursor = 'pointer';
+            card.style.width = '200px'; // Уменьшаем ширину для 3 колонок
+            card.style.display = 'flex';
+            card.style.flexDirection = 'column';
+            card.style.height = '100%';
+            
+            // Адаптивность для мобильных устройств
+            if (window.innerWidth <= 768) {
+                card.style.width = '100%';
+            }
+            
+            // Hover эффект
+            card.onmouseover = function() {
+                card.style.transform = 'translateY(-2px)';
+                card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            };
+            
+            card.onmouseout = function() {
+                card.style.transform = 'translateY(0)';
+                card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+            };
+            
+            // Клик для перехода на страницу товара
+            card.onclick = function() {
+                if (product.url) {
+                    window.open(product.url, '_blank');
+                }
+            };
+            
+            // Изображение продукта
+            if (product.imageUrl) {
+                const image = document.createElement('img');
+                image.src = product.imageUrl;
+                image.alt = product.name || 'Товар';
+                image.style.width = '180px';
+                image.style.height = '260px';
+                image.style.objectFit = 'cover';
+                image.style.borderRadius = '8px';
+                image.style.marginBottom = '10px';
+                image.style.display = 'block';
+                image.style.margin = '0 auto 10px auto'; // Центрируем изображение
+                
+                // Адаптивность для мобильных устройств
+                if (window.innerWidth <= 768) {
+                    image.style.width = '100%';
+                    image.style.height = 'auto';
+                    image.style.aspectRatio = '600/866';
+                }
+                
+                // Обработка ошибки загрузки изображения
+                image.onerror = function() {
+                    image.style.display = 'none';
+                    const placeholder = document.createElement('div');
+                    placeholder.style.width = '180px';
+                    placeholder.style.height = '260px';
+                    placeholder.style.backgroundColor = '#f3f4f6';
+                    placeholder.style.borderRadius = '8px';
+                    placeholder.style.marginBottom = '10px';
+                    placeholder.style.display = 'flex';
+                    placeholder.style.alignItems = 'center';
+                    placeholder.style.justifyContent = 'center';
+                    placeholder.style.color = '#9ca3af';
+                    placeholder.style.fontSize = '0.9rem';
+                    placeholder.textContent = 'Изображение недоступно';
+                    placeholder.style.margin = '0 auto 10px auto'; // Центрируем placeholder
+                    
+                    // Адаптивность для мобильных устройств
+                    if (window.innerWidth <= 768) {
+                        placeholder.style.width = '100%';
+                        placeholder.style.height = 'auto';
+                        placeholder.style.aspectRatio = '600/866';
+                    }
+                    card.insertBefore(placeholder, card.firstChild);
+                };
+                
+                card.appendChild(image);
+            }
+            
+            // Создаем контейнер для контента
+            const contentContainer = document.createElement('div');
+            contentContainer.style.flexGrow = '1';
+            contentContainer.style.display = 'flex';
+            contentContainer.style.flexDirection = 'column';
+            
+            // Название продукта
+            if (product.name) {
+                const name = document.createElement('h3');
+                name.textContent = product.name;
+                name.style.margin = '0 0 5px 0';
+                name.style.fontSize = '1rem';
+                name.style.fontWeight = '600';
+                name.style.color = '#1f2937';
+                contentContainer.appendChild(name);
+            }
+            
+            // Бренд
+            if (product.brand) {
+                const brand = document.createElement('p');
+                brand.textContent = product.brand;
+                brand.style.margin = '0 0 5px 0';
+                brand.style.fontSize = '0.9rem';
+                brand.style.color = '#6b7280';
+                contentContainer.appendChild(brand);
+            }
+            
+            // Цена
+            if (product.price) {
+                const price = document.createElement('p');
+                price.textContent = `${product.price} ₽`;
+                price.style.margin = '0 0 5px 0';
+                price.style.fontSize = '1.1rem';
+                price.style.fontWeight = '600';
+                price.style.color = '#bb279b';
+                contentContainer.appendChild(price);
+            }
+            
+            // Описание
+            if (product.description) {
+                const description = document.createElement('p');
+                let descriptionText = '';
+                
+                // Если описание - это объект, извлекаем ключевые поля
+                if (typeof product.description === 'object') {
+                    const descObj = product.description;
+                    if (descObj['Цвет']) descriptionText += `Цвет: ${descObj['Цвет']} `;
+                    if (descObj['Тип ткани']) descriptionText += `Ткань: ${descObj['Тип ткани']} `;
+                    if (descObj['Состав %']) descriptionText += `Состав: ${descObj['Состав %']} `;
+                    if (descObj['Сезон']) descriptionText += `Сезон: ${descObj['Сезон']} `;
+                } else {
+                    // Если описание - это строка
+                    descriptionText = product.description;
+                }
+                
+                // Обрезаем текст если он слишком длинный
+                if (descriptionText.length > 100) {
+                    descriptionText = descriptionText.substring(0, 100) + '...';
+                }
+                
+                description.textContent = descriptionText;
+                description.style.margin = '0 0 10px 0';
+                description.style.fontSize = '0.8rem';
+                description.style.color = '#4b5563';
+                description.style.lineHeight = '1.4';
+                contentContainer.appendChild(description);
+            }
+            
+            // Добавляем контейнер контента в карточку
+            card.appendChild(contentContainer);
+            
+            // Кнопка "Перейти к товару"
+            const button = document.createElement('button');
+            button.textContent = 'Перейти к товару';
+            button.style.width = '100%';
+            button.style.padding = '8px 12px';
+            button.style.backgroundColor = '#bb279b';
+            button.style.color = '#fff';
+            button.style.border = 'none';
+            button.style.borderRadius = '6px';
+            button.style.fontSize = '0.9rem';
+            button.style.cursor = 'pointer';
+            button.style.transition = 'background-color 0.2s';
+            button.style.marginTop = 'auto';
+            
+            button.onmouseover = function() {
+                button.style.backgroundColor = '#8B1B6A';
+            };
+            
+            button.onmouseout = function() {
+                button.style.backgroundColor = '#bb279b';
+            };
+            
+            button.onclick = function(e) {
+                e.stopPropagation();
+                if (product.url) {
+                    window.open(product.url, '_blank');
+                }
+            };
+            
+            card.appendChild(button);
+            
+            return card;
+        }
+
+        // Система авторизации
+        let isAuthenticated = false;
+        let userEmail = null;
+
+        // Проверка авторизации при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthStatus();
+        });
+
+        // Проверка статуса авторизации
+        function checkAuthStatus() {
+            console.log('🔍 Проверяем статус авторизации при загрузке страницы...');
+            fetch('/check_auth', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('📊 Результат проверки авторизации при загрузке:', data);
+                isAuthenticated = data.authenticated;
+                userEmail = data.email;
+                
+                updateAuthUI();
+                
+                // Проверяем параметры URL для автоматического запуска анкеты
+                const urlParams = new URLSearchParams(window.location.search);
+                const startSurvey = urlParams.get('start_survey');
+                const editSurvey = urlParams.get('edit_survey');
+                
+                if (startSurvey === 'true' && isAuthenticated) {
+                    console.log('🚀 Автоматический запуск анкеты из URL');
+                    setTimeout(() => {
+                        startSurvey();
+                    }, 1000);
+                } else if (editSurvey === 'true' && isAuthenticated) {
+                    console.log('✏️ Автоматический запуск редактирования анкеты из URL');
+                    setTimeout(() => {
+                        editSurvey();
+                    }, 1000);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Ошибка проверки авторизации при загрузке:', error);
+                isAuthenticated = false;
+                updateAuthUI();
+            });
+        }
+
+                // Обновление UI в зависимости от статуса авторизации
+        function updateAuthUI() {
+            console.log('🔄 Обновляем UI авторизации...');
+            const authButton = document.getElementById('auth-button');
+            const registerButton = document.getElementById('register-button');
+            const userInfo = document.getElementById('user-info');
+
+            if (isAuthenticated && userEmail) {
+                console.log('✅ Пользователь авторизован:', userEmail);
+                if (authButton) authButton.style.display = 'none';
+                if (registerButton) registerButton.style.display = 'none';
+                if (userInfo) {
+                    userInfo.style.display = 'block';
+                    userInfo.innerHTML = `
+                        <span style="color: #059669;">✅ ${userEmail}</span>
+                        <button onclick="window.location.href='/profile'" style="margin-left: 10px; padding: 5px 10px; background: #bb279b; color: white; border: none; border-radius: 4px; cursor: pointer;">Профиль</button>
+                        <button onclick="logout()" style="margin-left: 10px; padding: 5px 10px; background: #dc2626; color: white; border: none; border-radius: 4px; cursor: pointer;">Выйти</button>
+                    `;
+                }
+                
+                // Проверяем статус анкеты и подписку для динамических кнопок
+                checkSurveyStatusAndUpdateUI();
+            } else {
+                console.log('❌ Пользователь не авторизован');
+                if (authButton) authButton.style.display = 'block';
+                if (registerButton) registerButton.style.display = 'block';
+                if (userInfo) userInfo.style.display = 'none';
+            }
+        }
+
+        // Проверка статуса анкеты и обновление UI
+        function checkSurveyStatusAndUpdateUI() {
+            console.log('🔍 Начинаем проверку статуса анкеты...');
+            
+            // Ищем все кнопки анкеты и подбора на странице (может быть несколько)
+            const fillSurveyBtns = document.querySelectorAll('#fillSurveyBtn');
+            const getRecommendationsBtns = document.querySelectorAll('#get-recommendations-btn');
+            const preorderBtns = document.querySelectorAll('#preorderBtn');
+            
+            console.log('🔍 Кнопки анкеты найдены:', fillSurveyBtns.length);
+            console.log('🔍 Кнопки подбора найдены:', getRecommendationsBtns.length);
+            console.log('🔍 Кнопки предзаказа найдены:', preorderBtns.length);
+            
+            fetch('/check_survey_status', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('📊 Статус анкеты:', data);
+                
+                if (data.authenticated && data.subscription_active) {
+                    // Показываем только кнопку подбора на первом экране, скрываем кнопку предзаказа
+                    console.log('✅ Показываем кнопку подбора, скрываем кнопки анкеты и предзаказа');
+                    fillSurveyBtns.forEach(btn => {
+                        btn.style.display = 'none'; // Скрываем кнопку анкеты на первом экране
+                    });
+                    getRecommendationsBtns.forEach(btn => {
+                        btn.style.display = 'inline-block';
+                    });
+                    preorderBtns.forEach(btn => {
+                        btn.style.display = 'none'; // Скрываем кнопку предзаказа при активной подписке
+                    });
+                } else {
+                    // Нет активной подписки
+                    console.log('❌ Нет активной подписки - скрываем кнопки анкеты и подбора, показываем предзаказ');
+                    fillSurveyBtns.forEach(btn => btn.style.display = 'none');
+                    getRecommendationsBtns.forEach(btn => btn.style.display = 'none');
+                    preorderBtns.forEach(btn => btn.style.display = 'inline-block');
+                }
+            })
+            .catch(error => {
+                console.error('❌ Ошибка проверки статуса анкеты:', error);
+                // При ошибке скрываем кнопки анкеты и подбора, показываем предзаказ
+                const fillSurveyBtns = document.querySelectorAll('#fillSurveyBtn');
+                const getRecommendationsBtns = document.querySelectorAll('#get-recommendations-btn');
+                const preorderBtns = document.querySelectorAll('#preorderBtn');
+                fillSurveyBtns.forEach(btn => btn.style.display = 'none');
+                getRecommendationsBtns.forEach(btn => btn.style.display = 'none');
+                preorderBtns.forEach(btn => btn.style.display = 'inline-block');
+            });
+        }
+
+        // Переключение между формами входа и регистрации
+        function switchToLogin() {
+            document.getElementById('login-form').style.display = 'block';
+            document.getElementById('register-form').style.display = 'none';
+            document.getElementById('login-tab').style.background = '#bb279b';
+            document.getElementById('login-tab').style.color = 'white';
+            document.getElementById('register-tab').style.background = '#e5e7eb';
+            document.getElementById('register-tab').style.color = '#6b7280';
+        }
+
+        function switchToRegister() {
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('register-form').style.display = 'block';
+            document.getElementById('register-tab').style.background = '#bb279b';
+            document.getElementById('register-tab').style.color = 'white';
+            document.getElementById('login-tab').style.background = '#e5e7eb';
+            document.getElementById('login-tab').style.color = '#6b7280';
+        }
+
+        // Показ модального окна авторизации
+        function showAuthModal() {
+            const modal = document.getElementById('auth-modal');
+            if (modal) {
+                modal.style.display = 'flex';
+                // Переключаемся на форму входа
+                switchToLogin();
+            }
+        }
+
+        // Показ модального окна регистрации
+        function showRegisterModal() {
+            const modal = document.getElementById('auth-modal');
+            if (modal) {
+                modal.style.display = 'flex';
+                // Переключаемся на форму регистрации
+                switchToRegister();
+            }
+        }
+
+        // Скрытие модального окна авторизации
+        function hideAuthModal() {
+            const modal = document.getElementById('auth-modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Авторизация
+        function login() {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            
+            if (!email) {
+                showError('Введите email');
+                return;
+            }
+
+            if (!password) {
+                showError('Введите пароль');
+                return;
+            }
+
+            if (!isValidEmail(email)) {
+                showError('Введите корректный email');
+                return;
+            }
+
+            fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email: email, password: password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                                if (data.success) {
+                    isAuthenticated = true;
+                    userEmail = data.user.email;
+                    hideAuthModal();
+                    updateAuthUI();
+                    showSuccess('Авторизация успешна!');
+
+                    // Если есть сохраненные данные анкеты, показываем кнопку получения рекомендаций
+                    if (surveyData && Object.keys(surveyData).length > 0) {
+                        showRecommendationsButton();
+                    }
+                    
+                    // Проверяем подписку и показываем кнопку анкеты если нужно
+                    setTimeout(() => {
+                        updateAuthUI();
+                    }, 500);
+                } else {
+                    showError(data.error || 'Ошибка авторизации');
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка авторизации:', error);
+                showError('Ошибка соединения с сервером');
+            });
+        }
+
+        // Регистрация
+        function register() {
+            const email = document.getElementById('register-email').value.trim();
+            const password = document.getElementById('register-password').value;
+            
+            if (!email) {
+                showRegisterError('Введите email');
+                return;
+            }
+
+            if (!password) {
+                showRegisterError('Введите пароль');
+                return;
+            }
+
+            if (password.length < 6) {
+                showRegisterError('Пароль должен содержать минимум 6 символов');
+                return;
+            }
+
+            if (!isValidEmail(email)) {
+                showRegisterError('Введите корректный email');
+                return;
+            }
+
+            fetch('/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    email: email, 
+                    password: password
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showRegisterSuccess('Регистрация успешна! Выполняется автоматический вход...');
+                    
+                    // Автоматически авторизуем пользователя после регистрации
+                    fetch('/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 
+                            email: email, 
+                            password: password 
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(loginData => {
+                        if (loginData.success) {
+                            // Авторизация успешна
+                            isAuthenticated = true;
+                            userEmail = loginData.user.email;
+                            hideAuthModal();
+                            updateAuthUI();
+                            showRegisterSuccess('Регистрация и вход выполнены успешно! Добро пожаловать!');
+                            
+                            // Проверяем подписку и обновляем UI
+                            setTimeout(() => {
+                                updateAuthUI();
+                            }, 500);
+                            
+                        // Очищаем поля регистрации
+                        document.getElementById('register-email').value = '';
+                        document.getElementById('register-password').value = '';
+                        } else {
+                            // Если автоматическая авторизация не удалась, показываем сообщение
+                            showRegisterError('Регистрация успешна, но автоматический вход не удался. Пожалуйста, войдите вручную.');
+                            setTimeout(() => {
+                                switchToLogin();
+                    }, 2000);
+                        }
+                    })
+                    .catch(loginError => {
+                        console.error('Ошибка автоматической авторизации:', loginError);
+                        showRegisterError('Регистрация успешна, но автоматический вход не удался. Пожалуйста, войдите вручную.');
+                        setTimeout(() => {
+                            switchToLogin();
+                        }, 2000);
+                    });
+                } else {
+                    showRegisterError(data.error || 'Ошибка регистрации');
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка регистрации:', error);
+                showRegisterError('Ошибка соединения с сервером');
+            });
+        }
+
+        // Выход
+        function logout() {
+            fetch('/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                isAuthenticated = false;
+                userEmail = null;
+                updateAuthUI();
+                hideRecommendationsButton();
+            })
+            .catch(error => {
+                console.error('Ошибка выхода:', error);
+            });
+        }
+
+        // Валидация email
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        // Показ ошибки
+        function showError(message) {
+            const errorDiv = document.getElementById('auth-error');
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+                setTimeout(() => {
+                    errorDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Показ успеха
+        function showSuccess(message) {
+            const successDiv = document.getElementById('auth-success');
+            if (successDiv) {
+                successDiv.textContent = message;
+                successDiv.style.display = 'block';
+                setTimeout(() => {
+                    successDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // Показ ошибки в форме регистрации
+        function showRegisterError(message) {
+            const errorDiv = document.getElementById('register-error');
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+                setTimeout(() => {
+                    errorDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Показ успеха в форме регистрации
+        function showRegisterSuccess(message) {
+            const successDiv = document.getElementById('register-success');
+            if (successDiv) {
+                successDiv.textContent = message;
+                successDiv.style.display = 'block';
+                setTimeout(() => {
+                    successDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // Показ кнопки получения рекомендаций
+        function showRecommendationsButton() {
+            const recommendationsBtn = document.getElementById('get-recommendations-btn');
+            if (recommendationsBtn) {
+                recommendationsBtn.style.display = 'block';
+            }
+        }
+
+        // Скрытие кнопки получения рекомендаций
+        function hideRecommendationsButton() {
+            const recommendationsBtn = document.getElementById('get-recommendations-btn');
+            if (recommendationsBtn) {
+                recommendationsBtn.style.display = 'none';
+            }
+        }
+
+        // Переопределяем функцию получения рекомендаций для проверки авторизации
+        function getRecommendationsWithAuth() {
+            if (!isAuthenticated) {
+                showAuthModal();
+                return;
+            }
+            
+            // Проверяем статус анкеты перед подбором
+            checkSurveyStatusForRecommendations();
+        }
+
+        // Проверка статуса анкеты для подбора рекомендаций
+        function checkSurveyStatusForRecommendations() {
+            fetch('/check_survey_status', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include' // Добавляем передачу cookies для авторизации
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.has_survey) {
+                    // Анкета заполнена - показываем модальное окно выбора
+                    showRecommendationsChoiceModal();
+                } else {
+                    // Анкета не заполнена - показываем сообщение и запускаем заполнение
+                    showSurveyRequiredMessage();
+                }
+            })
+            .catch(error => {
+                console.error('❌ Ошибка проверки статуса анкеты:', error);
+                showSurveyRequiredMessage();
+            });
+        }
+
+        // Показ сообщения о необходимости заполнения анкеты
+        function showSurveyRequiredMessage() {
+            addBotMessage(`
+🎯 Для персонализированного подбора вещей необходимо заполнить анкету
+
+Это поможет нам понять ваши предпочтения и подобрать идеальные вещи именно для вас!
+
+Давайте заполним анкету прямо сейчас? 👇
+            `);
+            
+            // Показываем кнопку "Заполнить анкету" через 2 секунды
+            setTimeout(() => {
+                showFillSurveyButton();
+            }, 2000);
+        }
+
+        // Показ кнопки "Заполнить анкету" на втором шаге
+        function showFillSurveyButton() {
+            const userMessage = document.createElement('div');
+            userMessage.className = 'message user-message';
+            userMessage.style.marginTop = '20px';
+            
+            // Создаем контейнер для кнопки
+            const buttonsContainer = document.createElement('div');
+            buttonsContainer.className = 'message-content';
+            buttonsContainer.style.display = 'flex';
+            buttonsContainer.style.gap = '10px';
+            buttonsContainer.style.justifyContent = 'flex-end';
+            buttonsContainer.innerHTML = `
+                <div class="user-buttons-row">
+                    <button class="upload-button" id="fillSurveyBtnSecond" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">📝 Заполнить анкету</button>
+                </div>
+            `;
+            
+            // Добавляем контейнер с кнопкой в сообщение пользователя
+            userMessage.appendChild(buttonsContainer);
+            
+            // Добавляем сообщение пользователя в чат
+            chatMessages.appendChild(userMessage);
+            userMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Добавляем обработчик для кнопки
+            const fillSurveyBtnSecond = document.getElementById('fillSurveyBtnSecond');
+            if (fillSurveyBtnSecond) {
+                fillSurveyBtnSecond.onclick = function() {
+                    startSurvey();
+                };
+            }
+        }
+
+        // Массив вариативных сообщений для выбора действия
+        const recommendationChoiceMessages = [
+            "Отлично! Вы хотели бы подобрать одежду на основе уже заполненной анкеты или хотите отредактировать анкету сперва?",
+            "Отлично! У вас есть заполненная анкета. Хотите сразу подобрать вещи или сначала что-то изменить?",
+            "Отлично! Ваша анкета готова. Будем подбирать вещи прямо сейчас или хотите что-то подкорректировать?",
+            "Отлично! Анкета заполнена. Готовы сразу к подбору или нужно что-то изменить?",
+            "Отлично! У вас есть анкета. Подбираем вещи сейчас или редактируем анкету?",
+            "Отлично! Анкета готова. Идем сразу к подбору или сначала что-то изменим?",
+            "Отлично! Ваша анкета заполнена. Подбираем вещи или редактируем?",
+            "Отлично! Анкета есть. Сразу подбираем или сначала корректируем?",
+            "Отлично! Анкета готова. К подбору вещей или к редактированию?",
+            "Отлично! У вас есть анкета. Подбираем сейчас или редактируем сперва?"
+        ];
+
+        // Функция для получения случайного сообщения
+        function getRandomChoiceMessage() {
+            const randomIndex = Math.floor(Math.random() * recommendationChoiceMessages.length);
+            return recommendationChoiceMessages[randomIndex];
+        }
+
+        // Показ модального окна выбора действий для подбора
+        function showRecommendationsChoiceModal() {
+            const randomMessage = getRandomChoiceMessage();
+            
+            // Создаем сообщение бота вручную
+            const aiMessage = document.createElement('div');
+            aiMessage.className = 'message ai';
+            aiMessage.innerHTML = `
+                <div class="avatar">AI</div>
+                <div class="message-content"></div>
+            `;
+            chatMessages.appendChild(aiMessage);
+            const messageContent = aiMessage.querySelector('.message-content');
+            
+            // Сначала печатаем текст
+            typeText(messageContent, randomMessage, 20, () => {
+                // После завершения печати создаем сообщение пользователя с кнопками
+                const userMessage = document.createElement('div');
+                userMessage.className = 'message user-message';
+                userMessage.style.marginTop = '20px';
+                
+                // Создаем контейнер для кнопок
+                const buttonsContainer = document.createElement('div');
+                buttonsContainer.className = 'message-content';
+                buttonsContainer.style.display = 'flex';
+                buttonsContainer.style.gap = '10px';
+                buttonsContainer.style.justifyContent = 'flex-end';
+                buttonsContainer.innerHTML = `
+                    <div class="user-buttons-row">
+                        <button class="upload-button" onclick="useExistingSurvey()" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">🎯 Использовать заполненную анкету</button>
+                        <button class="upload-button" onclick="editSurvey()" style="background-color: transparent; color: #bb279b; border: 1px solid #bb279b; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.2s;">✏️ Редактировать анкету</button>
+                    </div>
+                `;
+                
+                // Добавляем контейнер с кнопками в сообщение пользователя
+                userMessage.appendChild(buttonsContainer);
+                
+                // Добавляем сообщение пользователя в чат
+                chatMessages.appendChild(userMessage);
+            });
+            
+            aiMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Использование существующей анкеты для подбора
+        function useExistingSurvey() {
+            addUserMessage('🎯 Использовать заполненную анкету');
+            
+            // Показываем сообщение о начале подбора
+            addBotMessage('🔍 Начинаем подбор вещей на основе вашей анкеты...\n\nАнализируем ваши предпочтения и подбираем идеальные варианты...');
+            
+            // Запускаем подбор
+            startRecommendationsProcess();
+        }
+
+        // Процесс подбора рекомендаций
+        function startRecommendationsProcess() {
+            console.log('🔍 DEBUG: startRecommendationsProcess called');
+            
+            fetch('/start_recommendations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include' // Добавляем передачу cookies для авторизации
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('🔍 DEBUG: Received data from server:', data);
+                
+                if (data.success) {
+                    console.log('🔍 DEBUG: Success response, recommendations type:', data.recommendations?.type);
+                    console.log('🔍 DEBUG: Recommendations data:', data.recommendations);
+                    console.log('🔍 DEBUG: Products count:', data.products_count);
+                    console.log('🔍 DEBUG: Total available:', data.total_available);
+                    console.log('🔍 DEBUG: Shown count:', data.shown_count);
+                    
+                    if (data.recommendations && data.recommendations.type === 'products') {
+                        console.log('🔍 DEBUG: Showing products, count:', data.recommendations.products?.length);
+                        // Показываем товары
+                        showRecommendations(data.recommendations.products);
+                        
+                        // Показываем информацию о доступных товарах
+                        if (data.total_available && data.shown_count !== undefined) {
+                            const remaining = data.total_available - data.shown_count;
+                            if (remaining > 0) {
+                                addBotMessage(`ℹ️ Доступно еще ${remaining} товаров для рекомендаций.`);
+                            } else {
+                                addBotMessage(`ℹ️ Все доступные товары уже показаны. Нажмите "Сбросить историю" для получения новых рекомендаций.`);
+                            }
+                        }
+                    } else if (data.recommendations && data.recommendations.type === 'message') {
+                        console.log('🔍 DEBUG: Showing message');
+                        // Показываем текстовое сообщение
+                        addBotMessage(data.recommendations.message);
+                    } else {
+                        console.log('🔍 DEBUG: Using old format');
+                        // Старый формат - просто текст
+                        addBotMessage(data.recommendations);
+                    }
+                } else {
+                    console.log('❌ DEBUG: Error response:', data.error);
+                    addBotMessage(`❌ Ошибка при подборе: ${data.error}`);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Ошибка подбора рекомендаций:', error);
+                addBotMessage('❌ Произошла ошибка при подборе рекомендаций. Попробуйте позже.');
+            });
+        }
+
+        // Функция для адаптивной сетки товаров
+        function setupResponsiveGrid(grid) {
+            if (window.innerWidth <= 480) {
+                grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+                grid.style.maxWidth = '600px';
+            } else if (window.innerWidth <= 768) {
+                grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+                grid.style.maxWidth = '600px';
+            } else {
+                grid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                grid.style.maxWidth = '1200px';
+            }
+        }
+
+        // ...
+        // В showRecommendations и других местах:
+        // Вместо всех условий адаптивности для grid используем:
+        // setupResponsiveGrid(grid);
+
+        // Добавим обработчик resize для перестроения сетки
+        window.addEventListener('resize', () => {
+            document.querySelectorAll('.recommendations-container div[style*="display: grid"]').forEach(setupResponsiveGrid);
+        });
+
+        // ...
+        // В showRecommendations:
+        // Заменить создание grid-контейнера на:
+        // const grid = document.createElement('div');
+        // grid.style.display = 'grid';
+        // grid.style.gap = '15px';
+        // setupResponsiveGrid(grid);
+        // ...
+        // recommendationsContainer.appendChild(grid);
+    </script>
+
+    <!-- Модальное окно авторизации -->
+    <div id="auth-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: white; padding: 30px; border-radius: 12px; max-width: 450px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+            <!-- Переключатель между входом и регистрацией -->
+            <div style="display: flex; margin-bottom: 20px; border-bottom: 2px solid #e5e7eb;">
+                <button id="login-tab" onclick="switchToLogin()" 
+                        style="flex: 1; padding: 12px; background: #bb279b; color: white; border: none; font-size: 16px; font-weight: 600; cursor: pointer; border-radius: 8px 0 0 0;">
+                    Вход
+                </button>
+                <button id="register-tab" onclick="switchToRegister()" 
+                        style="flex: 1; padding: 12px; background: #e5e7eb; color: #6b7280; border: none; font-size: 16px; font-weight: 600; cursor: pointer; border-radius: 0 8px 0 0;">
+                    Регистрация
+                </button>
+            </div>
+            
+            <!-- Форма входа -->
+            <div id="login-form">
+                <h2 style="margin: 0 0 20px 0; color: #1f2937; text-align: center;">🔐 Вход в систему</h2>
+                <p style="margin: 0 0 20px 0; color: #6b7280; text-align: center; font-size: 14px;">
+                    Войдите в систему для получения персональных рекомендаций
+                </p>
+                
+                <div style="margin-bottom: 15px;">
+                    <label for="login-email" style="display: block; margin-bottom: 8px; color: #374151; font-weight: 500;">Email:</label>
+                    <input type="email" id="login-email" placeholder="Введите ваш email" 
+                           style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px; box-sizing: border-box;">
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label for="login-password" style="display: block; margin-bottom: 8px; color: #374151; font-weight: 500;">Пароль:</label>
+                    <input type="password" id="login-password" placeholder="Введите пароль" 
+                           style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px; box-sizing: border-box;">
+                </div>
+                
+                <div style="text-align: right; margin-bottom: 20px;">
+                    <button type="button" onclick="showForgotPasswordModal()" 
+                            style="background: none; border: none; color: #bb279b; font-size: 14px; cursor: pointer; text-decoration: underline;">
+                        Забыли пароль?
+                    </button>
+                </div>
+                
+                <div id="auth-error" style="display: none; color: #dc2626; margin-bottom: 15px; text-align: center; font-size: 14px;"></div>
+                <div id="auth-success" style="display: none; color: #059669; margin-bottom: 15px; text-align: center; font-size: 14px;"></div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="login()" 
+                            style="flex: 1; padding: 12px; background: #bb279b; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                        Войти
+                    </button>
+                    <button onclick="hideAuthModal()" 
+                            style="flex: 1; padding: 12px; background: #6b7280; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                        Отмена
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Форма регистрации -->
+            <div id="register-form" style="display: none;">
+                <h2 style="margin: 0 0 20px 0; color: #1f2937; text-align: center;">📝 Регистрация</h2>
+                <p style="margin: 0 0 20px 0; color: #6b7280; text-align: center; font-size: 14px;">
+                    Создайте аккаунт для получения персональных рекомендаций
+                </p>
+                
+                <div style="margin-bottom: 15px;">
+                    <label for="register-email" style="display: block; margin-bottom: 8px; color: #374151; font-weight: 500;">Email:</label>
+                    <input type="email" id="register-email" placeholder="Введите ваш email" 
+                           style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px; box-sizing: border-box;">
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label for="register-password" style="display: block; margin-bottom: 8px; color: #374151; font-weight: 500;">Пароль:</label>
+                    <input type="password" id="register-password" placeholder="Введите пароль (минимум 6 символов)" 
+                           style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px; box-sizing: border-box;">
+                </div>
+                
+                <div id="register-error" style="display: none; color: #dc2626; margin-bottom: 15px; text-align: center; font-size: 14px;"></div>
+                <div id="register-success" style="display: none; color: #059669; margin-bottom: 15px; text-align: center; font-size: 14px;"></div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="register()" 
+                            style="flex: 1; padding: 12px; background: #bb279b; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                        Зарегистрироваться
+                    </button>
+                    <button onclick="hideAuthModal()" 
+                            style="flex: 1; padding: 12px; background: #6b7280; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                        Отмена
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно восстановления пароля -->
+    <div id="forgot-password-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: white; padding: 30px; border-radius: 12px; max-width: 450px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+            <h2 style="margin: 0 0 20px 0; color: #1f2937; text-align: center;">🔑 Восстановление пароля</h2>
+            <p style="margin: 0 0 20px 0; color: #6b7280; text-align: center; font-size: 14px;">
+                Введите ваш email, и мы отправим инструкции по восстановлению пароля
+            </p>
+            
+            <div style="margin-bottom: 20px;">
+                <label for="forgot-email" style="display: block; margin-bottom: 8px; color: #374151; font-weight: 500;">Email:</label>
+                <input type="email" id="forgot-email" placeholder="Введите ваш email" 
+                       style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px; box-sizing: border-box;">
+            </div>
+            
+            <div id="forgot-error" style="display: none; color: #dc2626; margin-bottom: 15px; text-align: center; font-size: 14px;"></div>
+            <div id="forgot-success" style="display: none; color: #059669; margin-bottom: 15px; text-align: center; font-size: 14px;"></div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button onclick="sendForgotPasswordEmail()" 
+                        style="flex: 1; padding: 12px; background: #bb279b; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                    Отправить
+                </button>
+                <button onclick="hideForgotPasswordModal()" 
+                        style="flex: 1; padding: 12px; background: #6b7280; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                    Отмена
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Функции для восстановления пароля
+        function showForgotPasswordModal() {
+            const modal = document.getElementById('forgot-password-modal');
+            if (modal) {
+                modal.style.display = 'flex';
+                // Очищаем поля и сообщения
+                document.getElementById('forgot-email').value = '';
+                document.getElementById('forgot-error').style.display = 'none';
+                document.getElementById('forgot-success').style.display = 'none';
+            }
+        }
+
+        function hideForgotPasswordModal() {
+            const modal = document.getElementById('forgot-password-modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        function showForgotError(message) {
+            const errorDiv = document.getElementById('forgot-error');
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+                document.getElementById('forgot-success').style.display = 'none';
+            }
+        }
+
+        function showForgotSuccess(message) {
+            const successDiv = document.getElementById('forgot-success');
+            if (successDiv) {
+                successDiv.textContent = message;
+                successDiv.style.display = 'block';
+                document.getElementById('forgot-error').style.display = 'none';
+            }
+        }
+
+        function sendForgotPasswordEmail() {
+            const email = document.getElementById('forgot-email').value.trim();
+            
+            if (!email) {
+                showForgotError('Введите email');
+                return;
+            }
+
+            if (!isValidEmail(email)) {
+                showForgotError('Введите корректный email');
+                return;
+            }
+
+            fetch('/forgot_password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email: email })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showForgotSuccess(data.message);
+                    // Закрываем модальное окно через 3 секунды
+                    setTimeout(() => {
+                        hideForgotPasswordModal();
+                    }, 3000);
+                } else {
+                    showForgotError(data.error || 'Ошибка отправки email');
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка восстановления пароля:', error);
+                showForgotError('Ошибка соединения с сервером');
+            });
         }
     </script>
 </body>

@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль - Style Box AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #bb279b;
+            --primary-light: #EDE9FE;
+            --text-primary: #1F2937;
+            --text-secondary: #6B7280;
+            --background: #FFFFFF;
+            --surface: #FFFFFF;
+            --border: #E5E7EB;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'CirceRounded', Arial, sans-serif !important;
+            background-color: var(--background);
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+            font-family: 'Nunito', Arial, sans-serif;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-family: 'CirceRounded', Arial, sans-serif !important;
+        }
+
+        .profile-content {
+            flex: 1;
+            background: var(--surface);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .profile-section {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .profile-section:last-child {
+            border-bottom: none;
+        }
+
+        .profile-section h2 {
+            font-size: 1.3rem;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+            font-family: 'Nunito', Arial, sans-serif;
+        }
+
+        .user-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .info-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .info-item h3 {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .info-item p {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .subscription-status {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 1rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .subscription-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .subscription-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .survey-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            font-family: 'Nunito', Arial, sans-serif;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #8B1B6A;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+            transform: translateY(-2px);
+        }
+
+        .survey-status {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-incomplete {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .data-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .data-item h4 {
+            font-size: 0.95rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            font-weight: 600;
+            font-family: 'Nunito', Arial, sans-serif;
+        }
+
+        .data-item p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .data-item img {
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .data-item ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .data-item li {
+            background: white;
+            padding: 0.5rem 0.75rem;
+            margin: 0.25rem 0;
+            border-radius: 0.25rem;
+            font-size: 0.85rem;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 1.5rem;
+            left: 1.5rem;
+            background: rgba(255,255,255,0.95);
+            color: var(--primary-color);
+            padding: 0.75rem 1.5rem;
+            border-radius: 1.5rem;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 2px solid var(--primary-color);
+            font-family: 'Nunito', Arial, sans-serif;
+        }
+
+        .back-btn:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            border: 1px solid #f5c6cb;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.4rem;
+            }
+
+            .user-info {
+                grid-template-columns: 1fr;
+            }
+
+            .data-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .survey-actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                text-align: center;
+            }
+
+            .back-btn {
+                position: relative;
+                top: auto;
+                left: auto;
+                margin-bottom: 1rem;
+                display: inline-block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-btn">← Назад</a>
+    
+    <div class="container">
+        <div class="header">
+            <h1>👤 Профиль пользователя</h1>
+            <p>Управление вашими данными и анкетой</p>
+        </div>
+
+        <div class="profile-content">
+            <!-- Информация о пользователе -->
+            <div class="profile-section">
+                <h2>📋 Информация о пользователе</h2>
+                <div class="user-info">
+                    <div class="info-item">
+                        <h3>Email</h3>
+                        <p>{{ user.email }}</p>
+                    </div>
+                    <div class="info-item">
+                        <h3>Имя пользователя</h3>
+                        <p>{{ user.username }}</p>
+                    </div>
+                    <div class="info-item">
+                        <h3>Дата регистрации</h3>
+                        <p>{{ user.created_at.strftime('%d.%m.%Y') if user.created_at else 'Не указана' }}</p>
+                    </div>
+                    <div class="info-item">
+                        <h3>Статус подписки</h3>
+                        {% if user.subscription_end and user.subscription_end > now %}
+                            <div class="subscription-status subscription-active">
+                                ✅ Активна до {{ user.subscription_end.strftime('%d.%m.%Y') }}
+                            </div>
+                        {% else %}
+                            <div class="subscription-status subscription-inactive">
+                                ❌ Неактивна
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Статус анкеты -->
+            <div class="profile-section">
+                <h2>📝 Статус анкеты</h2>
+                <div class="survey-status">
+                    {% if survey_data %}
+                        <div class="status-indicator status-completed">
+                            ✅ Анкета заполнена
+                        </div>
+                        <div class="survey-actions">
+                            <button onclick="editSurvey()" class="btn btn-primary">✏️ Редактировать анкету</button>
+                        </div>
+                    {% else %}
+                        <div class="status-indicator status-incomplete">
+                            ⚠️ Анкета не заполнена
+                        </div>
+                        <div class="survey-actions">
+                            <button onclick="startSurvey()" class="btn btn-success">🚀 Начать анкету</button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Данные анкеты -->
+            {% if survey_data %}
+            <div class="profile-section">
+                <h2>📊 Данные анкеты</h2>
+                <div id="surveyDataGrid" class="data-grid">
+                    <!-- Данные будут загружены через JavaScript -->
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        let surveyData = {{ survey_data | tojson | safe }};
+
+        // Автоматически загружаем данные анкеты при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            if (Object.keys(surveyData).length > 0) {
+                loadSurveyData();
+            }
+        });
+
+        function loadSurveyData() {
+            const grid = document.getElementById('surveyDataGrid');
+            
+            if (Object.keys(surveyData).length === 0) {
+                grid.innerHTML = '<div class="error">Данные анкеты не найдены</div>';
+            } else {
+                grid.innerHTML = '';
+                
+                // Отображаем данные анкеты
+                Object.entries(surveyData).forEach(([key, value]) => {
+                    if (key === 'photo_analysis') {
+                        // Особая обработка для анализа фото
+                        const photoDiv = document.createElement('div');
+                        photoDiv.className = 'data-item';
+                        photoDiv.innerHTML = `
+                            <h4>📸 Анализ фото</h4>
+                            <p><strong>Статус:</strong> ${value.photo_uploaded ? '✅ Загружено и проанализировано' : '❌ Не загружено'}</p>
+                        `;
+                        
+                        if (value.color_analysis) {
+                            photoDiv.innerHTML += `
+                                <p><strong>Цветотип:</strong> ${value.color_analysis.color_type || 'Не определен'}</p>
+                            `;
+                        }
+                        
+                        if (value.kibbe_analysis) {
+                            photoDiv.innerHTML += `
+                                <p><strong>Типаж:</strong> ${value.kibbe_analysis.kibbe_type || 'Не определен'}</p>
+                            `;
+                        }
+                        
+                        grid.appendChild(photoDiv);
+                    } else {
+                        const div = document.createElement('div');
+                        div.className = 'data-item';
+                        
+                        let displayValue = '';
+                        let displayHTML = '';
+                        
+                        if (Array.isArray(value)) {
+                            // Старый формат - массив значений
+                            displayValue = value.join(', ');
+                            displayHTML = `<p>${displayValue}</p>`;
+                        } else if (typeof value === 'object' && value !== null) {
+                            // Новый формат - объект с полной информацией
+                            if (value.type === 'single_choice_with_image' || value.type === 'single_choice') {
+                                displayHTML = `
+                                    <p><strong>Выбранный вариант:</strong> ${value.label}</p>
+                                    ${value.image ? `<img src="${value.image}" alt="${value.label}" style="max-width: 150px; max-height: 150px; border-radius: 8px; margin-top: 10px;">` : ''}
+                                `;
+                            } else if (value.type === 'multiple_choice' || value.type === 'image_choice') {
+                                const labels = value.values.map(v => v.label).join(', ');
+                                displayHTML = `
+                                    <p><strong>Выбранные варианты:</strong> ${labels}</p>
+                                    ${value.values.some(v => v.image) ? `
+                                        <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;">
+                                            ${value.values.map(v => v.image ? `<img src="${v.image}" alt="${v.label}" style="max-width: 100px; max-height: 100px; border-radius: 6px;">` : '').join('')}
+                                        </div>
+                                    ` : ''}
+                                `;
+                            } else if (value.value !== undefined) {
+                                // Числовые значения
+                                displayHTML = `<p><strong>Значение:</strong> ${value.value}</p>`;
+                            } else {
+                                // Другие объекты
+                                displayValue = JSON.stringify(value, null, 2);
+                                displayHTML = `<p>${displayValue}</p>`;
+                            }
+                        } else {
+                            // Простые значения
+                            displayValue = String(value);
+                            displayHTML = `<p>${displayValue}</p>`;
+                        }
+                        
+                        div.innerHTML = `
+                            <h4>${getFieldDisplayName(key)}</h4>
+                            ${displayHTML}
+                        `;
+                        
+                        grid.appendChild(div);
+                    }
+                });
+            }
+        }
+
+        function getFieldDisplayName(field) {
+            const fieldNames = {
+                'style_preferences': '🎨 Предпочтения стиля',
+                'color_preferences': '🌈 Цветовая гамма',
+                'height': '📏 Рост',
+                'top_size': '👕 Размер верха',
+                'bottom_size': '👖 Размер низа',
+                'foot_size': '👟 Размер ноги',
+                'body_type': '👗 Тип фигуры',
+                'top_clothing': '👚 Верхняя одежда',
+                'bottom_clothing': '👖 Нижняя одежда',
+                'additional_items': '👜 Дополнительные вещи',
+                'fit': '📐 Посадка',
+                'photo_analysis': '📸 Анализ фото'
+            };
+            
+            return fieldNames[field] || field;
+        }
+
+        function startSurvey() {
+            // Переходим на главную страницу и запускаем анкету
+            window.location.href = '/?start_survey=true';
+        }
+
+        function editSurvey() {
+            // Переходим на главную страницу и запускаем редактирование анкеты
+            window.location.href = '/?edit_survey=true';
+        }
+    </script>
+</body>
+</html> 

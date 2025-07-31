@@ -1,7 +1,36 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, Boolean, JSON
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, Boolean, JSON, Table
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database_config import Base
+
+# Таблицы связи товаров с атрибутами (многие ко многим)
+product_color_types = Table(
+    'product_color_types',
+    Base.metadata,
+    Column('product_id', Integer, ForeignKey('products.id'), primary_key=True),
+    Column('color_type', String, primary_key=True)  # весна, лето, осень, зима
+)
+
+product_kibbe_types = Table(
+    'product_kibbe_types',
+    Base.metadata,
+    Column('product_id', Integer, ForeignKey('products.id'), primary_key=True),
+    Column('kibbe_type', String, primary_key=True)  # романтик, гамин, классик, натурал, драматик
+)
+
+product_body_types = Table(
+    'product_body_types',
+    Base.metadata,
+    Column('product_id', Integer, ForeignKey('products.id'), primary_key=True),
+    Column('body_type', String, primary_key=True)  # груша, яблоко, песочные часы, прямоугольник
+)
+
+product_heights = Table(
+    'product_heights',
+    Base.metadata,
+    Column('product_id', Integer, ForeignKey('products.id'), primary_key=True),
+    Column('height', String, primary_key=True)  # до 160, 161-165, 166-170, 171-175, 176+
+)
 
 class User(Base):
     """Модель пользователя"""
@@ -41,6 +70,12 @@ class Product(Base):
     # Связи
     attributes = relationship("ProductAttribute", back_populates="product", uselist=False)
     recommendations = relationship("Recommendation", back_populates="product")
+    
+    # Связи многие ко многим - используем простые списки строк
+    color_types = []
+    kibbe_types = []
+    body_types = []
+    heights = []
 
 class ProductAttribute(Base):
     """Атрибуты товара для рекомендаций"""
@@ -50,12 +85,10 @@ class ProductAttribute(Base):
     product_id = Column(Integer, ForeignKey("products.id"), unique=True)
     
     # Цветовые характеристики
-    color_type = Column(String)  # весна, лето, осень, зима
     primary_color = Column(String)  # красный, синий, зеленый
     color_hex = Column(String)  # #FF0000
     
     # Стилевые характеристики
-    kibbe_type = Column(String)  # романтик, гамин, классик, натурал, драматик
     style = Column(String)  # классический, романтичный, спортивный, бохо
     silhouette = Column(String)  # приталенный, свободный, оверсайз
     

@@ -1,0 +1,356 @@
+{
+  "timestamp": "2025-07-28T10:25:55.972Z",
+  "survey_data": {
+    "style_preferences": [
+      "casual",
+      "smart_casual"
+    ],
+    "color_preferences": [
+      "soft",
+      "neutral"
+    ],
+    "top_clothing": [
+      "dresses",
+      "blouses",
+      "shirts"
+    ],
+    "bottom_clothing": [
+      "pants",
+      "jeans",
+      "skirts"
+    ],
+    "additional_items": [
+      "shoes",
+      "bags"
+    ],
+    "height": "165-169",
+    "bottom_size": [
+      "50"
+    ],
+    "body_type": "pear",
+    "foot_size": "39",
+    "budget": [
+      "до 5000",
+      "5000-10000"
+    ],
+    "prints": [
+      "без принтов"
+    ],
+    "clothing_type": "базовая",
+    "season": [
+      "осень"
+    ],
+    "fit": [
+      "слегка свободная",
+      "оверсайз"
+    ],
+    "photo_analysis": {
+      "color_analysis": {
+        "analysis_id": "21b0d3e2-f389-472d-b679-57f003db5d48",
+        "avoid_colors": [
+          "Холодные оттенки",
+          "Яркие цвета",
+          "Пастельные тона",
+          "Чёрный",
+          "Белый"
+        ],
+        "bright_colors_hex": [
+          "#f7a15a",
+          "#e77a4a",
+          "#c74a3a",
+          "#e77a7a",
+          "#e76a8a",
+          "#f7a1a2",
+          "#b7b74a",
+          "#4a8a6a",
+          "#2a8a7a",
+          "#2a8a8a",
+          "#2a6a8a",
+          "#4a6a8a",
+          "#6a7a8a",
+          "#3a7a4a"
+        ],
+        "characteristics": {
+          "brightness": "средний",
+          "contrast": "средний",
+          "saturation": "средний",
+          "temperature": "тёплый"
+        },
+        "color_combinations": [],
+        "color_combinations_svg": [
+          [
+            {
+              "color": "#1a8a8a",
+              "height": 110,
+              "type": "rect",
+              "width": 60,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "color": "#5a463d",
+              "height": 110,
+              "type": "rect",
+              "width": 60,
+              "x": 0,
+              "y": 110
+            }
+          ],
+          [
+            {
+              "color": "#f7c6b2",
+              "height": 110,
+              "type": "rect",
+              "width": 60,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "color": "#4a6a8a",
+              "cx": 30,
+              "cy": 35,
+              "fill": "none",
+              "rx": 18,
+              "ry": 28,
+              "stroke": "#4a6a8a",
+              "strokeWidth": 3,
+              "type": "ellipse"
+            },
+            {
+              "color": "#3a3a2a",
+              "height": 110,
+              "type": "rect",
+              "width": 60,
+              "x": 0,
+              "y": 110
+            },
+            {
+              "color": "#e77a4a",
+              "height": 28,
+              "type": "rect",
+              "width": 28,
+              "x": 32,
+              "y": 80
+            }
+          ],
+          [
+            {
+              "color": "#a3d1a3",
+              "height": 110,
+              "type": "rect",
+              "width": 60,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "color": "#1a4a6a",
+              "height": 110,
+              "type": "rect",
+              "width": 60,
+              "x": 0,
+              "y": 110
+            },
+            {
+              "color": "#3a7a4a",
+              "height": 18,
+              "type": "rect",
+              "width": 40,
+              "x": 10,
+              "y": 200
+            }
+          ],
+          [
+            {
+              "color": "#f7a15a",
+              "height": 110,
+              "type": "rect",
+              "width": 60,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "color": "#66514f",
+              "height": 110,
+              "type": "rect",
+              "width": 60,
+              "x": 0,
+              "y": 110
+            },
+            {
+              "color": "#2a8a7a",
+              "height": 8,
+              "type": "rect",
+              "width": 60,
+              "x": 0,
+              "y": 108
+            },
+            {
+              "color": "#a3d1c2",
+              "height": 18,
+              "type": "rect",
+              "width": 28,
+              "x": 16,
+              "y": 0
+            }
+          ],
+          [
+            {
+              "color": "#f7b8c8",
+              "height": 220,
+              "type": "rect",
+              "width": 60,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "color": "#a3d1d1",
+              "cx": 30,
+              "cy": 80,
+              "fill": "none",
+              "rx": 18,
+              "ry": 60,
+              "stroke": "#a3d1d1",
+              "strokeWidth": 3,
+              "type": "ellipse"
+            },
+            {
+              "color": "#b7b74a",
+              "height": 18,
+              "type": "rect",
+              "width": 40,
+              "x": 10,
+              "y": 200
+            }
+          ],
+          [
+            {
+              "color": "#b04d6d",
+              "height": 110,
+              "type": "rect",
+              "width": 18,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "color": "#f7e1c2",
+              "height": 110,
+              "type": "rect",
+              "width": 24,
+              "x": 18,
+              "y": 0
+            },
+            {
+              "color": "#b04d6d",
+              "height": 110,
+              "type": "rect",
+              "width": 18,
+              "x": 42,
+              "y": 0
+            },
+            {
+              "color": "#1a4a6a",
+              "height": 110,
+              "type": "rect",
+              "width": 60,
+              "x": 0,
+              "y": 110
+            },
+            {
+              "color": "#5a463d",
+              "height": 4,
+              "type": "rect",
+              "width": 30,
+              "x": 15,
+              "y": 108
+            }
+          ]
+        ],
+        "color_type": "Тёплая осень",
+        "colors": {
+          "eyes": {
+            "brightness": "средний",
+            "hex": "#5a3c2e",
+            "name": "карий",
+            "temperature": "нейтральный"
+          },
+          "hair": {
+            "brightness": "средний",
+            "hex": "#6b4e3d",
+            "name": "каштановый",
+            "temperature": "нейтральный"
+          },
+          "skin": {
+            "brightness": "средний",
+            "hex": "#d8b499",
+            "name": "бежевый",
+            "temperature": "нейтральный"
+          }
+        },
+        "dark_colors_hex": [
+          "#66514f",
+          "#4a4a44",
+          "#5a463d",
+          "#7a5a3a",
+          "#7a3d3a",
+          "#3a3a2a",
+          "#1a3a2a",
+          "#1a4a4a",
+          "#1a4a6a",
+          "#3a3a5a"
+        ],
+        "explanation": "Тёплый и насыщенный цветотип с золотисто-оливковым подтоном. Характерны теплый цвет кожи, глаза зеленого, серо-зеленого, янтарного или темно-коричневого цвета, волосы русые с теплым подтоном, рыжие или каштановые.",
+        "image": {
+          "format": "PRESET",
+          "height": 0,
+          "width": 0
+        },
+        "light_colors_hex": [
+          "#f7e1c2",
+          "#f7c6b2",
+          "#f7b8a3",
+          "#e7c6a3",
+          "#e7e1a3",
+          "#c7d1a3",
+          "#a3d1a3",
+          "#a3d1c2",
+          "#a3d1d1",
+          "#a3c7c7",
+          "#c2c7c7",
+          "#c2c7d7",
+          "#f7b8c8",
+          "#f7a3b2"
+        ],
+        "recommended_colors": [
+          "Терракотовый",
+          "Оливковый",
+          "Тёплый коричневый",
+          "Тёплый зелёный",
+          "Тёплый бежевый",
+          "Медный",
+          "Бордовый",
+          "Тёплый оранжевый"
+        ]
+      },
+      "kibbe_analysis": {
+        "body_features": "не определены",
+        "description": "У человека овальное лицо с большими глазами и средними губами.",
+        "face_features": "форма лица овальная, скулы средние, подбородок средний, губы средние, глаза большие",
+        "guide_sent": false,
+        "horizontal_lines": "нейтральные",
+        "kibbe_type": "Гамин",
+        "kibbe_type_external": "Гамин",
+        "message": "Для получения гайда необходимо оплатить",
+        "style_recommendations": "Фасоны одежды  \nВыбирай одежду с четкими линиями и структурированными силуэтами. Обращай внимание на укороченные жакеты, приталенные платья, зауженные брюки и юбки мини. Хорошо смотрятся многослойные образы, которые добавляют динамичности.\n\nТкани  \nОтдавай предпочтение легким и плотным тканям, которые хорошо держат форму. Подойдут деним, хлопок, твид и креп. Избегай слишком мягких и струящихся материалов.\n\nПринты  \nВыбирай яркие и контрастные узоры, такие как полоска, клетка, графика и геометрические фигуры. Хорошо смотрятся небольшие, но насыщенные принты, которые создают энергичный образ.\n\nАксессуары  \nСтремись к простым, но выразительным аксессуарам. Подойдут небольшие объемные сумки, яркие шарфы, шапки и шляпы. Украшения могут быть необычными и интересными, например, серьги геометрической формы или браслеты в стиле ретро. Избегай слишком крупных и массивных аксессуаров.",
+        "vertical_lines": "не выражены"
+      },
+      "photo_uploaded": true
+    }
+  },
+  "metadata": {
+    "total_questions": 16,
+    "completed_at": "28.07.2025, 13:25:55",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    "screen_resolution": "2560x1440",
+    "timezone": "Europe/Moscow"
+  }
+}

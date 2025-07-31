@@ -1,0 +1,64 @@
+{
+  "timestamp": "2025-07-28T08:55:22.654Z",
+  "survey_data": {
+    "style_preferences": [
+      "casual",
+      "smart_casual"
+    ],
+    "color_preferences": [
+      "soft",
+      "neutral"
+    ],
+    "top_clothing": [
+      "dresses",
+      "blouses",
+      "shirts"
+    ],
+    "bottom_clothing": [
+      "pants",
+      "jeans"
+    ],
+    "height": "165-169",
+    "top_size": [
+      "48",
+      "50"
+    ],
+    "bottom_size": [
+      "46",
+      "48"
+    ],
+    "body_type": "pear",
+    "foot_size": "39",
+    "budget": [
+      "до 5000",
+      "5000-10000"
+    ],
+    "prints": [
+      "без принтов"
+    ],
+    "clothing_type": "базовая",
+    "season": [
+      "осень"
+    ],
+    "fit": [
+      "слегка свободная",
+      "оверсайз"
+    ],
+    "photo_analysis": {
+      "color_analysis": {
+        "error": "Не удалось проанализировать изображение"
+      },
+      "kibbe_analysis": {
+        "error": "Ошибка анализа: Error code: 403 - {'error': {'code': 'unsupported_country_region_territory', 'message': 'Country, region, or territory not supported', 'param': None, 'type': 'request_forbidden'}}"
+      },
+      "photo_uploaded": true
+    }
+  },
+  "metadata": {
+    "total_questions": 16,
+    "completed_at": "28.07.2025, 11:55:22",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    "screen_resolution": "2560x1440",
+    "timezone": "Europe/Moscow"
+  }
+}
