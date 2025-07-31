@@ -291,14 +291,20 @@ class UserAuth:
             user = self.users_collection.find_one({"_id": user_id})
             
             if not user:
+                logger.warning(f"⚠️ Пользователь не найден: {user_id}")
                 return False
             
             email = user.get("email")
             if not email:
+                logger.warning(f"⚠️ У пользователя нет email: {user_id}")
                 return False
+            
+            logger.info(f"🔍 Проверяем подписку для пользователя: {email}")
             
             # Проверяем активную предварительную подписку
             pre_sub_result = self.get_pre_subscription(email)
+            
+            logger.info(f"🔍 Результат get_pre_subscription: {pre_sub_result}")
             
             if pre_sub_result['success']:
                 subscription = pre_sub_result['subscription']
@@ -306,7 +312,13 @@ class UserAuth:
                 
                 if subscription_end:
                     # Проверяем, что подписка еще действует
-                    return subscription_end > datetime.utcnow()
+                    is_active = subscription_end > datetime.utcnow()
+                    logger.info(f"🔍 Подписка активна: {is_active}, окончание: {subscription_end}")
+                    return is_active
+                else:
+                    logger.warning(f"⚠️ У подписки нет даты окончания: {email}")
+            else:
+                logger.warning(f"⚠️ Предварительная подписка не найдена: {email}")
             
             return False
             

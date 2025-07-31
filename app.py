@@ -2901,6 +2901,9 @@ def check_survey_status():
     # Проверяем статус подписки через предварительные подписки
     subscription_active = user_auth.check_subscription(str(user['_id']))
     
+    # Добавляем логирование для отладки
+    logger.info(f"🔍 check_survey_status - User: {user.get('email')}, Subscription: {subscription_active}")
+    
     return jsonify({
         'authenticated': True,
         'has_survey': has_survey,
