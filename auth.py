@@ -107,15 +107,20 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         session_id = session.get('session_id')
+        logger.info(f"🔍 Проверяем авторизацию. Session ID: {session_id}")
+        
         if not session_id:
+            logger.warning("⚠️ Session ID отсутствует в Flask session")
             return jsonify({'error': 'Требуется авторизация'}), 401
         
         # Проверяем сессию в MongoDB
         user = user_auth.get_user_by_session(session_id)
         if not user:
+            logger.warning(f"⚠️ Пользователь не найден по session_id: {session_id}")
             session.pop('session_id', None)
             return jsonify({'error': 'Сессия истекла. Требуется повторная авторизация'}), 401
         
+        logger.info(f"✅ Пользователь авторизован: {user.get('email')}")
         # Добавляем пользователя в request для использования в маршрутах
         request.current_user = user
         return f(*args, **kwargs)

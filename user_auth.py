@@ -188,7 +188,9 @@ class UserAuth:
                 "user_agent": None   # Можно добавить User-Agent
             }
             
-            self.sessions_collection.insert_one(session_data)
+            logger.info(f"🔑 Создаем сессию для пользователя {email}: {session_id}")
+            result = self.sessions_collection.insert_one(session_data)
+            logger.info(f"✅ Сессия сохранена в БД с ID: {result.inserted_id}")
             
             logger.info(f"✅ Пользователь авторизован: {email}")
             return {
@@ -209,19 +211,30 @@ class UserAuth:
     def get_user_by_session(self, session_id):
         """Получает пользователя по ID сессии"""
         try:
+            logger.info(f"🔍 Ищем сессию: {session_id}")
+            
             session_data = self.sessions_collection.find_one({
                 "session_id": session_id,
                 "expires_at": {"$gt": datetime.utcnow()}
             })
             
             if not session_data:
+                logger.warning(f"⚠️ Сессия не найдена или истекла: {session_id}")
                 return None
+            
+            logger.info(f"✅ Сессия найдена для пользователя: {session_data.get('email')}")
             
             user_id = session_data.get("user_id")
             if not user_id:
+                logger.error(f"❌ В сессии отсутствует user_id: {session_id}")
                 return None
             
             user = self.users_collection.find_one({"_id": user_id})
+            if not user:
+                logger.error(f"❌ Пользователь не найден по ID: {user_id}")
+                return None
+            
+            logger.info(f"✅ Пользователь получен: {user.get('email')}")
             return user
             
         except Exception as e:

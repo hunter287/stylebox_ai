@@ -59,6 +59,13 @@ app.config['MAX_CONTENT_LENGTH'] = 25 * 1024 * 1024  # 25MB max-limit
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.secret_key = os.environ.get('SECRET_KEY', 'dev_secret_key')
 
+# Настройки для session
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+app.config['SESSION_COOKIE_SECURE'] = False  # True для HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
 # Список доступных пресетов цветотипов
 PRESET_COLOR_TYPES = [
     'яркая зима', 'холодная зима', 'глубокая зима',
@@ -1090,6 +1097,10 @@ def login():
         if result['success']:
             # Сохраняем session_id в сессии Flask
             session['session_id'] = result['session_id']
+            session.permanent = True  # Делаем сессию постоянной
+            logger.info(f"🔑 Session ID сохранен в Flask session: {result['session_id']}")
+            logger.info(f"🔑 Session permanent: {session.permanent}")
+            logger.info(f"🔑 Session keys: {list(session.keys())}")
             record_login_attempt(success=True)
             
             logger.info(f"Успешная авторизация: {email}")
