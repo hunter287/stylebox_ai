@@ -197,11 +197,15 @@ def payment_success():
 @app.route('/analyze', methods=['POST', 'GET'])
 def analyze():
     print("=== DEBUG: Запрос получен ===")
-    logger.info("=== Начало обработки запроса /analyze ===")
+    logger.info("=== НАЧАЛО ЗАПРОСА /analyze ===")
     logger.info(f"Метод запроса: {request.method}")
     logger.info(f"Заголовки запроса: {dict(request.headers)}")
     logger.info(f"Форма запроса: {request.form}")
     logger.info(f"Файлы в запросе: {request.files}")
+    logger.info(f"Content-Length заголовок: {request.headers.get('Content-Length', 'НЕ УСТАНОВЛЕН')}")
+    logger.info(f"Content-Type заголовок: {request.headers.get('Content-Type', 'НЕ УСТАНОВЛЕН')}")
+    logger.info(f"FLASK_MAX_CONTENT_LENGTH из окружения: {os.environ.get('FLASK_MAX_CONTENT_LENGTH', 'НЕ УСТАНОВЛЕН')}")
+    logger.info(f"app.config['MAX_CONTENT_LENGTH']: {app.config.get('MAX_CONTENT_LENGTH', 'НЕ УСТАНОВЛЕН')}")
     
     if 'image' not in request.files:
         logger.warning("Файл изображения не найден в запросе")
@@ -227,8 +231,15 @@ def analyze():
     
     # Проверяем размер файла (максимум 20MB)
     max_file_size = 20 * 1024 * 1024  # 20MB
+    logger.info(f"Размер файла: {file_size} байт ({file_size/1024/1024:.2f} MB)")
+    logger.info(f"Максимальный размер файла: {max_file_size} байт ({max_file_size/1024/1024:.2f} MB)")
+    logger.info(f"Файл превышает лимит: {file_size > max_file_size}")
+    logger.info(f"FLASK_MAX_CONTENT_LENGTH из окружения: {os.environ.get('FLASK_MAX_CONTENT_LENGTH', 'НЕ УСТАНОВЛЕН')}")
+    logger.info(f"app.config['MAX_CONTENT_LENGTH']: {app.config.get('MAX_CONTENT_LENGTH', 'НЕ УСТАНОВЛЕН')}")
+    
     if file_size > max_file_size:
-        logger.warning(f"Файл слишком большой: {file_size} байт")
+        logger.warning(f"Файл слишком большой: {file_size} байт ({file_size/1024/1024:.2f} MB)")
+        logger.warning(f"Максимальный размер: {max_file_size} байт ({max_file_size/1024/1024:.2f} MB)")
         return jsonify({'error': 'Файл слишком большой. Максимальный размер: 20MB. Попробуйте уменьшить размер изображения.'}), 413
     
     if not allowed_file(file.filename):
