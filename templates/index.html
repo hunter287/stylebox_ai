@@ -2128,35 +2128,19 @@
                     const getRecommendationsBtn = document.getElementById('get-recommendations-btn');
                     const preorderBtn = document.getElementById('preorderBtn');
                     
-                    // Проверяем авторизацию и показываем/скрываем кнопки в зависимости от статуса подписки
-                    console.log('🔍 Проверяем авторизацию для кнопок...');
-                    // Проверяем авторизацию через API
-                    fetch('/check_auth', {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('📊 Результат проверки авторизации:', data);
-                        if (data.authenticated && data.subscription_active) {
-                            console.log('✅ Показываем кнопку подбора, скрываем кнопки анкеты и предзаказа');
-                            if (fillSurveyBtn) fillSurveyBtn.style.display = 'none'; // Скрываем кнопку анкеты на первом экране
-                            if (getRecommendationsBtn) getRecommendationsBtn.style.display = 'inline-block';
-                            if (preorderBtn) preorderBtn.style.display = 'none'; // Скрываем кнопку предзаказа при активной подписке
-                        } else {
-                            console.log('❌ Скрываем кнопки анкеты и подбора, показываем кнопку предзаказа');
-                            if (fillSurveyBtn) fillSurveyBtn.style.display = 'none';
-                            if (getRecommendationsBtn) getRecommendationsBtn.style.display = 'none';
-                            if (preorderBtn) preorderBtn.style.display = 'inline-block';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('❌ Ошибка проверки авторизации:', error);
-                        // В случае ошибки показываем кнопку предзаказа
+                    // Используем уже проверенный статус авторизации
+                    console.log('🔍 Используем глобальный статус авторизации...');
+                    if (isAuthenticated && window.subscriptionActive) {
+                        console.log('✅ Показываем кнопку подбора, скрываем кнопки анкеты и предзаказа');
+                        if (fillSurveyBtn) fillSurveyBtn.style.display = 'none';
+                        if (getRecommendationsBtn) getRecommendationsBtn.style.display = 'inline-block';
+                        if (preorderBtn) preorderBtn.style.display = 'none';
+                    } else {
+                        console.log('❌ Скрываем кнопки анкеты и подбора, показываем кнопку предзаказа');
+                        if (fillSurveyBtn) fillSurveyBtn.style.display = 'none';
+                        if (getRecommendationsBtn) getRecommendationsBtn.style.display = 'none';
                         if (preorderBtn) preorderBtn.style.display = 'inline-block';
-                    });
+                    }
                     
                     if (determineColorBtn) {
                         determineColorBtn.onclick = function() {
@@ -5039,6 +5023,7 @@
                 console.log('📊 Результат проверки авторизации при загрузке:', data);
                 isAuthenticated = data.authenticated;
                 userEmail = data.email;
+                window.subscriptionActive = data.subscription_active;
                 
                 updateAuthUI();
                 
