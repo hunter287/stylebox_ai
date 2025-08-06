@@ -2213,8 +2213,10 @@
                             // Проверяем подписку
                             fetch('/check_auth', {
                                 method: 'GET',
+                                credentials: 'include',
                                 headers: {
                                     'Content-Type': 'application/json',
+                                    'Cache-Control': 'no-cache'
                                 }
                             })
                             .then(response => response.json())
@@ -2242,27 +2244,8 @@
                                 return;
                             }
                             
-                            // Проверяем подписку
-                            fetch('/check_auth', {
-                                method: 'GET',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                }
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.authenticated && data.subscription_active) {
-                                    // Запускаем подбор рекомендаций
-                                    getRecommendationsWithAuth();
-                                } else {
-                                    // Показываем сообщение о необходимости подписки
-                                    addBotMessage("❌ Для подбора вещей требуется активная подписка. Пожалуйста, приобретите подписку для доступа к персональным рекомендациям.");
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Ошибка проверки подписки:', error);
-                                addBotMessage("❌ Ошибка проверки подписки. Пожалуйста, попробуйте позже.");
-                            });
+                            // Запускаем подбор рекомендаций напрямую
+                            getRecommendationsWithAuth();
                         };
                     }
                     
@@ -5118,9 +5101,9 @@
             console.log('🔍 Начинаем проверку статуса анкеты...');
             
             // Ищем все кнопки анкеты и подбора на странице (может быть несколько)
-            const fillSurveyBtns = document.querySelectorAll('#fillSurveyBtn');
-            const getRecommendationsBtns = document.querySelectorAll('#get-recommendations-btn');
-            const preorderBtns = document.querySelectorAll('#preorderBtn');
+            const fillSurveyBtns = document.querySelectorAll('[id*="fillSurveyBtn"]');
+            const getRecommendationsBtns = document.querySelectorAll('[id*="get-recommendations-btn"]');
+            const preorderBtns = document.querySelectorAll('[id*="preorderBtn"]');
             
             console.log('🔍 Кнопки анкеты найдены:', fillSurveyBtns.length);
             console.log('🔍 Кнопки подбора найдены:', getRecommendationsBtns.length);
@@ -5161,9 +5144,9 @@
             .catch(error => {
                 console.error('❌ Ошибка проверки статуса анкеты:', error);
                 // При ошибке скрываем кнопки анкеты и подбора, показываем предзаказ
-                const fillSurveyBtns = document.querySelectorAll('#fillSurveyBtn');
-                const getRecommendationsBtns = document.querySelectorAll('#get-recommendations-btn');
-                const preorderBtns = document.querySelectorAll('#preorderBtn');
+                const fillSurveyBtns = document.querySelectorAll('[id*="fillSurveyBtn"]');
+                const getRecommendationsBtns = document.querySelectorAll('[id*="get-recommendations-btn"]');
+                const preorderBtns = document.querySelectorAll('[id*="preorderBtn"]');
                 fillSurveyBtns.forEach(btn => btn.style.display = 'none');
                 getRecommendationsBtns.forEach(btn => btn.style.display = 'none');
                 preorderBtns.forEach(btn => btn.style.display = 'inline-block');
