@@ -160,18 +160,3 @@ class Analytics(Base):
     
     # Дополнительные данные события
     event_data = Column(JSON) 
-
-class PreSubscription(Base):
-    """Предварительные подписки для автоматического присвоения при регистрации"""
-    __tablename__ = "pre_subscriptions"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True, nullable=False)
-    subscription_end = Column(DateTime(timezone=True), nullable=False)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
-    # Дополнительные поля для отслеживания
-    source = Column(String, default="google_sheets")  # google_sheets, manual, etc.
-    notes = Column(Text)  # Дополнительные заметки 

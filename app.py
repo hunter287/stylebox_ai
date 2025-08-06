@@ -63,12 +63,20 @@ app.secret_key = os.environ.get('SECRET_KEY', 'dev_secret_key')
 # Настройки для session
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
-app.config['SESSION_COOKIE_SECURE'] = False  # True для HTTPS
+app.config['SESSION_COOKIE_SECURE'] = True  # True для HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # Инициализация Flask-Session
 Session(app)
+
+# Добавляем заголовки для предотвращения кэширования
+@app.after_request
+def add_header(response):
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 # Список доступных пресетов цветотипов
 PRESET_COLOR_TYPES = [

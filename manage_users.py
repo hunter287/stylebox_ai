@@ -53,13 +53,15 @@ def list_users():
     
     for user in users:
         user_id = str(user['_id'])
-        email = user.get('email', 'N/A')
-        username = user.get('username', 'N/A')
-        subscription = user.get('subscription_end', 'Нет')
-        created = user.get('created_at', 'N/A')
+        email = user.get('email') or 'N/A'
+        username = user.get('username') or 'N/A'
+        subscription = user.get('subscription_end') or 'Нет'
+        created = user.get('created_at') or 'N/A'
         
         if isinstance(created, datetime):
             created = created.strftime('%Y-%m-%d %H:%M')
+        elif created is None:
+            created = 'N/A'
         
         print(f"{user_id:<24} {email:<30} {username:<20} {subscription:<15} {created:<20}")
         user_count += 1

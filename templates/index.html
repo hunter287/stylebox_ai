@@ -2056,8 +2056,10 @@
             // Сначала проверяем статус подписки для выбора правильного приветствия
             fetch('/check_auth', {
                 method: 'GET',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache'
                 }
             })
             .then(response => response.json())
@@ -5043,8 +5045,10 @@
             console.log('🔍 Проверяем статус авторизации при загрузке страницы...');
             fetch('/check_auth', {
                 method: 'GET',
+                credentials: 'include',  // Важно для сохранения сессии
                 headers: {
                     'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache'
                 }
             })
             .then(response => response.json())
@@ -5124,8 +5128,10 @@
             
             fetch('/check_survey_status', {
                 method: 'GET',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache'
                 }
             })
             .then(response => response.json())
