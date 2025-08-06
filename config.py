@@ -34,7 +34,11 @@ UNISENDER_GO_API_KEY = os.getenv('UNISENDER_GO_API_KEY')
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///stylist_ai.db')
 
 # Application settings
-MAX_REQUESTS_PER_DAY = 10 
+MAX_REQUESTS_PER_DAY = 10
+
+# Subscription pricing
+SUBSCRIPTION_PRICE = float(os.getenv('SUBSCRIPTION_PRICE', '4990.00'))
+SUBSCRIPTION_PRICE_SPECIAL = float(os.getenv('SUBSCRIPTION_PRICE_SPECIAL', '4490.00')) 
 
 # Google Sheets configuration
 GOOGLE_SHEET_ID = os.getenv('GOOGLE_SHEET_ID')

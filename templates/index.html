@@ -2262,13 +2262,13 @@
             modal.innerHTML = `
                 <div class="modal-content">
                     <span class="close" id="closeSubscriptionModal">&times;</span>
-                    <h2>Оформить предзаказ</h2>
-                    <div style="margin-bottom:1rem; color:#6B7280; font-size:1rem;">Введите ваш email для оформления предзаказа</div>
+                    <h2>Купить подписку</h2>
+                    <div style="margin-bottom:1rem; color:#6B7280; font-size:1rem;">Введите ваш email для покупки подписки</div>
                     <input type="email" id="subscriptionEmail" placeholder="Ваш email" class="modal-input" autocomplete="email" autofocus>
                     <div id="subscriptionEmailError" style="color:#DC2626; font-size:0.95rem; margin:6px 0 0 0; display:none;"></div>
-                    <button class="upload-button subscription-pay-btn" id="subscriptionPayBtn" style="margin-top:1.2rem; width:100%;">Оформить предзаказ</button>
+                    <button class="upload-button subscription-pay-btn" id="subscriptionPayBtn" style="margin-top:1.2rem; width:100%;">Купить подписку</button>
                     <div id="subscriptionPaySuccess" style="display:none; margin-top:1.2rem; color:#059669; font-weight:500;">
-                        Спасибо за предзаказ!<br>Мы свяжемся с вами 11 июля для активации подписки.<br>Проверьте папку "Входящие" или "Спам".
+                        Спасибо за покупку!<br>Ваша подписка активирована и действует 1 год.<br>Теперь вы можете использовать все функции ИИ-стилиста.
                     </div>
                                 </div>
                             `;
@@ -2301,8 +2301,8 @@
                     
                     widget.pay('charge', {
                         publicId: publicId,
-                        description: 'Предзаказ на ИИ-стилиста (годовая подписка)',
-                        amount: 4990.00,
+                        description: 'ИИ-стилист (годовая подписка)',
+                        amount: parseFloat('{{ config.SUBSCRIPTION_PRICE }}'),
                         currency: 'RUB',
                         skin: 'classic',
                         email: email,

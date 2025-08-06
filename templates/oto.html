@@ -230,7 +230,7 @@
             widget.pay('charge', {
                 publicId: publicId,
                 description: 'Предзаказ на ИИ-стилиста (годовая подписка, спеццена для владельцев гайда)',
-                amount: 4490.00,
+                amount: parseFloat('{{ config.SUBSCRIPTION_PRICE_SPECIAL }}'),
                 currency: 'RUB',
                 skin: 'classic',
                 email: email,

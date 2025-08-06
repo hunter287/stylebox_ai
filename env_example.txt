@@ -1,0 +1,44 @@
+# Пример файла .env с настройками стоимости подписки
+
+# Telegram Bot Token
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+
+# Google Cloud Vision API
+GOOGLE_CLOUD_CREDENTIALS=path_to_your_google_cloud_credentials.json
+
+# OpenAI API Key
+OPENAI_API_KEY=your_openai_api_key_here
+
+# CloudPayments Configuration
+CLOUDPAYMENTS_PUBLIC_ID=your_cloudpayments_public_id_here
+
+# Email Configuration
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your_email@gmail.com
+SMTP_PASSWORD=your_email_password_here
+
+# Unisender Configuration
+UNISENDER_API_KEY=your_unisender_api_key_here
+UNISENDER_LIST_ID=your_unisender_list_id_here
+
+# Unisender Go API Key
+UNISENDER_GO_API_KEY=your_unisender_go_api_key_here
+
+# Database Configuration
+DATABASE_URL=sqlite:///stylist_ai.db
+
+# Google Sheets Configuration
+GOOGLE_SHEET_ID=your_google_sheet_id_here
+GOOGLE_SHEET_RANGE=A:A
+GOOGLE_SHEET_WORKSHEET=Лист1
+GOOGLE_SHEET_KIBBE_WORKSHEET=kibbe
+GOOGLE_SHEET_SUBSCRIPTION_WORKSHEET=subscription
+GOOGLE_SERVICE_ACCOUNT_FILE=google_service_account.json
+
+# Subscription Pricing
+SUBSCRIPTION_PRICE=4990.00
+SUBSCRIPTION_PRICE_SPECIAL=4490.00
+
+# Application Secret Key
+SECRET_KEY=your_secret_key_here 

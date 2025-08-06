@@ -6,7 +6,7 @@ from color_analysis import ColorAnalyzer
 from pdf_report import generate_pdf_report, generate_kibbe_pdf
 import cv2
 import json
-from config import CLOUDPAYMENTS_PUBLIC_ID, UNISENDER_API_KEY, UNISENDER_LIST_ID, UNISENDER_GO_API_KEY, OPENAI_API_KEY, GOOGLE_SHEET_ID, GOOGLE_SHEET_RANGE, GOOGLE_SHEET_WORKSHEET, GOOGLE_SHEET_KIBBE_WORKSHEET, GOOGLE_SHEET_SUBSCRIPTION_WORKSHEET, GOOGLE_SERVICE_ACCOUNT_FILE
+from config import CLOUDPAYMENTS_PUBLIC_ID, UNISENDER_API_KEY, UNISENDER_LIST_ID, UNISENDER_GO_API_KEY, OPENAI_API_KEY, GOOGLE_SHEET_ID, GOOGLE_SHEET_RANGE, GOOGLE_SHEET_WORKSHEET, GOOGLE_SHEET_KIBBE_WORKSHEET, GOOGLE_SHEET_SUBSCRIPTION_WORKSHEET, GOOGLE_SERVICE_ACCOUNT_FILE, SUBSCRIPTION_PRICE, SUBSCRIPTION_PRICE_SPECIAL
 import requests
 import random
 import string
@@ -196,11 +196,16 @@ def cleanup_temp_files(filepath):
 
 @app.route('/')
 def index():
-    return render_template('index.html', config={'CLOUDPAYMENTS_PUBLIC_ID': CLOUDPAYMENTS_PUBLIC_ID})
+    return render_template('index.html', config={
+        'CLOUDPAYMENTS_PUBLIC_ID': CLOUDPAYMENTS_PUBLIC_ID,
+        'SUBSCRIPTION_PRICE': SUBSCRIPTION_PRICE
+    })
 
 @app.route('/payment-success')
 def payment_success():
-    return render_template('payment_success.html')
+    # Получаем тип покупки из параметров URL
+    purchase_type = request.args.get('type', '')
+    return render_template('payment_success.html', purchase_type=purchase_type)
 
 @app.route('/analyze', methods=['POST', 'GET'])
 def analyze():
@@ -818,15 +823,22 @@ def paid_callback():
     # Проверяем, что custom_fields - это словарь
     if isinstance(custom_fields, dict):
         guide_type = custom_fields.get('guideType', '')
+        payment_type = custom_fields.get('type', '')
     else:
         guide_type = ''
+        payment_type = ''
     
     print("[paid_callback] Email:", email)
     print("[paid_callback] Analysis ID:", analysis_id)
     print("[paid_callback] Description:", description)
     print("[paid_callback] Custom fields:", custom_fields)
     print("[paid_callback] Guide type:", guide_type)
+    print("[paid_callback] Payment type:", payment_type)
     
+    # Определяем тип покупки
+    is_subscription = ('подписк' in description or 'предзаказ' in description or 
+                      payment_type == 'subscription' or 
+                      data_json.get('type') == 'subscription')
     is_kibbe_guide = ('стиль' in description or 'типаж' in description or 'kibbe' in description or 
                      guide_type == 'kibbe')
     
@@ -853,7 +865,40 @@ def paid_callback():
             print("Missing required data: email")
             return jsonify({'code': 10, 'message': 'No email'}), 400
 
-        if is_kibbe_guide:
+        # Обработка покупки подписки
+        if is_subscription:
+            try:
+                print("[paid_callback] Processing subscription purchase")
+                
+                # Подключаемся к MongoDB
+                if not user_auth.connect():
+                    print("[paid_callback] Failed to connect to MongoDB")
+                    return jsonify({'code': 15, 'message': 'Database connection failed'}), 500
+                
+                # Устанавливаем дату окончания подписки (год от текущей даты)
+                from datetime import datetime, timedelta
+                subscription_end = datetime.utcnow() + timedelta(days=365)
+                
+                # Добавляем предварительную подписку
+                result = user_auth.add_pre_subscription(
+                    email=email,
+                    subscription_end=subscription_end,
+                    source="payment",
+                    notes=f"Оплата через CloudPayments. Описание: {description}"
+                )
+                
+                if result['success']:
+                    print(f"[paid_callback] Subscription added successfully for {email}")
+                    return jsonify({'code': 0, 'message': 'Subscription added successfully'}), 200
+                else:
+                    print(f"[paid_callback] Failed to add subscription: {result['error']}")
+                    return jsonify({'code': 16, 'message': f'Failed to add subscription: {result["error"]}'}), 500
+                    
+            except Exception as e:
+                print(f"[paid_callback] Error processing subscription purchase: {str(e)}")
+                return jsonify({'code': 17, 'message': f'Subscription processing error: {str(e)}'}), 500
+
+        elif is_kibbe_guide:
             # Обработка покупки гайда по Кибби
             try:
                 # Генерируем PDF для Кибби и отправляем email
@@ -1027,7 +1072,10 @@ def check_email_in_kibbe_sheet(email):
 
 @app.route('/oto')
 def oto_offer():
-    return render_template('oto.html', config={'CLOUDPAYMENTS_PUBLIC_ID': CLOUDPAYMENTS_PUBLIC_ID})
+    return render_template('oto.html', config={
+        'CLOUDPAYMENTS_PUBLIC_ID': CLOUDPAYMENTS_PUBLIC_ID,
+        'SUBSCRIPTION_PRICE_SPECIAL': SUBSCRIPTION_PRICE_SPECIAL
+    })
 
 @app.route('/kibbe')
 def kibbe_page():
