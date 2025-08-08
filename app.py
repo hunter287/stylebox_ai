@@ -765,8 +765,7 @@ def get_guide_pdf():
 
 @app.route('/paid_callback', methods=['POST'])
 def paid_callback():
-    try:
-        # Получаем данные из form-data или JSON
+    # Получаем данные из form-data или JSON
     print("[DEBUG] ===== WEBHOOK RECEIVED =====")
     print("[DEBUG] Request method:", request.method)
     print("[DEBUG] Request URL:", request.url)
@@ -995,11 +994,6 @@ def paid_callback():
     else:
         print(f"Payment not completed, status: {status}")
         return jsonify({'code': 13, 'message': 'Payment not completed'}), 200
-    except Exception as e:
-        print("[DEBUG] ❌ CRITICAL ERROR in paid_callback:", str(e))
-        import traceback
-        print("[DEBUG] Traceback:", traceback.format_exc())
-        return jsonify({"code": 99, "message": f"Internal error: {str(e)}"})
 
 def normalize_email(email):
     return ''.join(c for c in email if c.isalnum())
