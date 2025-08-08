@@ -771,8 +771,15 @@ def paid_callback():
     print("[DEBUG] Request URL:", request.url)
     print("[DEBUG] Request headers:", dict(request.headers))
     print("[DEBUG] Request form data:", dict(request.form))
-    print("[DEBUG] Request JSON:", request.get_json())
     print("[DEBUG] Content-Type:", request.headers.get('Content-Type'))
+    
+    # Безопасно получаем JSON данные
+    try:
+        json_data = request.get_json()
+        print("[DEBUG] Request JSON:", json_data)
+    except Exception as e:
+        print("[DEBUG] Error getting JSON data:", str(e))
+        print("[DEBUG] Request JSON: None (form-data only)")
     print("[DEBUG] ==============================")
     
     data = request.form if request.form else request.get_json()
