@@ -2314,7 +2314,8 @@
                     }, {
                         onSuccess: function(options) {
                             console.log('Payment successful, redirecting to success page');
-                            window.location.href = '/payment-success?type=subscription';
+                            const email = document.getElementById('subscriptionEmail').value;
+                            window.location.href = `/payment-success?type=subscription&email=${encodeURIComponent(email)}`;
                         },
                         onFail: function(reason) {
                             console.log('Payment failed:', reason);

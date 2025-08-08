@@ -209,9 +209,10 @@ def index():
 
 @app.route('/payment-success')
 def payment_success():
-    # Получаем тип покупки из параметров URL
+    # Получаем тип покупки и email из параметров URL
     purchase_type = request.args.get('type', '')
-    return render_template('payment_success.html', purchase_type=purchase_type)
+    user_email = request.args.get('email', '')
+    return render_template('payment_success.html', purchase_type=purchase_type, user_email=user_email)
 
 @app.route('/analyze', methods=['POST', 'GET'])
 def analyze():

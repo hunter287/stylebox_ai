@@ -93,6 +93,78 @@
             margin-bottom: 0;
         }
 
+        /* Стили для формы регистрации */
+        .registration-form {
+            display: none;
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: var(--primary-light);
+            border-radius: 1rem;
+            text-align: left;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+        }
+
+        .register-button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+            width: 100%;
+        }
+
+        .register-button:hover {
+            opacity: 0.9;
+        }
+
+        .register-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            color: #dc2626;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+
+        .success-message {
+            color: #059669;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+
         @media (max-width: 600px) {
             .container {
                 margin: 1rem;
@@ -109,7 +181,30 @@
             <p style="font-size: 1.2rem; color: var(--primary-color); margin-bottom: 1rem;">Спасибо за покупку подписки! 🎉</p>
             <p>Ваша подписка на ИИ-стилиста активирована и действует 1 год.</p>
             <p>Теперь вы можете использовать все функции персонального подбора вещей.</p>
+            <p style="font-weight: 500; color: var(--primary-color);">Осталось только завершить регистрацию:</p>
         </div>
+        
+        <!-- Форма регистрации для подписок -->
+        <div id="registrationForm" class="registration-form">
+            <div class="form-group">
+                <label for="userEmail">Email:</label>
+                <input type="email" id="userEmail" value="{{ user_email }}" readonly>
+            </div>
+            <div class="form-group">
+                <label for="userPassword">Придумайте пароль:</label>
+                <input type="password" id="userPassword" placeholder="Минимум 6 символов" minlength="6">
+                <div id="passwordError" class="error-message"></div>
+            </div>
+            <div class="form-group">
+                <label for="userPasswordConfirm">Подтвердите пароль:</label>
+                <input type="password" id="userPasswordConfirm" placeholder="Повторите пароль" minlength="6">
+                <div id="confirmError" class="error-message"></div>
+            </div>
+            <button id="registerBtn" class="register-button" onclick="registerUser()">Создать аккаунт</button>
+            <div id="registerSuccess" class="success-message"></div>
+            <div id="registerError" class="error-message"></div>
+        </div>
+        
         <p id="guideMessage">Ваш персональный гайд по цветотипу уже в пути и скоро появится в вашем email.</p>
         <p>Проверьте папку "Входящие" или "Спам".</p>
         <a href="/" class="back-button">Вернуться на главную</a>
@@ -122,6 +217,7 @@
         // Проверяем различные варианты написания
         if (purchaseType === 'subscription' || purchaseType === 'subsciption' || purchaseType === 'sub') {
             document.getElementById('subscriptionMessage').style.display = 'block';
+            document.getElementById('registrationForm').style.display = 'block';
             document.getElementById('guideMessage').style.display = 'none';
         } else if (purchaseType === 'kibbe') {
             // Изменяем сообщение для Кибби гайда
@@ -129,6 +225,91 @@
             if (guideMessage) {
                 guideMessage.textContent = 'Ваш персональный гайд по типажу уже в пути и скоро появится в вашем email.';
             }
+        }
+
+        // Функция регистрации пользователя
+        function registerUser() {
+            const email = document.getElementById('userEmail').value;
+            const password = document.getElementById('userPassword').value;
+            const passwordConfirm = document.getElementById('userPasswordConfirm').value;
+            
+            // Очищаем предыдущие ошибки
+            document.getElementById('passwordError').style.display = 'none';
+            document.getElementById('confirmError').style.display = 'none';
+            document.getElementById('registerError').style.display = 'none';
+            document.getElementById('registerSuccess').style.display = 'none';
+            
+            // Валидация
+            if (!password || password.length < 6) {
+                document.getElementById('passwordError').textContent = 'Пароль должен содержать минимум 6 символов';
+                document.getElementById('passwordError').style.display = 'block';
+                return;
+            }
+            
+            if (password !== passwordConfirm) {
+                document.getElementById('confirmError').textContent = 'Пароли не совпадают';
+                document.getElementById('confirmError').style.display = 'block';
+                return;
+            }
+            
+            // Отключаем кнопку
+            const registerBtn = document.getElementById('registerBtn');
+            registerBtn.disabled = true;
+            registerBtn.textContent = 'Создаем аккаунт...';
+            
+            // Регистрируем пользователя
+            fetch('/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    email: email, 
+                    password: password,
+                    username: email.split('@')[0] // Генерируем username из email
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Автоматически авторизуем пользователя после регистрации
+                    return fetch('/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 
+                            email: email, 
+                            password: password 
+                        })
+                    });
+                } else {
+                    throw new Error(data.error || 'Ошибка регистрации');
+                }
+            })
+            .then(response => response.json())
+            .then(loginData => {
+                if (loginData.success) {
+                    document.getElementById('registerSuccess').textContent = 'Аккаунт создан! Перенаправляем на главную...';
+                    document.getElementById('registerSuccess').style.display = 'block';
+                    
+                    // Перенаправляем на главную через 2 секунды
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                } else {
+                    throw new Error(loginData.error || 'Ошибка авторизации');
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                document.getElementById('registerError').textContent = error.message || 'Произошла ошибка. Попробуйте еще раз.';
+                document.getElementById('registerError').style.display = 'block';
+                
+                // Включаем кнопку обратно
+                registerBtn.disabled = false;
+                registerBtn.textContent = 'Создать аккаунт';
+            });
         }
     </script>
 </body>
