@@ -781,12 +781,15 @@ def paid_callback():
     print("[DEBUG] Raw data:", dict(data))
     print("[DEBUG] =========================")
     
+    print("[DEBUG] Step 1: Starting data processing...")
     try:
+        print("[DEBUG] Step 2: Extracting status and email...")
         status = str(data.get('Status', '')).lower()
         email = data.get('Email')
         print("[DEBUG] Status:", status)
         print("[DEBUG] Email:", email)
         
+        print("[DEBUG] Step 3: Parsing Data field...")
         # Получаем Data и парсим его как JSON
         data_json = {}
         if data.get('Data'):
@@ -799,6 +802,7 @@ def paid_callback():
         else:
             print("[DEBUG] No Data field found")
         
+        print("[DEBUG] Step 4: Analyzing purchase type...")
         print("[DEBUG] ===== PURCHASE TYPE ANALYSIS =====")
         description = data.get('Description', '').lower()
         print("[DEBUG] Description:", description)
@@ -816,21 +820,28 @@ def paid_callback():
         print("[DEBUG] Is subscription:", is_subscription)
         print("[DEBUG] =================================")
         
+        print("[DEBUG] Step 5: Checking payment status...")
         if status == 'completed' and email:
             print("[DEBUG] ===== PROCESSING SUBSCRIPTION =====")
             print("[DEBUG] Email:", email)
             
             if is_subscription:
+                print("[DEBUG] Step 6: Processing subscription...")
                 try:
+                    print("[DEBUG] Step 6.1: Setting up subscription end date...")
                     # Добавляем подписку на 1 год
                     from datetime import datetime, timedelta
                     subscription_end = datetime.utcnow() + timedelta(days=365)
+                    print("[DEBUG] Subscription end date:", subscription_end)
                     
+                    print("[DEBUG] Step 6.2: Connecting to MongoDB...")
                     # Подключаемся к MongoDB
                     if not user_auth.connect():
                         print("[DEBUG] Failed to connect to MongoDB")
                         return jsonify({'code': 15, 'message': 'Database connection failed'}), 500
+                    print("[DEBUG] MongoDB connected successfully")
                     
+                    print("[DEBUG] Step 6.3: Adding subscription to database...")
                     result = user_auth.add_pre_subscription(
                         email=email,
                         subscription_end=subscription_end,
