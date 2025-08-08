@@ -781,219 +781,79 @@ def paid_callback():
     print("[DEBUG] Raw data:", dict(data))
     print("[DEBUG] =========================")
     
-    status = str(data.get('Status', '')).lower()
-    email = data.get('Email')
-    print("[DEBUG] Status:", status)
-    print("[DEBUG] Email:", email)
-    
-    # Получаем Data и парсим его как JSON
-    data_json = {}
-    if data.get('Data'):
-        try:
-            data_json = json.loads(data.get('Data'))
-            print("[DEBUG] Parsed Data JSON:", data_json)
-        except Exception as e:
-            print("[DEBUG] Error parsing Data JSON:", e)
-            data_json = {}
-    else:
-        print("[DEBUG] No Data field found")
-    
-    analysis_id = (
-        data_json.get('analysis_id') or
-        data.get('analysis_id') or
-        data.get('AnalysisId') or
-        data.get('analysisId')
-    )
-    print("[paid_callback] after analysis_id extraction, value:", analysis_id)
-    custom_fields = data.get('CustomFields')
-    print("[paid_callback] after custom_fields extraction")
-    custom_fields_dict = {}  # всегда определяем заранее
-    if not analysis_id and custom_fields:
-        print("[paid_callback] inside custom_fields block")
-        # Если custom_fields — строка, распарсить как JSON
-        if isinstance(custom_fields, str) and custom_fields:
+    try:
+        status = str(data.get('Status', '')).lower()
+        email = data.get('Email')
+        print("[DEBUG] Status:", status)
+        print("[DEBUG] Email:", email)
+        
+        # Получаем Data и парсим его как JSON
+        data_json = {}
+        if data.get('Data'):
             try:
-                import json as _json
-                custom_fields_dict = _json.loads(custom_fields)
-            except Exception:
-                custom_fields_dict = {}
-        elif isinstance(custom_fields, dict):
-            custom_fields_dict = custom_fields
+                data_json = json.loads(data.get('Data'))
+                print("[DEBUG] Parsed Data JSON:", data_json)
+            except Exception as e:
+                print("[DEBUG] Error parsing Data JSON:", e)
+                data_json = {}
         else:
-            custom_fields_dict = {}
-        analysis_id = (
-            custom_fields_dict.get('analysis_id') or
-            custom_fields_dict.get('AnalysisId') or
-            custom_fields_dict.get('analysisId')
+            print("[DEBUG] No Data field found")
+        
+        print("[DEBUG] ===== PURCHASE TYPE ANALYSIS =====")
+        description = data.get('Description', '').lower()
+        print("[DEBUG] Description:", description)
+        
+        # Определяем тип покупки
+        payment_type = data_json.get('type', '')
+        print("[DEBUG] Payment type:", payment_type)
+        
+        # Проверяем, является ли это подпиской
+        is_subscription = (
+            'подписка' in description or 
+            'предзаказ' in description or
+            payment_type == 'subscription'
         )
-        print("[paid_callback] after custom_fields_dict extraction, value:", analysis_id)
-    # Определяем тип покупки по описанию и дополнительным данным
-    description = data.get('Description', '').lower()
-    
-    # Используем уже распарсенный data_json вместо data.get('Data')
-    guide_type = data_json.get('guideType', '')
-    payment_type = data_json.get('type', '')
-    
-    print("[paid_callback] Email:", email)
-    print("[paid_callback] Analysis ID:", analysis_id)
-    print("[paid_callback] Description:", description)
-    print("[paid_callback] Custom fields:", custom_fields)
-    print("[paid_callback] Guide type:", guide_type)
-    print("[paid_callback] Payment type:", payment_type)
-    
-    # Определяем тип покупки
-    is_subscription = ('подписк' in description or 'предзаказ' in description or 
-                      payment_type == 'subscription')
-    is_kibbe_guide = ('стиль' in description or 'типаж' in description or 'kibbe' in description or 
-                     guide_type == 'kibbe')
-    
-    print("[DEBUG] ===== PURCHASE TYPE ANALYSIS =====")
-    print("[DEBUG] Description:", description)
-    print("[DEBUG] Payment type:", payment_type)
-    print("[DEBUG] Data JSON:", data_json)
-    print("[DEBUG] Guide type:", guide_type)
-    print("[DEBUG] Is subscription:", is_subscription)
-    print("[DEBUG] Is kibbe guide:", is_kibbe_guide)
-    print("[DEBUG] =================================")
-    
-    if is_kibbe_guide:
-        # Для гайдов по Кибби используем данные из сессии
-        analysis_path = None
-        image_path = None
-        pdf_path = None
-        print("[paid_callback] Kibbe guide purchase detected")
-    else:
-        # Для цветотипов используем старую логику
-        analysis_path = f'static/reports/last_analysis_{analysis_id}.json'
-        image_path = f'static/reports/last_image_{analysis_id}.jpg'
-        pdf_path = f'static/reports/report_{normalize_email(email)}_{analysis_id}.pdf'
-        print("[paid_callback] Color guide purchase detected")
-    
-    print("[paid_callback] Analysis path:", analysis_path, "Exists:", os.path.exists(analysis_path) if analysis_path else "N/A")
-    print("[paid_callback] Image path:", image_path, "Exists:", os.path.exists(image_path) if image_path else "N/A")
-    print("[paid_callback] PDF path:", pdf_path)
-    
-    if status == 'completed':
-        # Получаем email и analysis_id из данных
-        if not email:
-            print("Missing required data: email")
-            return jsonify({'code': 10, 'message': 'No email'}), 400
-
-        # Обработка покупки подписки
-        if is_subscription:
-            try:
-                print("[DEBUG] ===== PROCESSING SUBSCRIPTION =====")
-                print("[DEBUG] Email:", email)
-                print("[DEBUG] Description:", description)
-                print("[DEBUG] =================================")
-                
-                # Подключаемся к MongoDB
-                if not user_auth.connect():
-                    print("[paid_callback] Failed to connect to MongoDB")
-                    return jsonify({'code': 15, 'message': 'Database connection failed'}), 500
-                
-                # Устанавливаем дату окончания подписки (год от текущей даты)
-                from datetime import datetime, timedelta
-                subscription_end = datetime.utcnow() + timedelta(days=365)
-                
-                # Добавляем предварительную подписку
-                result = user_auth.add_pre_subscription(
-                    email=email,
-                    subscription_end=subscription_end,
-                    source="payment",
-                    notes=f"Оплата через CloudPayments. Описание: {description}"
-                )
-                
-                if result['success']:
-                    print(f"[DEBUG] ✅ Subscription added successfully for {email}")
-                    return jsonify({'code': 0, 'message': 'Subscription added successfully'}), 200
-                else:
-                    print(f"[DEBUG] ❌ Failed to add subscription: {result['error']}")
-                    return jsonify({'code': 16, 'message': f'Failed to add subscription: {result["error"]}'}), 500
-                    
-            except Exception as e:
-                print(f"[paid_callback] Error processing subscription purchase: {str(e)}")
-                return jsonify({'code': 17, 'message': f'Subscription processing error: {str(e)}'}), 500
-
-        elif is_kibbe_guide:
-            # Обработка покупки гайда по Кибби
-            try:
-                # Генерируем PDF для Кибби и отправляем email
-                if 'last_kibbe_analysis' in session and 'last_kibbe_image_path' in session:
-                    analysis = session['last_kibbe_analysis']
-                    image_path = session['last_kibbe_image_path']
-                    kibbe_type = analysis.get('kibbe_type', 'romantic')
-                    
-                    # Проверяем, что файл с фото существует
-                    if not os.path.exists(image_path):
-                        print(f"[paid_callback] Image file not found: {image_path}")
-                        return jsonify({'code': 11, 'message': 'Image file not found'}), 404
-                    
-                    # Генерируем PDF для Кибби
-                    full_pdf_path = generate_kibbe_pdf(
-                        user_photo_path=image_path,
-                        kibbe_type=kibbe_type,
-                        email=email
-                    )
-                    print(f"[paid_callback] Kibbe PDF generated: {full_pdf_path}")
-                    
-                    if os.path.exists(full_pdf_path) and os.path.getsize(full_pdf_path) > 10*1024:
-                        # Отправляем email с гайдом по Кибби
-                        if send_kibbe_guide_email(email, full_pdf_path):
-                            print("[paid_callback] Kibbe guide email sent successfully!")
-                            return jsonify({'code': 0, 'message': 'Kibbe guide sent successfully'}), 200
-                        else:
-                            print("[paid_callback] Error sending Kibbe guide email!")
-                            return jsonify({'code': 12, 'message': 'Failed to send Kibbe guide email'}), 500
-                    else:
-                        print("[paid_callback] Kibbe PDF not created or too small")
-                        return jsonify({'code': 11, 'message': 'Kibbe PDF not created'}), 500
-                else:
-                    print("[paid_callback] No Kibbe analysis found in session")
-                    return jsonify({'code': 11, 'message': 'No Kibbe analysis found'}), 404
-            except Exception as e:
-                print(f"[paid_callback] Error processing Kibbe guide purchase: {str(e)}")
-                return jsonify({'code': 14, 'message': f'Kibbe processing error: {str(e)}'}), 500
-        else:
-            # Обработка покупки гайда по цветотипу (старая логика)
-            if not analysis_id:
-                print("Missing required data: analysis_id for color guide")
-                return jsonify({'code': 10, 'message': 'No analysis_id for color guide'}), 400
-
-            # Проверяем наличие файлов анализа и изображения
-            if os.path.exists(analysis_path) and os.path.exists(image_path):
+        print("[DEBUG] Is subscription:", is_subscription)
+        print("[DEBUG] =================================")
+        
+        if status == 'completed' and email:
+            print("[DEBUG] ===== PROCESSING SUBSCRIPTION =====")
+            print("[DEBUG] Email:", email)
+            
+            if is_subscription:
                 try:
-                    # Загружаем данные анализа
-                    with open(analysis_path) as f:
-                        analysis = json.load(f)
+                    # Добавляем подписку на 1 год
+                    from datetime import datetime, timedelta
+                    subscription_end = datetime.utcnow() + timedelta(days=365)
                     
-                    # Генерируем PDF для цветотипа
-                    full_pdf_path = generate_pdf_report(
-                        user_photo_path=image_path,
-                        analysis=analysis
+                    # Подключаемся к MongoDB
+                    if not user_auth.connect():
+                        print("[DEBUG] Failed to connect to MongoDB")
+                        return jsonify({'code': 15, 'message': 'Database connection failed'}), 500
+                    
+                    result = user_auth.add_pre_subscription(
+                        email=email,
+                        subscription_end=subscription_end,
+                        source="payment",
+                        notes=f"CloudPayments payment - {data.get('TransactionId', 'N/A')}"
                     )
-                    print(f"[paid_callback] Color PDF generated: {full_pdf_path}")
-                    
-                    if os.path.exists(full_pdf_path) and os.path.getsize(full_pdf_path) > 10*1024:
-                        # Отправляем email с гайдом по цветотипу
-                        if send_guide_email(email, full_pdf_path):
-                            print("[paid_callback] Color guide email sent successfully!")
-                            return jsonify({'code': 0, 'message': 'Color guide sent successfully'}), 200
-                        else:
-                            print("[paid_callback] Error sending color guide email!")
-                            return jsonify({'code': 12, 'message': 'Failed to send color guide email'}), 500
-                    else:
-                        print("[paid_callback] Color PDF not created or too small")
-                        return jsonify({'code': 11, 'message': 'Color PDF not created'}), 500
+                    print("[DEBUG] ✅ Subscription added successfully for", email)
+                    return jsonify({"code": 0, "message": "Subscription added successfully"})
                 except Exception as e:
-                    print(f"Error processing color guide payment: {str(e)}")
-                    return jsonify({'code': 14, 'message': f'Processing error: {str(e)}'}), 500
+                    print("[DEBUG] ❌ Error adding subscription:", str(e))
+                    return jsonify({"code": 16, "message": f"Failed to add subscription: {str(e)}"})
             else:
-                print(f"Files not found:\n- Analysis exists: {os.path.exists(analysis_path)}\n- Image exists: {os.path.exists(image_path)}")
-                return jsonify({'code': 11, 'message': 'Analysis or image not found'}), 404
-    else:
-        print(f"Payment not completed, status: {status}")
-        return jsonify({'code': 13, 'message': 'Payment not completed'}), 200
+                print("[DEBUG] Not a subscription payment")
+                return jsonify({"code": 0, "message": "Payment processed successfully"})
+        else:
+            print("[DEBUG] Invalid status or email")
+            return jsonify({"code": 1, "message": "Invalid payment data"})
+            
+    except Exception as e:
+        print("[DEBUG] ❌ CRITICAL ERROR in data processing:", str(e))
+        import traceback
+        print("[DEBUG] Traceback:", traceback.format_exc())
+        return jsonify({"code": 99, "message": f"Internal error: {str(e)}"})
 
 def normalize_email(email):
     return ''.join(c for c in email if c.isalnum())
