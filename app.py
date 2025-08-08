@@ -766,10 +766,14 @@ def get_guide_pdf():
 @app.route('/paid_callback', methods=['POST'])
 def paid_callback():
     # Получаем данные из form-data или JSON
-    print("[paid_callback] Request method:", request.method)
-    print("[paid_callback] Request headers:", dict(request.headers))
-    print("[paid_callback] Request form data:", dict(request.form))
-    print("[paid_callback] Request JSON:", request.get_json())
+    print("[DEBUG] ===== WEBHOOK RECEIVED =====")
+    print("[DEBUG] Request method:", request.method)
+    print("[DEBUG] Request URL:", request.url)
+    print("[DEBUG] Request headers:", dict(request.headers))
+    print("[DEBUG] Request form data:", dict(request.form))
+    print("[DEBUG] Request JSON:", request.get_json())
+    print("[DEBUG] Content-Type:", request.headers.get('Content-Type'))
+    print("[DEBUG] ==============================")
     
     data = request.form if request.form else request.get_json()
     print("[paid_callback] Webhook data:", dict(data))
@@ -842,6 +846,15 @@ def paid_callback():
     is_kibbe_guide = ('стиль' in description or 'типаж' in description or 'kibbe' in description or 
                      guide_type == 'kibbe')
     
+    print("[DEBUG] ===== PURCHASE TYPE ANALYSIS =====")
+    print("[DEBUG] Description:", description)
+    print("[DEBUG] Payment type:", payment_type)
+    print("[DEBUG] Data JSON:", data_json)
+    print("[DEBUG] Guide type:", guide_type)
+    print("[DEBUG] Is subscription:", is_subscription)
+    print("[DEBUG] Is kibbe guide:", is_kibbe_guide)
+    print("[DEBUG] =================================")
+    
     if is_kibbe_guide:
         # Для гайдов по Кибби используем данные из сессии
         analysis_path = None
@@ -868,7 +881,10 @@ def paid_callback():
         # Обработка покупки подписки
         if is_subscription:
             try:
-                print("[paid_callback] Processing subscription purchase")
+                print("[DEBUG] ===== PROCESSING SUBSCRIPTION =====")
+                print("[DEBUG] Email:", email)
+                print("[DEBUG] Description:", description)
+                print("[DEBUG] =================================")
                 
                 # Подключаемся к MongoDB
                 if not user_auth.connect():
@@ -888,10 +904,10 @@ def paid_callback():
                 )
                 
                 if result['success']:
-                    print(f"[paid_callback] Subscription added successfully for {email}")
+                    print(f"[DEBUG] ✅ Subscription added successfully for {email}")
                     return jsonify({'code': 0, 'message': 'Subscription added successfully'}), 200
                 else:
-                    print(f"[paid_callback] Failed to add subscription: {result['error']}")
+                    print(f"[DEBUG] ❌ Failed to add subscription: {result['error']}")
                     return jsonify({'code': 16, 'message': f'Failed to add subscription: {result["error"]}'}), 500
                     
             except Exception as e:
