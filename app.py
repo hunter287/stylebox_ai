@@ -776,20 +776,27 @@ def paid_callback():
     print("[DEBUG] ==============================")
     
     data = request.form if request.form else request.get_json()
-    print("[paid_callback] Webhook data:", dict(data))
-    print("[paid_callback] after webhook data print")
+    print("[DEBUG] ===== DATA PROCESSING =====")
+    print("[DEBUG] Data type: form" if request.form else "Data type: JSON")
+    print("[DEBUG] Raw data:", dict(data))
+    print("[DEBUG] =========================")
+    
     status = str(data.get('Status', '')).lower()
-    print("[paid_callback] after status extraction")
     email = data.get('Email')
-    print("[paid_callback] after email extraction")
+    print("[DEBUG] Status:", status)
+    print("[DEBUG] Email:", email)
     
     # Получаем Data и парсим его как JSON
     data_json = {}
     if data.get('Data'):
         try:
             data_json = json.loads(data.get('Data'))
-        except:
+            print("[DEBUG] Parsed Data JSON:", data_json)
+        except Exception as e:
+            print("[DEBUG] Error parsing Data JSON:", e)
             data_json = {}
+    else:
+        print("[DEBUG] No Data field found")
     
     analysis_id = (
         data_json.get('analysis_id') or
