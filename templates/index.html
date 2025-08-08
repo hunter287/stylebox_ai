@@ -5071,14 +5071,77 @@
                     `;
                 }
                 
-                // Проверяем статус анкеты и подписку для динамических кнопок
-                checkSurveyStatusAndUpdateUI();
+                // Сразу проверяем авторизацию и подписку
+                checkAuthAndUpdateUI();
             } else {
                 console.log('❌ Пользователь не авторизован');
                 if (authButton) authButton.style.display = 'block';
                 if (registerButton) registerButton.style.display = 'block';
                 if (userInfo) userInfo.style.display = 'none';
             }
+        }
+
+        // Новая функция для проверки авторизации и обновления UI
+        function checkAuthAndUpdateUI() {
+            console.log('🔍 Проверяем авторизацию и подписку...');
+            
+            fetch('/check_auth', {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('📊 Результат проверки авторизации:', data);
+                
+                if (data.authenticated && data.subscription_active) {
+                    console.log('✅ Пользователь авторизован и имеет активную подписку');
+                    window.subscriptionActive = true;
+                    
+                    // Обновляем все кнопки на странице
+                    updateButtonsForAuthenticatedUser();
+                } else {
+                    console.log('❌ Пользователь не авторизован или нет активной подписки');
+                    window.subscriptionActive = false;
+                    
+                    // Обновляем все кнопки на странице
+                    updateButtonsForUnauthenticatedUser();
+                }
+            })
+            .catch(error => {
+                console.error('❌ Ошибка проверки авторизации:', error);
+                window.subscriptionActive = false;
+                updateButtonsForUnauthenticatedUser();
+            });
+        }
+
+        // Функция для обновления кнопок для авторизованного пользователя с подпиской
+        function updateButtonsForAuthenticatedUser() {
+            console.log('🔄 Обновляем кнопки для авторизованного пользователя с подпиской');
+            
+            const fillSurveyBtns = document.querySelectorAll('[id*="fillSurveyBtn"]');
+            const getRecommendationsBtns = document.querySelectorAll('[id*="get-recommendations-btn"]');
+            const preorderBtns = document.querySelectorAll('[id*="preorderBtn"]');
+            
+            fillSurveyBtns.forEach(btn => btn.style.display = 'none');
+            getRecommendationsBtns.forEach(btn => btn.style.display = 'inline-block');
+            preorderBtns.forEach(btn => btn.style.display = 'none');
+        }
+
+        // Функция для обновления кнопок для неавторизованного пользователя
+        function updateButtonsForUnauthenticatedUser() {
+            console.log('🔄 Обновляем кнопки для неавторизованного пользователя');
+            
+            const fillSurveyBtns = document.querySelectorAll('[id*="fillSurveyBtn"]');
+            const getRecommendationsBtns = document.querySelectorAll('[id*="get-recommendations-btn"]');
+            const preorderBtns = document.querySelectorAll('[id*="preorderBtn"]');
+            
+            fillSurveyBtns.forEach(btn => btn.style.display = 'none');
+            getRecommendationsBtns.forEach(btn => btn.style.display = 'none');
+            preorderBtns.forEach(btn => btn.style.display = 'inline-block');
         }
 
         // Проверка статуса анкеты и обновление UI
@@ -5218,18 +5281,13 @@
                     isAuthenticated = true;
                     userEmail = data.user.email;
                     hideAuthModal();
-                    updateAuthUI();
                     showSuccess('Авторизация успешна!');
 
-                    // Если есть сохраненные данные анкеты, показываем кнопку получения рекомендаций
-                    if (surveyData && Object.keys(surveyData).length > 0) {
-                        showRecommendationsButton();
-                    }
+                    // Сразу проверяем авторизацию и подписку
+                    checkAuthAndUpdateUI();
                     
-                    // Проверяем подписку и показываем кнопку анкеты если нужно
-                    setTimeout(() => {
-                        updateAuthUI();
-                    }, 500);
+                    // Обновляем UI авторизации
+                    updateAuthUI();
                 } else {
                     showError(data.error || 'Ошибка авторизации');
                 }
@@ -5298,13 +5356,13 @@
                             isAuthenticated = true;
                             userEmail = loginData.user.email;
                             hideAuthModal();
-                            updateAuthUI();
                             showRegisterSuccess('Регистрация и вход выполнены успешно! Добро пожаловать!');
                             
-                            // Проверяем подписку и обновляем UI
-                            setTimeout(() => {
-                                updateAuthUI();
-                            }, 500);
+                            // Сразу проверяем авторизацию и подписку
+                            checkAuthAndUpdateUI();
+                            
+                            // Обновляем UI авторизации
+                            updateAuthUI();
                             
                         // Очищаем поля регистрации
                         document.getElementById('register-email').value = '';
