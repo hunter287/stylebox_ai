@@ -765,7 +765,8 @@ def get_guide_pdf():
 
 @app.route('/paid_callback', methods=['POST'])
 def paid_callback():
-    # Получаем данные из form-data или JSON
+    try:
+        # Получаем данные из form-data или JSON
     print("[DEBUG] ===== WEBHOOK RECEIVED =====")
     print("[DEBUG] Request method:", request.method)
     print("[DEBUG] Request URL:", request.url)
@@ -829,15 +830,10 @@ def paid_callback():
         print("[paid_callback] after custom_fields_dict extraction, value:", analysis_id)
     # Определяем тип покупки по описанию и дополнительным данным
     description = data.get('Description', '').lower()
-    custom_fields = data.get('Data', {})
     
-    # Проверяем, что custom_fields - это словарь
-    if isinstance(custom_fields, dict):
-        guide_type = custom_fields.get('guideType', '')
-        payment_type = custom_fields.get('type', '')
-    else:
-        guide_type = ''
-        payment_type = ''
+    # Используем уже распарсенный data_json вместо data.get('Data')
+    guide_type = data_json.get('guideType', '')
+    payment_type = data_json.get('type', '')
     
     print("[paid_callback] Email:", email)
     print("[paid_callback] Analysis ID:", analysis_id)
@@ -848,8 +844,7 @@ def paid_callback():
     
     # Определяем тип покупки
     is_subscription = ('подписк' in description or 'предзаказ' in description or 
-                      payment_type == 'subscription' or 
-                      data_json.get('type') == 'subscription')
+                      payment_type == 'subscription')
     is_kibbe_guide = ('стиль' in description or 'типаж' in description or 'kibbe' in description or 
                      guide_type == 'kibbe')
     
@@ -1000,6 +995,11 @@ def paid_callback():
     else:
         print(f"Payment not completed, status: {status}")
         return jsonify({'code': 13, 'message': 'Payment not completed'}), 200
+    except Exception as e:
+        print("[DEBUG] ❌ CRITICAL ERROR in paid_callback:", str(e))
+        import traceback
+        print("[DEBUG] Traceback:", traceback.format_exc())
+        return jsonify({"code": 99, "message": f"Internal error: {str(e)}"})
 
 def normalize_email(email):
     return ''.join(c for c in email if c.isalnum())
