@@ -106,9 +106,9 @@
         <div class="success-icon">✓</div>
         <h1>Спасибо за покупку!</h1>
         <div id="subscriptionMessage">
-            <p style="font-size: 1.2rem; color: var(--primary-color); margin-bottom: 1rem;">Спасибо за предзаказ на ИИ-стилиста! 🤖</p>
-            <p>Ваш персональный ИИ-стилист появится 11 июля.</p>
-            <p>Мы пришлем всю информацию на ваш email, как только он будет готов.</p>
+            <p style="font-size: 1.2rem; color: var(--primary-color); margin-bottom: 1rem;">Спасибо за покупку подписки! 🎉</p>
+            <p>Ваша подписка на ИИ-стилиста активирована и действует 1 год.</p>
+            <p>Теперь вы можете использовать все функции персонального подбора вещей.</p>
         </div>
         <p id="guideMessage">Ваш персональный гайд по цветотипу уже в пути и скоро появится в вашем email.</p>
         <p>Проверьте папку "Входящие" или "Спам".</p>
@@ -117,13 +117,13 @@
 
     <script>
         // Проверяем, была ли это покупка подписки или Кибби гайда
-        const urlParams = new URLSearchParams(window.location.search);
-        const type = urlParams.get('type');
+        const purchaseType = '{{ purchase_type }}';
         
         // Проверяем различные варианты написания
-        if (type === 'subscription' || type === 'subsciption' || type === 'sub') {
+        if (purchaseType === 'subscription' || purchaseType === 'subsciption' || purchaseType === 'sub') {
             document.getElementById('subscriptionMessage').style.display = 'block';
-        } else if (type === 'kibbe') {
+            document.getElementById('guideMessage').style.display = 'none';
+        } else if (purchaseType === 'kibbe') {
             // Изменяем сообщение для Кибби гайда
             const guideMessage = document.getElementById('guideMessage');
             if (guideMessage) {

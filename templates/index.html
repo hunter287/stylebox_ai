@@ -5071,8 +5071,12 @@
                     `;
                 }
                 
-                // Сразу проверяем авторизацию и подписку
-                checkAuthAndUpdateUI();
+                // Обновляем кнопки на основе глобального статуса подписки
+                if (window.subscriptionActive) {
+                    updateButtonsForAuthenticatedUser();
+                } else {
+                    updateButtonsForUnauthenticatedUser();
+                }
             } else {
                 console.log('❌ Пользователь не авторизован');
                 if (authButton) authButton.style.display = 'block';
@@ -5097,15 +5101,18 @@
             .then(data => {
                 console.log('📊 Результат проверки авторизации:', data);
                 
+                // Обновляем глобальные переменные
+                isAuthenticated = data.authenticated;
+                userEmail = data.email;
+                window.subscriptionActive = data.subscription_active;
+                
                 if (data.authenticated && data.subscription_active) {
                     console.log('✅ Пользователь авторизован и имеет активную подписку');
-                    window.subscriptionActive = true;
                     
                     // Обновляем все кнопки на странице
                     updateButtonsForAuthenticatedUser();
                 } else {
                     console.log('❌ Пользователь не авторизован или нет активной подписки');
-                    window.subscriptionActive = false;
                     
                     // Обновляем все кнопки на странице
                     updateButtonsForUnauthenticatedUser();
@@ -5283,11 +5290,13 @@
                     hideAuthModal();
                     showSuccess('Авторизация успешна!');
 
-                    // Сразу проверяем авторизацию и подписку
-                    checkAuthAndUpdateUI();
-                    
                     // Обновляем UI авторизации
                     updateAuthUI();
+                    
+                    // Проверяем авторизацию и подписку с небольшой задержкой
+                    setTimeout(() => {
+                        checkAuthAndUpdateUI();
+                    }, 100);
                 } else {
                     showError(data.error || 'Ошибка авторизации');
                 }
@@ -5358,11 +5367,13 @@
                             hideAuthModal();
                             showRegisterSuccess('Регистрация и вход выполнены успешно! Добро пожаловать!');
                             
-                            // Сразу проверяем авторизацию и подписку
-                            checkAuthAndUpdateUI();
-                            
                             // Обновляем UI авторизации
                             updateAuthUI();
+                            
+                            // Проверяем авторизацию и подписку с небольшой задержкой
+                            setTimeout(() => {
+                                checkAuthAndUpdateUI();
+                            }, 100);
                             
                         // Очищаем поля регистрации
                         document.getElementById('register-email').value = '';
