@@ -229,7 +229,7 @@
             const widget = new cp.CloudPayments();
             widget.pay('charge', {
                 publicId: publicId,
-                description: 'Предзаказ на ИИ-стилиста (годовая подписка, спеццена для владельцев гайда)',
+                description: 'Подписка на ИИ-стилиста (годовая подписка, спеццена для владельцев гайда)',
                 amount: parseFloat('{{ config.SUBSCRIPTION_PRICE_SPECIAL }}'),
                 currency: 'RUB',
                 skin: 'classic',
