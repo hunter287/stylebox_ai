@@ -108,6 +108,9 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         session_id = session.get('session_id')
         logger.info(f"🔍 Проверяем авторизацию. Session ID: {session_id}")
+        logger.info(f"🔍 Session keys: {list(session.keys())}")
+        logger.info(f"🔍 Session permanent: {session.permanent}")
+        logger.info(f"🔍 Session modified: {session.modified}")
         
         if not session_id:
             logger.warning("⚠️ Session ID отсутствует в Flask session")

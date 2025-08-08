@@ -63,9 +63,11 @@ app.secret_key = os.environ.get('SECRET_KEY', 'dev_secret_key')
 # Настройки для session
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
-app.config['SESSION_COOKIE_SECURE'] = True  # True для HTTPS
+app.config['SESSION_COOKIE_SECURE'] = False  # Временно False для отладки
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_DOMAIN'] = None  # Для всех доменов
+app.config['SESSION_COOKIE_PATH'] = '/'
 
 # Инициализация Flask-Session
 Session(app)
@@ -91,6 +93,10 @@ PRESET_COLOR_TYPES = [
 # Создаем директорию для загрузок, если она не существует
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs('static/reports', exist_ok=True)
+
+# Создаем директорию для сессий Flask
+session_dir = 'flask_session'
+os.makedirs(session_dir, exist_ok=True)
 
 # Список поддерживаемых форматов изображений
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'heic', 'heif', 'avif'}
@@ -980,11 +986,19 @@ def kibbe_page():
 @app.route('/check_auth', methods=['GET'])
 def check_auth():
     """Проверка статуса авторизации"""
+    print("[DEBUG] ===== CHECK AUTH =====")
+    print("[DEBUG] Session keys:", list(session.keys()))
+    print("[DEBUG] Session ID from session:", session.get('session_id'))
+    print("[DEBUG] Session permanent:", session.permanent)
+    
     session_id = session.get('session_id')
     if session_id:
+        print("[DEBUG] Session ID found, checking user...")
         user = user_auth.get_user_by_session(session_id)
         if user:
+            print("[DEBUG] User found:", user.get('email'))
             subscription_active = user_auth.check_subscription(str(user['_id']))
+            print("[DEBUG] Subscription active:", subscription_active)
             return jsonify({
                 'authenticated': True,
                 'email': user['email'],
@@ -992,7 +1006,12 @@ def check_auth():
                 'subscription_active': subscription_active,
                 'profile': user.get('profile', {})
             })
+        else:
+            print("[DEBUG] User not found for session_id:", session_id)
+    else:
+        print("[DEBUG] No session_id in session")
     
+    print("[DEBUG] Returning unauthenticated response")
     return jsonify({
         'authenticated': False,
         'subscription_active': False
@@ -1072,6 +1091,8 @@ def login():
             logger.info(f"🔑 Session ID сохранен в Flask session: {result['session_id']}")
             logger.info(f"🔑 Session permanent: {session.permanent}")
             logger.info(f"🔑 Session keys: {list(session.keys())}")
+            logger.info(f"🔑 Session ID после сохранения: {session.get('session_id')}")
+            logger.info(f"🔑 Session modified: {session.modified}")
             # record_login_attempt(success=True)  # Временно отключено
             
             logger.info(f"Успешная авторизация: {email}")
