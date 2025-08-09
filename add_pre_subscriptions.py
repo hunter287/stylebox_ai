@@ -310,15 +310,26 @@ def main():
     parser.add_argument('--until', help='Дата окончания подписки в формате YYYY-MM-DD')
     parser.add_argument('--source', default='manual', help="Источник подписки (по умолчанию 'manual')")
     parser.add_argument('--notes', help='Заметки (опционально)')
-    parser.add_argument('--mongo-uri', help='URI MongoDB (перекрывает переменную окружения MONGO_URI)')
-    parser.add_argument('--db', help='Имя базы данных (перекрывает переменную окружения MONGO_DB_NAME)')
+    parser.add_argument('--prod', action='store_true', help='Использовать прод-базу (MONGO_URI_PROD / MONGO_DB_NAME_PROD)')
+    parser.add_argument('--mongo-uri', help='Явно указать URI MongoDB (перекрывает переменные окружения)')
+    parser.add_argument('--db', help='Явно указать имя базы данных (перекрывает переменные окружения)')
     args = parser.parse_args()
 
-    # Переопределяем соединение, если переданы параметры БД
+    # Настройка подключения к БД
+    # Приоритет: --mongo-uri/--db > --prod > переменные окружения по умолчанию
+    if args.prod:
+        # Подставляем прод-настройки (если заданы), иначе дефолты prod
+        os.environ['MONGO_URI'] = os.getenv('MONGO_URI_PROD', 'mongodb://localhost:27018/')
+        os.environ['MONGO_DB_NAME'] = os.getenv('MONGO_DB_NAME_PROD', 'stylist_ai_prod')
+        try:
+            user_auth.mongo_uri = os.environ['MONGO_URI']
+            user_auth.database_name = os.environ['MONGO_DB_NAME']
+        except Exception:
+            pass
+
     if args.mongo_uri:
         os.environ['MONGO_URI'] = args.mongo_uri
         try:
-            # Переопределяем параметры уже созданного инстанса
             user_auth.mongo_uri = args.mongo_uri
         except Exception:
             pass
