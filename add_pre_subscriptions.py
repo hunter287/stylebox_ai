@@ -16,11 +16,24 @@ from typing import Optional
 from datetime import datetime, timedelta
 from user_auth import user_auth
 
+def print_connection_info(prefix: str = "Подключение"):
+    """Печатает информацию о том, к какой БД будем подключаться."""
+    env_uri = os.getenv('MONGO_URI')
+    env_db = os.getenv('MONGO_DB_NAME')
+    try:
+        current_uri = getattr(user_auth, 'mongo_uri', None)
+        current_db = getattr(user_auth, 'database_name', None)
+    except Exception:
+        current_uri = None
+        current_db = None
+    print(f"\n🗄️ {prefix}:\n  ENV MONGO_URI: {env_uri}\n  ENV MONGO_DB_NAME: {env_db}\n  user_auth.mongo_uri: {current_uri}\n  user_auth.database_name: {current_db}")
+
 def add_pre_subscription_from_input():
     """Добавляет предварительную подписку через интерактивный ввод"""
     print("=== Добавление предварительной подписки ===")
     
     # Подключаемся к MongoDB
+    print_connection_info("Перед подключением (интерактив)")
     if not user_auth.connect():
         print("❌ Ошибка подключения к MongoDB")
         return False
@@ -75,6 +88,7 @@ def add_pre_subscription_via_args(email: str, until: str, source: str = 'manual'
     print("=== Добавление предварительной подписки (CLI) ===")
 
     # Подключаемся к MongoDB
+    print_connection_info("Перед подключением (CLI)")
     if not user_auth.connect():
         print("❌ Ошибка подключения к MongoDB")
         return False
@@ -101,6 +115,12 @@ def add_pre_subscription_via_args(email: str, until: str, source: str = 'manual'
         if notes:
             print(f"   Заметки: {notes}")
         print(f"   ID: {result['subscription_id']}")
+        # Верификация: пробуем сразу прочитать обратно
+        try:
+            check = user_auth.get_pre_subscription(email)
+            print(f"🔎 Проверка чтения из БД: {check}")
+        except Exception as e:
+            print(f"⚠️ Не удалось выполнить проверочное чтение: {e}")
         return True
     else:
         print(f"❌ Ошибка: {result['error']}")
