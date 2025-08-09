@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
 """
-Скрипт для добавления предварительных подписок из существующих данных
+Скрипт для управления предварительными подписками.
+
+Поддерживает два режима:
+1) Непосредственное добавление через аргументы командной строки:
+   python add_pre_subscriptions.py --email user@example.com --until 2025-12-31 [--source manual] [--notes "..."]
+
+2) Интерактивное меню (если аргументы не указаны).
 """
 
 import os
 import sys
+import argparse
 from datetime import datetime, timedelta
 from user_auth import user_auth
 
@@ -49,6 +56,49 @@ def add_pre_subscription_from_input():
     if result['success']:
         print(f"✅ Предварительная подписка добавлена для {email}")
         print(f"   Действует до: {subscription_end.strftime('%Y-%m-%d')}")
+        print(f"   ID: {result['subscription_id']}")
+        return True
+    else:
+        print(f"❌ Ошибка: {result['error']}")
+        return False
+
+def add_pre_subscription_via_args(email: str, until: str, source: str = 'manual', notes: str | None = None) -> bool:
+    """Добавляет предварительную подписку на основе аргументов командной строки.
+
+    :param email: Email пользователя
+    :param until: Дата окончания подписки в формате YYYY-MM-DD
+    :param source: Источник подписки (по умолчанию manual)
+    :param notes: Заметки (опционально)
+    :return: True при успехе, иначе False
+    """
+    print("=== Добавление предварительной подписки (CLI) ===")
+
+    # Подключаемся к MongoDB
+    if not user_auth.connect():
+        print("❌ Ошибка подключения к MongoDB")
+        return False
+
+    email = (email or '').strip().lower()
+    if not email or '@' not in email:
+        print("❌ Неверный email")
+        return False
+
+    try:
+        subscription_end = datetime.strptime(until.strip(), '%Y-%m-%d')
+    except Exception:
+        print("❌ Неверный формат даты. Используйте YYYY-MM-DD")
+        return False
+
+    source = (source or 'manual').strip() or 'manual'
+    notes = (notes.strip() if isinstance(notes, str) else None) or None
+
+    result = user_auth.add_pre_subscription(email, subscription_end, source, notes)
+    if result['success']:
+        print(f"✅ Предварительная подписка добавлена для {email}")
+        print(f"   Действует до: {subscription_end.strftime('%Y-%m-%d')}")
+        print(f"   Источник: {source}")
+        if notes:
+            print(f"   Заметки: {notes}")
         print(f"   ID: {result['subscription_id']}")
         return True
     else:
@@ -254,6 +304,21 @@ def cleanup_expired_subscriptions():
 
 def main():
     """Главная функция"""
+    parser = argparse.ArgumentParser(description='Утилита для управления предварительными подписками')
+    parser.add_argument('--email', help='Email пользователя для создания подписки')
+    parser.add_argument('--until', help='Дата окончания подписки в формате YYYY-MM-DD')
+    parser.add_argument('--source', default='manual', help="Источник подписки (по умолчанию 'manual')")
+    parser.add_argument('--notes', help='Заметки (опционально)')
+    args = parser.parse_args()
+
+    # Режим: прямое добавление по аргументам
+    if args.email or args.until or args.source != 'manual' or args.notes:
+        if not args.email or not args.until:
+            print("❌ Для прямого добавления укажите оба параметра: --email и --until (YYYY-MM-DD)")
+            sys.exit(1)
+        ok = add_pre_subscription_via_args(args.email, args.until, args.source, args.notes)
+        sys.exit(0 if ok else 2)
+
     print("🔧 Утилита для управления предварительными подписками")
     print("=" * 50)
     
