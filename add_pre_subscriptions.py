@@ -310,7 +310,24 @@ def main():
     parser.add_argument('--until', help='Дата окончания подписки в формате YYYY-MM-DD')
     parser.add_argument('--source', default='manual', help="Источник подписки (по умолчанию 'manual')")
     parser.add_argument('--notes', help='Заметки (опционально)')
+    parser.add_argument('--mongo-uri', help='URI MongoDB (перекрывает переменную окружения MONGO_URI)')
+    parser.add_argument('--db', help='Имя базы данных (перекрывает переменную окружения MONGO_DB_NAME)')
     args = parser.parse_args()
+
+    # Переопределяем соединение, если переданы параметры БД
+    if args.mongo_uri:
+        os.environ['MONGO_URI'] = args.mongo_uri
+        try:
+            # Переопределяем параметры уже созданного инстанса
+            user_auth.mongo_uri = args.mongo_uri
+        except Exception:
+            pass
+    if args.db:
+        os.environ['MONGO_DB_NAME'] = args.db
+        try:
+            user_auth.database_name = args.db
+        except Exception:
+            pass
 
     # Режим: прямое добавление по аргументам
     if args.email or args.until or args.source != 'manual' or args.notes:
