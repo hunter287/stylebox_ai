@@ -336,7 +336,7 @@ def main():
     args = parser.parse_args()
 
     # Настройка подключения к БД
-    # Приоритет: --mongo-uri/--db > --prod > переменные окружения по умолчанию
+    # Приоритет: --mongo-uri/--db > --prod > PROD по умолчанию (stylist_ai_prod, :27018)
     if args.prod:
         # Подставляем прод-настройки (если заданы), иначе дефолты prod
         os.environ['MONGO_URI'] = os.getenv('MONGO_URI_PROD', 'mongodb://localhost:27018/')
@@ -359,6 +359,21 @@ def main():
             user_auth.database_name = args.db
         except Exception:
             pass
+
+    # Если ничего не указано (и нет ENV), по умолчанию используем PROD дефолты
+    if not args.mongo_uri and not args.db and not args.prod:
+        if not os.getenv('MONGO_URI'):
+            os.environ['MONGO_URI'] = os.getenv('MONGO_URI_PROD', 'mongodb://localhost:27018/')
+            try:
+                user_auth.mongo_uri = os.environ['MONGO_URI']
+            except Exception:
+                pass
+        if not os.getenv('MONGO_DB_NAME'):
+            os.environ['MONGO_DB_NAME'] = os.getenv('MONGO_DB_NAME_PROD', 'stylist_ai_prod')
+            try:
+                user_auth.database_name = os.environ['MONGO_DB_NAME']
+            except Exception:
+                pass
 
     # Режим: прямое добавление по аргументам
     if args.email or args.until or args.source != 'manual' or args.notes:
