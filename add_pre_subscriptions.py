@@ -12,6 +12,7 @@
 import os
 import sys
 import argparse
+from typing import Optional
 from datetime import datetime, timedelta
 from user_auth import user_auth
 
@@ -62,7 +63,7 @@ def add_pre_subscription_from_input():
         print(f"❌ Ошибка: {result['error']}")
         return False
 
-def add_pre_subscription_via_args(email: str, until: str, source: str = 'manual', notes: str | None = None) -> bool:
+def add_pre_subscription_via_args(email: str, until: str, source: str = 'manual', notes: Optional[str] = None) -> bool:
     """Добавляет предварительную подписку на основе аргументов командной строки.
 
     :param email: Email пользователя
