@@ -504,6 +504,13 @@ class UserAuth:
     def add_pre_subscription(self, email, subscription_end, source="manual", notes=None, product_type="subscription"):
         """Добавляет предварительную подписку"""
         try:
+            # Проверяем подключение к MongoDB
+            if not self.db or not self.pre_subscriptions_collection:
+                logger.warning("MongoDB не подключена, пытаемся переподключиться...")
+                if not self.connect():
+                    logger.error("Не удалось подключиться к MongoDB")
+                    return {"success": False, "error": "Ошибка подключения к базе данных"}
+            
             email = email.strip().lower()
             
             # Проверяем, что email не занят (только для подписок ИИ-стилиста)
@@ -549,6 +556,13 @@ class UserAuth:
     def get_pre_subscription(self, email, product_type="subscription"):
         """Получает предварительную подписку по email"""
         try:
+            # Проверяем подключение к MongoDB
+            if not self.db or not self.pre_subscriptions_collection:
+                logger.warning("MongoDB не подключена, пытаемся переподключиться...")
+                if not self.connect():
+                    logger.error("Не удалось подключиться к MongoDB")
+                    return {"success": False, "error": "Ошибка подключения к базе данных"}
+            
             email = email.strip().lower()
             
             # Ищем подписку ИИ-стилиста (subscription_end есть И product_type != "guide")
@@ -622,6 +636,13 @@ class UserAuth:
     def remove_pre_subscription(self, email, product_type="subscription"):
         """Удаляет предварительную подписку"""
         try:
+            # Проверяем подключение к MongoDB
+            if not self.db or not self.pre_subscriptions_collection:
+                logger.warning("MongoDB не подключена, пытаемся переподключиться...")
+                if not self.connect():
+                    logger.error("Не удалось подключиться к MongoDB")
+                    return {"success": False, "error": "Ошибка подключения к базе данных"}
+            
             email = email.strip().lower()
             
             if product_type == "subscription":
@@ -727,6 +748,13 @@ class UserAuth:
     def add_guide_purchase(self, email, product_type, amount, transaction_id, source="cloudpayments", notes=None):
         """Добавляет покупку гайда"""
         try:
+            # Проверяем подключение к MongoDB
+            if not self.db or not self.pre_subscriptions_collection:
+                logger.warning("MongoDB не подключена, пытаемся переподключиться...")
+                if not self.connect():
+                    logger.error("Не удалось подключиться к MongoDB")
+                    return {"success": False, "error": "Ошибка подключения к базе данных"}
+            
             email = email.strip().lower()
             
             # Создаем запись о покупке гайда
@@ -773,6 +801,13 @@ class UserAuth:
     def can_send_guide(self, email, product_type):
         """Проверяет, можно ли отправить гайд"""
         try:
+            # Проверяем подключение к MongoDB
+            if not self.db or not self.pre_subscriptions_collection:
+                logger.warning("MongoDB не подключена, пытаемся переподключиться...")
+                if not self.connect():
+                    logger.error("Не удалось подключиться к MongoDB")
+                    return False
+            
             purchase = self.pre_subscriptions_collection.find_one({
                 "email": email,
                 "product_type": product_type,
@@ -790,6 +825,13 @@ class UserAuth:
     def mark_guide_sent(self, email, product_type, pdf_path):
         """Помечает гайд как отправленный"""
         try:
+            # Проверяем подключение к MongoDB
+            if not self.db or not self.pre_subscriptions_collection:
+                logger.warning("MongoDB не подключена, пытаемся переподключиться...")
+                if not self.connect():
+                    logger.error("Не удалось подключиться к MongoDB")
+                    return {"success": False, "error": "Ошибка подключения к базе данных"}
+            
             result = self.pre_subscriptions_collection.update_one(
                 {
                     "email": email,
@@ -819,6 +861,13 @@ class UserAuth:
     def get_guide_purchase_stats(self):
         """Получает статистику по покупкам гайдов"""
         try:
+            # Проверяем подключение к MongoDB
+            if not self.db or not self.pre_subscriptions_collection:
+                logger.warning("MongoDB не подключена, пытаемся переподключиться...")
+                if not self.connect():
+                    logger.error("Не удалось подключиться к MongoDB")
+                    return {"success": False, "error": "Ошибка подключения к базе данных"}
+            
             # Статистика по типам гайдов
             guide_stats = self.pre_subscriptions_collection.aggregate([
                 {

@@ -98,6 +98,13 @@ os.makedirs('static/reports', exist_ok=True)
 session_dir = 'flask_session'
 os.makedirs(session_dir, exist_ok=True)
 
+# Подключаемся к MongoDB при запуске приложения
+logger.info("Подключение к MongoDB...")
+if user_auth.connect():
+    logger.info("✅ MongoDB подключена успешно")
+else:
+    logger.warning("⚠️ Не удалось подключиться к MongoDB")
+
 # Список поддерживаемых форматов изображений
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'heic', 'heif', 'avif'}
 
@@ -220,6 +227,13 @@ def payment_success():
 def analyze():
     print("=== DEBUG: Запрос получен ===")
     logger.info("=== НАЧАЛО ЗАПРОСА /analyze ===")
+    
+    # Убеждаемся, что подключение к MongoDB активно
+    if not user_auth.db or not user_auth.pre_subscriptions_collection:
+        logger.warning("MongoDB не подключена, пытаемся переподключиться...")
+        if not user_auth.connect():
+            logger.error("Не удалось подключиться к MongoDB")
+            return jsonify({'error': 'Ошибка подключения к базе данных'}), 500
     logger.info(f"Метод запроса: {request.method}")
     logger.info(f"Заголовки запроса: {dict(request.headers)}")
     logger.info(f"Форма запроса: {request.form}")
@@ -403,6 +417,13 @@ def make_report_filename(email):
     return f"{prefix}_{rand}_report_{date}.pdf"
 
 def send_guide_email(email, pdf_path):
+    # Убеждаемся, что подключение к MongoDB активно
+    if not user_auth.db or not user_auth.pre_subscriptions_collection:
+        logger.warning("MongoDB не подключена, пытаемся переподключиться...")
+        if not user_auth.connect():
+            logger.error("Не удалось подключиться к MongoDB")
+            return False
+    
     # Проверяем, купил ли пользователь гайд
     if not user_auth.can_send_guide(email, "color_guide"):
         print(f"❌ Попытка отправить цветовой гайд без покупки: {email}")
@@ -478,6 +499,13 @@ def send_guide_email(email, pdf_path):
 
 
 def send_kibbe_guide_email(email, pdf_path):
+    # Убеждаемся, что подключение к MongoDB активно
+    if not user_auth.db or not user_auth.pre_subscriptions_collection:
+        logger.warning("MongoDB не подключена, пытаемся переподключиться...")
+        if not user_auth.connect():
+            logger.error("Не удалось подключиться к MongoDB")
+            return False
+    
     # Проверяем, купил ли пользователь гайд
     if not user_auth.can_send_guide(email, "kibbe_guide"):
         print(f"❌ Попытка отправить гайд по типажу без покупки: {email}")
@@ -1412,6 +1440,13 @@ def update_profile():
 
 @app.route('/analyze_kibbe', methods=['POST'])
 def analyze_kibbe():
+    # Убеждаемся, что подключение к MongoDB активно
+    if not user_auth.db or not user_auth.pre_subscriptions_collection:
+        logger.warning("MongoDB не подключена, пытаемся переподключиться...")
+        if not user_auth.connect():
+            logger.error("Не удалось подключиться к MongoDB")
+            return jsonify({'error': 'Ошибка подключения к базе данных'}), 500
+    
     if 'image' not in request.files:
         return jsonify({'error': 'Нет файла'}), 400
     file = request.files['image']
