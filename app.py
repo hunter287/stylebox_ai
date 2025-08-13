@@ -98,6 +98,23 @@ os.makedirs('static/reports', exist_ok=True)
 session_dir = 'flask_session'
 os.makedirs(session_dir, exist_ok=True)
 
+# Тестовый endpoint для проверки работы Flask
+@app.route('/test', methods=['GET'])
+def test():
+    """Простой тестовый endpoint"""
+    return jsonify({'status': 'ok', 'message': 'Flask работает'})
+
+# Простой тестовый endpoint для send_guide_email
+@app.route('/test_send_guide', methods=['POST'])
+def test_send_guide():
+    """Простой тестовый endpoint для проверки send_guide_email"""
+    try:
+        data = request.get_json()
+        email = data.get('email', 'test@example.com')
+        return jsonify({'status': 'ok', 'email': email, 'message': 'test_send_guide работает'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 500
+
 # Подключаемся к MongoDB при запуске приложения
 logger.info("Подключение к MongoDB...")
 if user_auth.connect():
@@ -685,10 +702,16 @@ def send_guide_for_existing_user(email, guide_type):
 def send_guide():
     """Endpoint to send the guide via email"""
     try:
+        print(f"[DEBUG] ===== send_guide endpoint вызван =====")
         data = request.get_json()
+        print(f"[DEBUG] Полученные данные: {data}")
+        
         email = data.get('email')
         if not email:
+            print(f"[DEBUG] Email не передан")
             return jsonify({'error': 'Email is required'}), 400
+        
+        print(f"[DEBUG] Email получен: {email}")
         
         # Проверяем, есть ли данные анализа в сессии
         print(f"[DEBUG] send_guide: Проверяем сессию для {email}")
@@ -698,16 +721,21 @@ def send_guide():
         if 'last_analysis' not in session or 'last_image_path' not in session:
             print(f"[DEBUG] Данных анализа нет в сессии, проверяем Google Sheets...")
             # Если данных нет в сессии, проверяем, есть ли пользователь в Google Sheets
-            can_send = user_auth.can_send_guide(email, "color_guide")
-            print(f"[DEBUG] can_send_guide результат: {can_send}")
-            
-            if can_send:
-                print(f"[DEBUG] Пользователь найден в Google Sheets, вызываем send_guide_for_existing_user...")
-                # Пользователь найден в Google Sheets, отправляем гайд
-                return send_guide_for_existing_user(email, "color_guide")
-            else:
-                print(f"[DEBUG] Пользователь не найден ни в сессии, ни в Google Sheets")
-                return jsonify({'error': 'No analysis found and user not in system'}), 400
+            try:
+                can_send = user_auth.can_send_guide(email, "color_guide")
+                print(f"[DEBUG] can_send_guide результат: {can_send}")
+                
+                if can_send:
+                    print(f"[DEBUG] Пользователь найден в Google Sheets, вызываем send_guide_for_existing_user...")
+                    # Пользователь найден в Google Sheets, отправляем гайд
+                    return send_guide_for_existing_user(email, "color_guide")
+                else:
+                    print(f"[DEBUG] Пользователь не найден ни в сессии, ни в Google Sheets")
+                    return jsonify({'error': 'No analysis found and user not in system'}), 400
+            except Exception as e:
+                print(f"[DEBUG] ❌ Ошибка при проверке can_send_guide: {str(e)}")
+                print(f"[DEBUG] Traceback: {traceback.format_exc()}")
+                return jsonify({'error': f'Error checking user access: {str(e)}'}), 500
         # Генерируем уникальное имя PDF
         filename = make_report_filename(email)
         pdf_path = os.path.join('static/reports', filename)
