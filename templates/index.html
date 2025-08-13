@@ -2389,11 +2389,26 @@
                     const isKibbeGuide = localStorage.getItem('currentAnalysisType') === 'kibbe';
                     const endpoint = isKibbeGuide ? '/send_kibbe_guide_email' : '/send_guide_email';
                     
+                    console.log('[DEBUG] Отправляем гайд:', {
+                        email: email,
+                        currentAnalysisType: localStorage.getItem('currentAnalysisType'),
+                        isKibbeGuide: isKibbeGuide,
+                        endpoint: endpoint,
+                        preview_image: window._lastUploadedImage,
+                        lastUploadedImageExists: !!window._lastUploadedImage
+                    });
+                    
                     // Вызываем соответствующий эндпоинт
                     const sendResp = await fetch(endpoint, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email, preview_image: window._lastUploadedImage })
+                    });
+                    
+                    console.log('[DEBUG] Ответ сервера:', {
+                        status: sendResp.status,
+                        statusText: sendResp.statusText,
+                        ok: sendResp.ok
                     });
                     const sendData = await sendResp.json();
                     if (sendData.success) {
@@ -2418,7 +2433,7 @@
             
             // Определяем тип гайда и цену
             const isKibbeGuide = localStorage.getItem('currentAnalysisType') === 'kibbe';
-                            const guidePrice = isKibbeGuide ? {{ config.KIBBE_GUIDE_PRICE }} : {{ config.COLOR_GUIDE_PRICE }};
+            const guidePrice = isKibbeGuide ? {{ config.KIBBE_GUIDE_PRICE }} : {{ config.COLOR_GUIDE_PRICE }};
             const guideLabel = isKibbeGuide ? 'Персональный гайд по стилю' : 'Персональный цветовой гайд';
             
             const data = {
