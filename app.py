@@ -229,7 +229,7 @@ def analyze():
     logger.info("=== НАЧАЛО ЗАПРОСА /analyze ===")
     
     # Убеждаемся, что подключение к MongoDB активно
-    if not user_auth.db or not user_auth.pre_subscriptions_collection:
+    if user_auth.db is None or user_auth.pre_subscriptions_collection is None:
         logger.warning("MongoDB не подключена, пытаемся переподключиться...")
         if not user_auth.connect():
             logger.error("Не удалось подключиться к MongoDB")
@@ -418,7 +418,7 @@ def make_report_filename(email):
 
 def send_guide_email(email, pdf_path):
     # Убеждаемся, что подключение к MongoDB активно
-    if not user_auth.db or not user_auth.pre_subscriptions_collection:
+    if user_auth.db is None or user_auth.pre_subscriptions_collection is None:
         logger.warning("MongoDB не подключена, пытаемся переподключиться...")
         if not user_auth.connect():
             logger.error("Не удалось подключиться к MongoDB")
@@ -500,7 +500,7 @@ def send_guide_email(email, pdf_path):
 
 def send_kibbe_guide_email(email, pdf_path):
     # Убеждаемся, что подключение к MongoDB активно
-    if not user_auth.db or not user_auth.pre_subscriptions_collection:
+    if user_auth.db is None or user_auth.pre_subscriptions_collection is None:
         logger.warning("MongoDB не подключена, пытаемся переподключиться...")
         if not user_auth.connect():
             logger.error("Не удалось подключиться к MongoDB")
@@ -1441,7 +1441,7 @@ def update_profile():
 @app.route('/analyze_kibbe', methods=['POST'])
 def analyze_kibbe():
     # Убеждаемся, что подключение к MongoDB активно
-    if not user_auth.db or not user_auth.pre_subscriptions_collection:
+    if user_auth.db is None or user_auth.pre_subscriptions_collection is None:
         logger.warning("MongoDB не подключена, пытаемся переподключиться...")
         if not user_auth.connect():
             logger.error("Не удалось подключиться к MongoDB")

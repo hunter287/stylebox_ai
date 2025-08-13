@@ -505,7 +505,7 @@ class UserAuth:
         """Добавляет предварительную подписку"""
         try:
             # Проверяем подключение к MongoDB
-            if not self.db or not self.pre_subscriptions_collection:
+            if self.db is None or self.pre_subscriptions_collection is None:
                 logger.warning("MongoDB не подключена, пытаемся переподключиться...")
                 if not self.connect():
                     logger.error("Не удалось подключиться к MongoDB")
@@ -557,7 +557,7 @@ class UserAuth:
         """Получает предварительную подписку по email"""
         try:
             # Проверяем подключение к MongoDB
-            if not self.db or not self.pre_subscriptions_collection:
+            if self.db is None or self.pre_subscriptions_collection is None:
                 logger.warning("MongoDB не подключена, пытаемся переподключиться...")
                 if not self.connect():
                     logger.error("Не удалось подключиться к MongoDB")
@@ -637,7 +637,7 @@ class UserAuth:
         """Удаляет предварительную подписку"""
         try:
             # Проверяем подключение к MongoDB
-            if not self.db or not self.pre_subscriptions_collection:
+            if self.db is None or self.pre_subscriptions_collection is None:
                 logger.warning("MongoDB не подключена, пытаемся переподключиться...")
                 if not self.connect():
                     logger.error("Не удалось подключиться к MongoDB")
@@ -749,7 +749,7 @@ class UserAuth:
         """Добавляет покупку гайда"""
         try:
             # Проверяем подключение к MongoDB
-            if not self.db or not self.pre_subscriptions_collection:
+            if self.db is None or self.pre_subscriptions_collection is None:
                 logger.warning("MongoDB не подключена, пытаемся переподключиться...")
                 if not self.connect():
                     logger.error("Не удалось подключиться к MongoDB")
@@ -802,7 +802,7 @@ class UserAuth:
         """Проверяет, можно ли отправить гайд"""
         try:
             # Проверяем подключение к MongoDB
-            if not self.db or not self.pre_subscriptions_collection:
+            if self.db is None or self.pre_subscriptions_collection is None:
                 logger.warning("MongoDB не подключена, пытаемся переподключиться...")
                 if not self.connect():
                     logger.error("Не удалось подключиться к MongoDB")
@@ -826,7 +826,7 @@ class UserAuth:
         """Помечает гайд как отправленный"""
         try:
             # Проверяем подключение к MongoDB
-            if not self.db or not self.pre_subscriptions_collection:
+            if self.db is None or self.pre_subscriptions_collection is None:
                 logger.warning("MongoDB не подключена, пытаемся переподключиться...")
                 if not self.connect():
                     logger.error("Не удалось подключиться к MongoDB")
@@ -862,7 +862,7 @@ class UserAuth:
         """Получает статистику по покупкам гайдов"""
         try:
             # Проверяем подключение к MongoDB
-            if not self.db or not self.pre_subscriptions_collection:
+            if self.db is None or self.pre_subscriptions_collection is None:
                 logger.warning("MongoDB не подключена, пытаемся переподключиться...")
                 if not self.connect():
                     logger.error("Не удалось подключиться к MongoDB")
