@@ -588,6 +588,77 @@ def wait_for_file_complete(filepath, min_size=10*1024, timeout=10):
         time.sleep(0.2)
     return False
 
+
+def send_guide_for_existing_user(email, guide_type):
+    """Отправляет гайд существующему пользователю из Google Sheets"""
+    try:
+        # Генерируем уникальное имя PDF
+        filename = make_report_filename(email)
+        pdf_path = os.path.join('static/reports', filename)
+        
+        if guide_type == "color_guide":
+            # Для цветового гайда используем стандартный шаблон
+            # Создаем базовый анализ на основе пресетов
+            analysis = {
+                'color_type': 'яркая весна',  # Базовый тип
+                'explanation': 'Ваш персональный цветовой гайд готов!',
+                'dark_colors_hex': ['#000000', '#1a1a1a', '#333333'],
+                'bright_colors_hex': ['#ff0000', '#00ff00', '#0000ff'],
+                'light_colors_hex': ['#ffffff', '#f0f0f0', '#e0e0e0']
+            }
+            
+            # Создаем временное изображение (можно использовать стандартное)
+            image_path = 'static/images/color_guide_01.jpg'  # Используем стандартное изображение
+            
+            # Генерируем PDF
+            full_pdf_path = generate_pdf_report(analysis, image_path, output_path=pdf_path)
+            
+        elif guide_type == "kibbe_guide":
+            # Для гайда по Кибби используем стандартный шаблон
+            analysis = {
+                'kibbe_type': 'Романтик',  # Базовый тип
+                'vertical_lines': 'умеренные',
+                'horizontal_lines': 'мягкие, округлые',
+                'face_features': 'губы полные, глаза большие, мягкие черты лица',
+                'body_features': 'мягкие, округлые линии, выраженная талия',
+                'description': 'мягкая, женственная внешность с округлыми чертами',
+                'style_recommendations': 'Фасоны одежды\n- Мягкие, облегающие силуэты\n- Округлые вырезы\n- Платья с оборками и рюшами'
+            }
+            
+            # Создаем временное изображение
+            image_path = 'static/kibbe/romantic/romantic_main_01.jpg'
+            
+            # Генерируем PDF для Кибби
+            full_pdf_path = generate_kibbe_pdf(
+                user_photo_path=image_path,
+                kibbe_type=analysis['kibbe_type'],
+                email=email
+            )
+        
+        # Проверяем, что PDF создан
+        if os.path.exists(full_pdf_path) and os.path.getsize(full_pdf_path) > 10*1024:
+            # Отправляем email с гайдом
+            if guide_type == "color_guide":
+                success = send_guide_email(email, full_pdf_path)
+            else:
+                success = send_kibbe_guide_email(email, full_pdf_path)
+            
+            if success:
+                return jsonify({'success': True, 'message': f'Гайд {guide_type} отправлен успешно'})
+            else:
+                return jsonify({'error': 'Failed to send email'}), 500
+        else:
+            # Если не удалось создать PDF, отправляем письмо с извинением
+            if guide_type == "color_guide":
+                send_guide_email_apology(email)
+            else:
+                send_guide_email_apology(email)
+            return jsonify({'error': 'PDF not created, apology email sent'}), 500
+            
+    except Exception as e:
+        print(f"Error in send_guide_for_existing_user: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/send_guide_email', methods=['POST'])
 def send_guide():
     """Endpoint to send the guide via email"""
@@ -596,8 +667,15 @@ def send_guide():
         email = data.get('email')
         if not email:
             return jsonify({'error': 'Email is required'}), 400
+        
+        # Проверяем, есть ли данные анализа в сессии
         if 'last_analysis' not in session or 'last_image_path' not in session:
-            return jsonify({'error': 'No analysis found'}), 400
+            # Если данных нет в сессии, проверяем, есть ли пользователь в Google Sheets
+            if user_auth.can_send_guide(email, "color_guide"):
+                # Пользователь найден в Google Sheets, отправляем гайд
+                return send_guide_for_existing_user(email, "color_guide")
+            else:
+                return jsonify({'error': 'No analysis found and user not in system'}), 400
         # Генерируем уникальное имя PDF
         filename = make_report_filename(email)
         pdf_path = os.path.join('static/reports', filename)
@@ -645,8 +723,15 @@ def send_kibbe_guide():
         email = data.get('email')
         if not email:
             return jsonify({'error': 'Email is required'}), 400
+        
+        # Проверяем, есть ли данные анализа в сессии
         if 'last_kibbe_analysis' not in session or 'last_kibbe_image_path' not in session:
-            return jsonify({'error': 'No Kibbe analysis found'}), 400
+            # Если данных нет в сессии, проверяем, есть ли пользователь в Google Sheets
+            if user_auth.can_send_guide(email, "kibbe_guide"):
+                # Пользователь найден в Google Sheets, отправляем гайд
+                return send_guide_for_existing_user(email, "kibbe_guide")
+            else:
+                return jsonify({'error': 'No analysis found and user not in system'}), 400
         
         analysis = session['last_kibbe_analysis']
         image_path = session['last_kibbe_image_path']
