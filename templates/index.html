@@ -2418,7 +2418,7 @@
             
             // Определяем тип гайда и цену
             const isKibbeGuide = localStorage.getItem('currentAnalysisType') === 'kibbe';
-            const guidePrice = isKibbeGuide ? 1000.00 : 500.00;
+                            const guidePrice = isKibbeGuide ? {{ config.KIBBE_GUIDE_PRICE }} : {{ config.COLOR_GUIDE_PRICE }};
             const guideLabel = isKibbeGuide ? 'Персональный гайд по стилю' : 'Персональный цветовой гайд';
             
             const data = {
@@ -2601,7 +2601,7 @@
                             </div>
                         </div>
                         <div class="guide-price-text" style="margin-top: 1rem; font-size: 1.1rem; color: #bb279b; line-height: 1.2;">
-                            Персональный гайд — <b>500 руб.</b><br>
+                            Персональный гайд — <b>{{ config.COLOR_GUIDE_PRICE|int }} руб.</b><br>
                             <span style="font-size: 0.95rem;">или <b>бесплатно</b> при оформлении подписки на ИИ-стилиста</span>
                         </div>
                     `;
@@ -2685,7 +2685,7 @@
                             </div>
                         </div>
                         <div class="guide-price-text" style="margin-top: 1rem; font-size: 1.1rem; color: #bb279b; line-height: 1.2;">
-                            Персональный гайд под типаж внешности — <b>1000 руб.</b><br>
+                            Персональный гайд под типаж внешности — <b>{{ config.KIBBE_GUIDE_PRICE|int }} руб.</b><br>
                             <span style="font-size: 0.95rem;">или <b>бесплатно</b> при оформлении подписки на ИИ-стилиста</span>
                         </div>
                     `;

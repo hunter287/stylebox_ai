@@ -66,10 +66,30 @@ class UserAuth:
             self.db.password_reset_tokens.create_index("used")
             
             # Индексы для предварительных подписок
-            self.pre_subscriptions_collection.create_index("email", unique=True)
+            # Убираем уникальность по email, так как у одного email может быть подписка + гайды
+            self.pre_subscriptions_collection.create_index("email")
             self.pre_subscriptions_collection.create_index("subscription_end")
             self.pre_subscriptions_collection.create_index("is_active")
             self.pre_subscriptions_collection.create_index("created_at")
+            
+            # Новые индексы для поддержки гайдов
+            self.pre_subscriptions_collection.create_index("product_type")
+            self.pre_subscriptions_collection.create_index([
+                ("email", 1), 
+                ("product_type", 1), 
+                ("status", 1)
+            ])
+            # Уникальный индекс только для подписок ИИ-стилиста (один email = одна подписка)
+            self.pre_subscriptions_collection.create_index([
+                ("email", 1), 
+                ("product_type", 1)
+            ], unique=True)
+            self.pre_subscriptions_collection.create_index([
+                ("product_type", 1), 
+                ("guide_data.sent", 1)
+            ])
+            self.pre_subscriptions_collection.create_index("transaction_id")
+            self.pre_subscriptions_collection.create_index("amount")
             
             logger.info("✅ Индексы для пользователей созданы")
             
@@ -481,15 +501,22 @@ class UserAuth:
             logger.error(f"Ошибка сброса пароля: {e}")
             return {"success": False, "error": "Внутренняя ошибка сервера"}
 
-    def add_pre_subscription(self, email, subscription_end, source="manual", notes=None):
+    def add_pre_subscription(self, email, subscription_end, source="manual", notes=None, product_type="subscription"):
         """Добавляет предварительную подписку"""
         try:
             email = email.strip().lower()
             
-            # Проверяем, что email не занят
-            existing_subscription = self.pre_subscriptions_collection.find_one({"email": email})
-            if existing_subscription:
-                return {"success": False, "error": "Предварительная подписка для этого email уже существует"}
+            # Проверяем, что email не занят (только для подписок ИИ-стилиста)
+            if product_type == "subscription":
+                existing_subscription = self.pre_subscriptions_collection.find_one({
+                    "email": email,
+                    "product_type": "subscription"
+                })
+                if existing_subscription:
+                    return {"success": False, "error": "Предварительная подписка для этого email уже существует"}
+            else:
+                # Для гайдов разрешаем множественные покупки
+                existing_subscription = None
             
             # Создаем предварительную подписку
             subscription_data = {
@@ -498,86 +525,142 @@ class UserAuth:
                 "is_active": True,
                 "source": source,
                 "notes": notes,
+                "product_type": product_type,
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow()
             }
             
             result = self.pre_subscriptions_collection.insert_one(subscription_data)
             
-            logger.info(f"✅ Предварительная подписка добавлена: {email}")
+            if product_type == "subscription":
+                logger.info(f"✅ Предварительная подписка добавлена: {email}")
+            else:
+                logger.info(f"✅ Покупка гайда {product_type} добавлена: {email}")
             return {
                 "success": True,
                 "subscription_id": str(result.inserted_id),
-                "message": "Предварительная подписка добавлена"
+                "message": "Предварительная подписка добавлена" if product_type == "subscription" else f"Покупка гайда {product_type} добавлена"
             }
             
         except Exception as e:
             logger.error(f"Ошибка добавления предварительной подписки: {e}")
             return {"success": False, "error": "Внутренняя ошибка сервера"}
 
-    def get_pre_subscription(self, email):
+    def get_pre_subscription(self, email, product_type="subscription"):
         """Получает предварительную подписку по email"""
         try:
             email = email.strip().lower()
             
-            # Ищем подписку без фильтра is_active, так как поле может не быть установлено
-            subscription = self.pre_subscriptions_collection.find_one({"email": email})
+            # Ищем подписку ИИ-стилиста (subscription_end есть И product_type != "guide")
+            if product_type == "subscription":
+                subscription = self.pre_subscriptions_collection.find_one({
+                    "email": email,
+                    "subscription_end": {"$exists": True, "$ne": None},
+                    "$or": [
+                        {"product_type": {"$exists": False}},  # Старые записи без product_type
+                        {"product_type": "subscription"}       # Новые записи с product_type
+                    ]
+                })
+            else:
+                # Для гайдов ищем по product_type
+                subscription = self.pre_subscriptions_collection.find_one({
+                    "email": email,
+                    "product_type": product_type
+                })
             
             if not subscription:
-                return {"success": False, "error": "Предварительная подписка не найдена"}
+                if product_type == "subscription":
+                    return {"success": False, "error": "Предварительная подписка не найдена"}
+                else:
+                    return {"success": False, "error": f"Покупка гайда {product_type} не найдена"}
             
-            # Проверяем, не истекла ли подписка
-            subscription_end = subscription.get("subscription_end")
-            if not subscription_end:
-                return {"success": False, "error": "У предварительной подписки нет даты окончания"}
-            
-            # Если subscription_end - строка, конвертируем в datetime
-            if isinstance(subscription_end, str):
-                try:
-                    subscription_end = datetime.fromisoformat(subscription_end.replace('Z', '+00:00'))
-                except ValueError:
-                    return {"success": False, "error": "Неверный формат даты окончания подписки"}
-            
-            if subscription_end < datetime.utcnow():
-                return {"success": False, "error": "Предварительная подписка истекла"}
-            
-            return {
-                "success": True,
-                "subscription": {
-                    "id": str(subscription["_id"]),
-                    "email": subscription["email"],
-                    "subscription_end": subscription_end,
-                    "source": subscription.get("source", "manual"),
-                    "notes": subscription.get("notes"),
-                    "created_at": subscription.get("created_at")
+            # Для подписок ИИ-стилиста проверяем дату окончания
+            if product_type == "subscription":
+                subscription_end = subscription.get("subscription_end")
+                if not subscription_end:
+                    return {"success": False, "error": "У предварительной подписки нет даты окончания"}
+                
+                # Если subscription_end - строка, конвертируем в datetime
+                if isinstance(subscription_end, str):
+                    try:
+                        subscription_end = datetime.fromisoformat(subscription_end.replace('Z', '+00:00'))
+                    except ValueError:
+                        return {"success": False, "error": "Неверный формат даты окончания подписки"}
+                
+                if subscription_end < datetime.utcnow():
+                    return {"success": False, "error": "Предварительная подписка истекла"}
+                
+                return {
+                    "success": True,
+                    "subscription": {
+                        "id": str(subscription["_id"]),
+                        "email": subscription["email"],
+                        "subscription_end": subscription_end,
+                        "source": subscription.get("source", "manual"),
+                        "notes": subscription.get("notes"),
+                        "created_at": subscription.get("created_at")
+                    }
                 }
-            }
+            else:
+                # Для гайдов возвращаем информацию о покупке
+                return {
+                    "success": True,
+                    "subscription": {
+                        "id": str(subscription["_id"]),
+                        "email": subscription["email"],
+                        "product_type": subscription.get("product_type"),
+                        "status": subscription.get("status", "completed"),
+                        "guide_data": subscription.get("guide_data", {}),
+                        "created_at": subscription.get("created_at")
+                    }
+                }
             
         except Exception as e:
-            logger.error(f"Ошибка получения предварительной подписки: {e}")
+            logger.error(f"Ошибка получения {'предварительной подписки' if product_type == 'subscription' else f'покупки гайда {product_type}'}: {e}")
             return {"success": False, "error": "Внутренняя ошибка сервера"}
 
-    def remove_pre_subscription(self, email):
+    def remove_pre_subscription(self, email, product_type="subscription"):
         """Удаляет предварительную подписку"""
         try:
             email = email.strip().lower()
             
-            result = self.pre_subscriptions_collection.delete_one({"email": email})
+            if product_type == "subscription":
+                result = self.pre_subscriptions_collection.delete_one({
+                    "email": email,
+                    "product_type": "subscription"
+                })
+            else:
+                result = self.pre_subscriptions_collection.delete_one({
+                    "email": email,
+                    "product_type": product_type
+                })
             
             if result.deleted_count > 0:
-                logger.info(f"✅ Предварительная подписка удалена: {email}")
-                return {"success": True, "message": "Предварительная подписка удалена"}
+                if product_type == "subscription":
+                    logger.info(f"✅ Предварительная подписка удалена: {email}")
+                    return {"success": True, "message": "Предварительная подписка удалена"}
+                else:
+                    logger.info(f"✅ Покупка гайда {product_type} удалена: {email}")
+                    return {"success": True, "message": f"Покупка гайда {product_type} удалена"}
             else:
-                return {"success": False, "error": "Предварительная подписка не найдена"}
+                if product_type == "subscription":
+                    return {"success": False, "error": "Предварительная подписка не найдена"}
+                else:
+                    return {"success": False, "error": f"Покупка гайда {product_type} не найдена"}
             
         except Exception as e:
-            logger.error(f"Ошибка удаления предварительной подписки: {e}")
+            logger.error(f"Ошибка удаления {'предварительной подписки' if product_type == 'subscription' else f'покупки гайда {product_type}'}: {e}")
             return {"success": False, "error": "Внутренняя ошибка сервера"}
 
-    def list_pre_subscriptions(self, active_only=True):
+    def list_pre_subscriptions(self, active_only=True, product_type=None):
         """Получает список предварительных подписок"""
         try:
-            subscriptions = list(self.pre_subscriptions_collection.find({}).sort("created_at", -1))
+            # Фильтруем по product_type если указан
+            filter_query = {}
+            if product_type:
+                filter_query["product_type"] = product_type
+            
+            subscriptions = list(self.pre_subscriptions_collection.find(filter_query).sort("created_at", -1))
             
             # Если нужны только активные, фильтруем по дате
             if active_only:
@@ -611,19 +694,25 @@ class UserAuth:
             }
             
         except Exception as e:
-            logger.error(f"Ошибка получения списка предварительных подписок: {e}")
+            logger.error(f"Ошибка получения списка {'предварительных подписок' if not product_type else f'покупок гайдов {product_type}'}: {e}")
             return {"success": False, "error": "Внутренняя ошибка сервера"}
 
-    def cleanup_expired_pre_subscriptions(self):
+    def cleanup_expired_pre_subscriptions(self, product_type="subscription"):
         """Очищает истекшие предварительные подписки"""
         try:
-            result = self.pre_subscriptions_collection.update_many(
-                {
-                    "subscription_end": {"$lt": datetime.utcnow()},
-                    "is_active": True
-                },
-                {"$set": {"is_active": False, "updated_at": datetime.utcnow()}}
-            )
+            if product_type == "subscription":
+                # Для подписок ИИ-стилиста очищаем по дате
+                current_time = datetime.utcnow()
+                result = self.pre_subscriptions_collection.update_many(
+                    {
+                        "product_type": "subscription",
+                        "subscription_end": {"$lt": current_time}
+                    },
+                    {"$set": {"is_active": False}}
+                )
+            else:
+                # Для гайдов очистка не требуется
+                return {"success": True, "cleaned_count": 0}
             
             logger.info(f"✅ Очищено {result.modified_count} истекших предварительных подписок")
             return {
@@ -632,7 +721,139 @@ class UserAuth:
             }
             
         except Exception as e:
-            logger.error(f"Ошибка очистки истекших предварительных подписок: {e}")
+            logger.error(f"Ошибка очистки истекших {'предварительных подписок' if product_type == 'subscription' else f'покупок гайдов {product_type}'}: {e}")
+            return {"success": False, "error": "Внутренняя ошибка сервера"}
+
+    def add_guide_purchase(self, email, product_type, amount, transaction_id, source="cloudpayments", notes=None):
+        """Добавляет покупку гайда"""
+        try:
+            email = email.strip().lower()
+            
+            # Создаем запись о покупке гайда
+            guide_data = {
+                "email": email,
+                "product_type": product_type,
+                "subscription_end": None,  # У гайдов нет subscription_end
+                "amount": amount,
+                "currency": "RUB",
+                "status": "completed",
+                "payment_provider": "cloudpayments",
+                "transaction_id": transaction_id,
+                "source": source,
+                "notes": notes,
+                "guide_data": {
+                    "sent": False,
+                    "sent_at": None,
+                    "pdf_path": None,
+                    "attempts": 0,
+                    "last_attempt": None
+                },
+                "metadata": {
+                    "user_agent": None,
+                    "ip": None,
+                    "utm_source": None
+                },
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            }
+            
+            result = self.pre_subscriptions_collection.insert_one(guide_data)
+            
+            logger.info(f"✅ Покупка гайда {product_type} добавлена: {email}, transaction_id: {transaction_id}")
+            return {
+                "success": True,
+                "guide_id": str(result.inserted_id),
+                "message": f"Покупка гайда {product_type} добавлена"
+            }
+            
+        except Exception as e:
+            logger.error(f"Ошибка добавления покупки гайда: {e}")
+            return {"success": False, "error": "Внутренняя ошибка сервера"}
+
+    def can_send_guide(self, email, product_type):
+        """Проверяет, можно ли отправить гайд"""
+        try:
+            purchase = self.pre_subscriptions_collection.find_one({
+                "email": email,
+                "product_type": product_type,
+                "subscription_end": None,  # У гайдов нет subscription_end
+                "status": "completed",
+                "guide_data.sent": False
+            })
+            
+            return purchase is not None
+            
+        except Exception as e:
+            logger.error(f"Ошибка проверки возможности отправки гайда: {e}")
+            return False
+
+    def mark_guide_sent(self, email, product_type, pdf_path):
+        """Помечает гайд как отправленный"""
+        try:
+            result = self.pre_subscriptions_collection.update_one(
+                {
+                    "email": email,
+                    "product_type": product_type,
+                    "status": "completed"
+                },
+                {
+                    "$set": {
+                        "guide_data.sent": True,
+                        "guide_data.sent_at": datetime.utcnow(),
+                        "guide_data.pdf_path": pdf_path,
+                        "updated_at": datetime.utcnow()
+                    }
+                }
+            )
+            
+            if result.modified_count > 0:
+                logger.info(f"✅ Гайд {product_type} помечен как отправленный: {email}")
+                return {"success": True, "message": "Гайд помечен как отправленный"}
+            else:
+                return {"success": False, "error": "Покупка гайда не найдена"}
+            
+        except Exception as e:
+            logger.error(f"Ошибка пометки гайда как отправленного: {e}")
+            return {"success": False, "error": "Внутренняя ошибка сервера"}
+
+    def get_guide_purchase_stats(self):
+        """Получает статистику по покупкам гайдов"""
+        try:
+            # Статистика по типам гайдов
+            guide_stats = self.pre_subscriptions_collection.aggregate([
+                {
+                    "$match": {
+                        "product_type": {"$in": ["color_guide", "kibbe_guide"]},
+                        "subscription_end": None
+                    }
+                },
+                {
+                    "$group": {
+                        "_id": "$product_type",
+                        "total_purchases": {"$sum": 1},
+                        "total_amount": {"$sum": "$amount"},
+                        "sent_count": {
+                            "$sum": {"$cond": ["$guide_data.sent", 1, 0]}
+                        },
+                        "pending_count": {
+                            "$sum": {"$cond": ["$guide_data.sent", 0, 1]}
+                        }
+                    }
+                }
+            ])
+            
+            stats = list(guide_stats)
+            
+            return {
+                "success": True,
+                "stats": stats,
+                "total_guides": sum(stat["total_purchases"] for stat in stats),
+                "total_sent": sum(stat["sent_count"] for stat in stats),
+                "total_pending": sum(stat["pending_count"] for stat in stats)
+            }
+            
+        except Exception as e:
+            logger.error(f"Ошибка получения статистики по гайдам: {e}")
             return {"success": False, "error": "Внутренняя ошибка сервера"}
 
 # Создаем глобальный экземпляр

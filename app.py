@@ -6,7 +6,7 @@ from color_analysis import ColorAnalyzer
 from pdf_report import generate_pdf_report, generate_kibbe_pdf
 import cv2
 import json
-from config import CLOUDPAYMENTS_PUBLIC_ID, UNISENDER_API_KEY, UNISENDER_LIST_ID, UNISENDER_GO_API_KEY, OPENAI_API_KEY, GOOGLE_SHEET_ID, GOOGLE_SHEET_RANGE, GOOGLE_SHEET_WORKSHEET, GOOGLE_SHEET_KIBBE_WORKSHEET, GOOGLE_SHEET_SUBSCRIPTION_WORKSHEET, GOOGLE_SERVICE_ACCOUNT_FILE, SUBSCRIPTION_PRICE, SUBSCRIPTION_PRICE_SPECIAL
+from config import CLOUDPAYMENTS_PUBLIC_ID, UNISENDER_API_KEY, UNISENDER_LIST_ID, UNISENDER_GO_API_KEY, OPENAI_API_KEY, GOOGLE_SHEET_ID, GOOGLE_SHEET_RANGE, GOOGLE_SHEET_WORKSHEET, GOOGLE_SHEET_KIBBE_WORKSHEET, GOOGLE_SHEET_SUBSCRIPTION_WORKSHEET, GOOGLE_SERVICE_ACCOUNT_FILE, SUBSCRIPTION_PRICE, SUBSCRIPTION_PRICE_SPECIAL, COLOR_GUIDE_PRICE, KIBBE_GUIDE_PRICE
 import requests
 import random
 import string
@@ -204,7 +204,9 @@ def cleanup_temp_files(filepath):
 def index():
     return render_template('index.html', config={
         'CLOUDPAYMENTS_PUBLIC_ID': CLOUDPAYMENTS_PUBLIC_ID,
-        'SUBSCRIPTION_PRICE': SUBSCRIPTION_PRICE
+        'SUBSCRIPTION_PRICE': SUBSCRIPTION_PRICE,
+        'COLOR_GUIDE_PRICE': COLOR_GUIDE_PRICE,
+        'KIBBE_GUIDE_PRICE': KIBBE_GUIDE_PRICE
     })
 
 @app.route('/payment-success')
@@ -401,6 +403,11 @@ def make_report_filename(email):
     return f"{prefix}_{rand}_report_{date}.pdf"
 
 def send_guide_email(email, pdf_path):
+    # Проверяем, купил ли пользователь гайд
+    if not user_auth.can_send_guide(email, "color_guide"):
+        print(f"❌ Попытка отправить цветовой гайд без покупки: {email}")
+        return False
+    
     # Используем Web API Unisender Go для транзакционных писем
     api_key = UNISENDER_GO_API_KEY
     api_url = "https://go2.unisender.ru/ru/transactional/api/v1/email/send.json"
@@ -456,6 +463,8 @@ def send_guide_email(email, pdf_path):
 
         if response.status_code == 200:
             print("Письмо отправлено через Unisender Go Transactional API!")
+            # Помечаем гайд как отправленный
+            user_auth.mark_guide_sent(email, "color_guide", pdf_path)
             return True
         else:
             print(f"Ошибка отправки письма: {response.text}")
@@ -469,6 +478,11 @@ def send_guide_email(email, pdf_path):
 
 
 def send_kibbe_guide_email(email, pdf_path):
+    # Проверяем, купил ли пользователь гайд
+    if not user_auth.can_send_guide(email, "kibbe_guide"):
+        print(f"❌ Попытка отправить гайд по типажу без покупки: {email}")
+        return False
+    
     # Используем Web API Unisender Go для транзакционных писем
     api_key = UNISENDER_GO_API_KEY
     api_url = "https://go2.unisender.ru/ru/transactional/api/v1/email/send.json"
@@ -524,15 +538,17 @@ def send_kibbe_guide_email(email, pdf_path):
 
         if response.status_code == 200:
             print("Письмо с гайдом по Кибби отправлено через Unisender Go Transactional API!")
+            # Помечаем гайд как отправленный
+            user_auth.mark_guide_sent(email, "kibbe_guide", pdf_path)
             return True
         else:
-            print(f"Ошибка отправки письма с гайдом по Кибби: {response.text}")
+            print(f"Ошибка отправки письма: {response.text}")
             return False
     except requests.exceptions.SSLError as e:
         print(f"SSL ошибка: {str(e)}")
         return False
     except Exception as e:
-        print(f"Ошибка при отправке письма с гайдом по Кибби: {str(e)}")
+        print(f"Ошибка при отправке письма: {str(e)}")
         return False
 
 def wait_for_file_complete(filepath, min_size=10*1024, timeout=10):
@@ -831,13 +847,35 @@ def paid_callback():
             'предзаказ' in description or
             payment_type == 'subscription'
         )
+        
+        # Проверяем, является ли это гайдом
+        is_color_guide = (
+            'цветовой' in description or 
+            'color' in description or
+            payment_type == 'color_guide'
+        )
+        
+        is_kibbe_guide = (
+            'типаж' in description or 
+            'kibbe' in description or
+            payment_type == 'kibbe_guide'
+        )
+        
         print("[DEBUG] Is subscription:", is_subscription)
+        print("[DEBUG] Is color guide:", is_color_guide)
+        print("[DEBUG] Is kibbe guide:", is_kibbe_guide)
         print("[DEBUG] =================================")
         
         print("[DEBUG] Step 5: Checking payment status...")
         if status == 'completed' and email:
-            print("[DEBUG] ===== PROCESSING SUBSCRIPTION =====")
+            print("[DEBUG] ===== PROCESSING PAYMENT =====")
             print("[DEBUG] Email:", email)
+            
+            # Подключаемся к MongoDB
+            if not user_auth.connect():
+                print("[DEBUG] Failed to connect to MongoDB")
+                return jsonify({'code': 15, 'message': 'Database connection failed'}), 500
+            print("[DEBUG] MongoDB connected successfully")
             
             if is_subscription:
                 print("[DEBUG] Step 6: Processing subscription...")
@@ -848,27 +886,64 @@ def paid_callback():
                     subscription_end = datetime.utcnow() + timedelta(days=365)
                     print("[DEBUG] Subscription end date:", subscription_end)
                     
-                    print("[DEBUG] Step 6.2: Connecting to MongoDB...")
-                    # Подключаемся к MongoDB
-                    if not user_auth.connect():
-                        print("[DEBUG] Failed to connect to MongoDB")
-                        return jsonify({'code': 15, 'message': 'Database connection failed'}), 500
-                    print("[DEBUG] MongoDB connected successfully")
-                    
-                    print("[DEBUG] Step 6.3: Adding subscription to database...")
+                    print("[DEBUG] Step 6.2: Adding subscription to database...")
                     result = user_auth.add_pre_subscription(
                         email=email,
                         subscription_end=subscription_end,
                         source="payment",
-                        notes=f"CloudPayments payment - {data.get('TransactionId', 'N/A')}"
+                        notes=f"CloudPayments payment - {data.get('TransactionId', 'N/A')}",
+                        product_type="subscription"
                     )
                     print("[DEBUG] ✅ Subscription added successfully for", email)
                     return jsonify({"code": 0, "message": "Subscription added successfully"})
                 except Exception as e:
                     print("[DEBUG] ❌ Error adding subscription:", str(e))
                     return jsonify({"code": 16, "message": f"Failed to add subscription: {str(e)}"})
+            
+            elif is_color_guide:
+                print("[DEBUG] Step 6: Processing color guide purchase...")
+                try:
+                    print("[DEBUG] Step 6.1: Adding color guide purchase to database...")
+                    amount = float(data.get('Amount', COLOR_GUIDE_PRICE))
+                    transaction_id = data.get('TransactionId', 'N/A')
+                    
+                    result = user_auth.add_guide_purchase(
+                        email=email,
+                        product_type="color_guide",
+                        amount=amount,
+                        transaction_id=transaction_id,
+                        source="cloudpayments",
+                        notes=f"CloudPayments payment - {transaction_id}"
+                    )
+                    print("[DEBUG] ✅ Color guide purchase added successfully for", email)
+                    return jsonify({"code": 0, "message": "Color guide purchase added successfully"})
+                except Exception as e:
+                    print("[DEBUG] ❌ Error adding color guide purchase:", str(e))
+                    return jsonify({"code": 17, "message": f"Failed to add color guide purchase: {str(e)}"})
+            
+            elif is_kibbe_guide:
+                print("[DEBUG] Step 6: Processing kibbe guide purchase...")
+                try:
+                    print("[DEBUG] Step 6.1: Adding kibbe guide purchase to database...")
+                    amount = float(data.get('Amount', KIBBE_GUIDE_PRICE))
+                    transaction_id = data.get('TransactionId', 'N/A')
+                    
+                    result = user_auth.add_guide_purchase(
+                        email=email,
+                        product_type="kibbe_guide",
+                        amount=amount,
+                        transaction_id=transaction_id,
+                        source="cloudpayments",
+                        notes=f"CloudPayments payment - {transaction_id}"
+                    )
+                    print("[DEBUG] ✅ Kibbe guide purchase added successfully for", email)
+                    return jsonify({"code": 0, "message": "Kibbe guide purchase added successfully"})
+                except Exception as e:
+                    print("[DEBUG] ❌ Error adding kibbe guide purchase:", str(e))
+                    return jsonify({"code": 18, "message": f"Failed to add kibbe guide purchase: {str(e)}"})
+            
             else:
-                print("[DEBUG] Not a subscription payment")
+                print("[DEBUG] Not a recognized payment type")
                 return jsonify({"code": 0, "message": "Payment processed successfully"})
         else:
             print("[DEBUG] Invalid status or email")
@@ -976,7 +1051,9 @@ def check_email_in_kibbe_sheet(email):
 def oto_offer():
     return render_template('oto.html', config={
         'CLOUDPAYMENTS_PUBLIC_ID': CLOUDPAYMENTS_PUBLIC_ID,
-        'SUBSCRIPTION_PRICE_SPECIAL': SUBSCRIPTION_PRICE_SPECIAL
+        'SUBSCRIPTION_PRICE_SPECIAL': SUBSCRIPTION_PRICE_SPECIAL,
+        'COLOR_GUIDE_PRICE': COLOR_GUIDE_PRICE,
+        'KIBBE_GUIDE_PRICE': KIBBE_GUIDE_PRICE
     })
 
 @app.route('/kibbe')
