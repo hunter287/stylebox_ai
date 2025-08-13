@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 from pymongo import MongoClient
 from bson import ObjectId
 import logging
+import gspread
+from google.oauth2.service_account import Credentials
 # Используем переменные окружения напрямую
 
 logger = logging.getLogger(__name__)
@@ -808,6 +810,7 @@ class UserAuth:
                     logger.error("Не удалось подключиться к MongoDB")
                     return False
             
+            # Сначала проверяем MongoDB
             purchase = self.pre_subscriptions_collection.find_one({
                 "email": email,
                 "product_type": product_type,
@@ -816,7 +819,48 @@ class UserAuth:
                 "guide_data.sent": False
             })
             
-            return purchase is not None
+            if purchase is not None:
+                return True
+            
+            # Если в MongoDB нет покупки, проверяем Google Sheets
+            # Это нужно для случаев, когда пользователь уже есть в системе
+            try:
+                # Получаем настройки Google Sheets из переменных окружения
+                google_sheet_id = os.getenv('GOOGLE_SHEET_ID')
+                google_service_account_file = os.getenv('GOOGLE_SERVICE_ACCOUNT_FILE')
+                
+                if google_sheet_id and google_service_account_file:
+                    # Определяем, какой лист проверять в зависимости от типа гайда
+                    if product_type == "color_guide":
+                        worksheet_name = os.getenv('GOOGLE_SHEET_WORKSHEET', 'Лист1')
+                    elif product_type == "kibbe_guide":
+                        worksheet_name = os.getenv('GOOGLE_SHEET_KIBBE_WORKSHEET', 'kibbe')
+                    else:
+                        worksheet_name = os.getenv('GOOGLE_SHEET_WORKSHEET', 'Лист1')
+                    
+                    # Подключаемся к Google Sheets
+                    creds = Credentials.from_service_account_file(
+                        google_service_account_file, 
+                        scopes=['https://www.googleapis.com/auth/spreadsheets.readonly']
+                    )
+                    gc = gspread.authorize(creds)
+                    sh = gc.open_by_key(google_sheet_id)
+                    worksheet = sh.worksheet(worksheet_name)
+                    
+                    # Получаем все email'ы из первой колонки
+                    emails = worksheet.col_values(1)
+                    emails = [e.strip().lower() for e in emails if e.strip()]
+                    
+                    # Проверяем, есть ли email в списке
+                    if email.lower() in emails:
+                        logger.info(f"✅ Email {email} найден в Google Sheets для гайда {product_type}")
+                        return True
+                        
+            except Exception as e:
+                logger.warning(f"Ошибка при проверке Google Sheets для {email}: {e}")
+                # Если не удалось проверить Google Sheets, продолжаем работу
+            
+            return False
             
         except Exception as e:
             logger.error(f"Ошибка проверки возможности отправки гайда: {e}")
@@ -832,6 +876,7 @@ class UserAuth:
                     logger.error("Не удалось подключиться к MongoDB")
                     return {"success": False, "error": "Ошибка подключения к базе данных"}
             
+            # Сначала пытаемся найти и обновить существующую покупку в MongoDB
             result = self.pre_subscriptions_collection.update_one(
                 {
                     "email": email,
@@ -851,8 +896,75 @@ class UserAuth:
             if result.modified_count > 0:
                 logger.info(f"✅ Гайд {product_type} помечен как отправленный: {email}")
                 return {"success": True, "message": "Гайд помечен как отправленный"}
-            else:
-                return {"success": False, "error": "Покупка гайда не найдена"}
+            
+            # Если покупка не найдена в MongoDB, но email есть в Google Sheets,
+            # создаем запись о том, что гайд был отправлен
+            try:
+                google_sheet_id = os.getenv('GOOGLE_SHEET_ID')
+                google_service_account_file = os.getenv('GOOGLE_SERVICE_ACCOUNT_FILE')
+                
+                if google_sheet_id and google_service_account_file:
+                    # Определяем, какой лист проверять
+                    if product_type == "color_guide":
+                        worksheet_name = os.getenv('GOOGLE_SHEET_WORKSHEET', 'Лист1')
+                    elif product_type == "kibbe_guide":
+                        worksheet_name = os.getenv('GOOGLE_SHEET_KIBBE_WORKSHEET', 'kibbe')
+                    else:
+                        worksheet_name = os.getenv('GOOGLE_SHEET_WORKSHEET', 'Лист1')
+                    
+                    # Подключаемся к Google Sheets
+                    creds = Credentials.from_service_account_file(
+                        google_service_account_file, 
+                        scopes=['https://www.googleapis.com/auth/spreadsheets.readonly']
+                    )
+                    gc = gspread.authorize(creds)
+                    sh = gc.open_by_key(google_sheet_id)
+                    worksheet = sh.worksheet(worksheet_name)
+                    
+                    # Получаем все email'ы из первой колонки
+                    emails = worksheet.col_values(1)
+                    emails = [e.strip().lower() for e in emails if e.strip()]
+                    
+                    # Проверяем, есть ли email в списке
+                    if email.lower() in emails:
+                        logger.info(f"✅ Email {email} найден в Google Sheets, создаем запись об отправке гайда {product_type}")
+                        
+                        # Создаем запись о том, что гайд был отправлен
+                        guide_data = {
+                            "email": email,
+                            "product_type": product_type,
+                            "subscription_end": None,
+                            "amount": 0,  # Бесплатно для существующих пользователей
+                            "currency": "RUB",
+                            "status": "completed",
+                            "payment_provider": "google_sheets",
+                            "transaction_id": f"gs_{int(time.time())}",
+                            "source": "google_sheets",
+                            "notes": f"Гайд отправлен пользователю из Google Sheets",
+                            "guide_data": {
+                                "sent": True,
+                                "sent_at": datetime.utcnow(),
+                                "pdf_path": pdf_path,
+                                "attempts": 1,
+                                "last_attempt": datetime.utcnow()
+                            },
+                            "metadata": {
+                                "user_agent": None,
+                                "ip": None,
+                                "utm_source": None
+                            },
+                            "created_at": datetime.utcnow(),
+                            "updated_at": datetime.utcnow()
+                        }
+                        
+                        result = self.pre_subscriptions_collection.insert_one(guide_data)
+                        logger.info(f"✅ Запись об отправке гайда {product_type} создана: {email}")
+                        return {"success": True, "message": "Гайд помечен как отправленный"}
+            
+            except Exception as e:
+                logger.warning(f"Ошибка при проверке Google Sheets для {email}: {e}")
+            
+            return {"success": False, "error": "Покупка гайда не найдена"}
             
         except Exception as e:
             logger.error(f"Ошибка пометки гайда как отправленного: {e}")
