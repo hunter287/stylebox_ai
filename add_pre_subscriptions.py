@@ -65,7 +65,7 @@ def add_pre_subscription_from_input():
     notes = input("Введите заметки (необязательно): ").strip() or None
     
     # Добавляем предварительную подписку
-    result = user_auth.add_pre_subscription(email, subscription_end, source, notes)
+    result = user_auth.add_pre_subscription(email, subscription_end, source, notes, "subscription")
     
     if result['success']:
         print(f"✅ Предварительная подписка добавлена для {email}")
@@ -107,7 +107,7 @@ def add_pre_subscription_via_args(email: str, until: str, source: str = 'manual'
     source = (source or 'manual').strip() or 'manual'
     notes = (notes.strip() if isinstance(notes, str) else None) or None
 
-    result = user_auth.add_pre_subscription(email, subscription_end, source, notes)
+    result = user_auth.add_pre_subscription(email, subscription_end, source, notes, "subscription")
     if result['success']:
         print(f"✅ Предварительная подписка добавлена для {email}")
         print(f"   Действует до: {subscription_end.strftime('%Y-%m-%d')}")
@@ -180,7 +180,7 @@ def add_multiple_pre_subscriptions():
                         continue
                     
                     # Добавляем подписку
-                    result = user_auth.add_pre_subscription(email, subscription_end, source, notes)
+                    result = user_auth.add_pre_subscription(email, subscription_end, source, notes, "subscription")
                     
                 elif format_choice == "2":
                     # Формат: email,дата,источник,заметки
@@ -210,7 +210,7 @@ def add_multiple_pre_subscriptions():
                         continue
                     
                     # Добавляем подписку
-                    result = user_auth.add_pre_subscription(email, subscription_end, source, notes)
+                    result = user_auth.add_pre_subscription(email, subscription_end, source, notes, "subscription")
                     
                 elif format_choice == "3":
                     # Формат: email,дата
@@ -240,7 +240,7 @@ def add_multiple_pre_subscriptions():
                         continue
                     
                     # Добавляем подписку
-                    result = user_auth.add_pre_subscription(email, subscription_end, source, notes)
+                    result = user_auth.add_pre_subscription(email, subscription_end, source, notes, "subscription")
                 
                 else:
                     print("❌ Неверный выбор формата")
