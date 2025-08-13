@@ -592,11 +592,15 @@ def wait_for_file_complete(filepath, min_size=10*1024, timeout=10):
 def send_guide_for_existing_user(email, guide_type):
     """Отправляет гайд существующему пользователю из Google Sheets"""
     try:
+        print(f"[DEBUG] send_guide_for_existing_user: Начало для {email}, тип: {guide_type}")
+        
         # Генерируем уникальное имя PDF
         filename = make_report_filename(email)
         pdf_path = os.path.join('static/reports', filename)
+        print(f"[DEBUG] PDF путь: {pdf_path}")
         
         if guide_type == "color_guide":
+            print(f"[DEBUG] Создаем цветовой гайд для {email}")
             # Для цветового гайда используем стандартный шаблон
             # Создаем базовый анализ на основе пресетов
             analysis = {
@@ -606,12 +610,17 @@ def send_guide_for_existing_user(email, guide_type):
                 'bright_colors_hex': ['#ff0000', '#00ff00', '#0000ff'],
                 'light_colors_hex': ['#ffffff', '#f0f0f0', '#e0e0e0']
             }
+            print(f"[DEBUG] Анализ создан: {analysis}")
             
             # Создаем временное изображение (можно использовать стандартное)
             image_path = 'static/images/color_guide_01.jpg'  # Используем стандартное изображение
+            print(f"[DEBUG] Путь к изображению: {image_path}")
+            print(f"[DEBUG] Изображение существует: {os.path.exists(image_path)}")
             
             # Генерируем PDF
+            print(f"[DEBUG] Начинаем генерацию PDF...")
             full_pdf_path = generate_pdf_report(analysis, image_path, output_path=pdf_path)
+            print(f"[DEBUG] PDF сгенерирован: {full_pdf_path}")
             
         elif guide_type == "kibbe_guide":
             # Для гайда по Кибби используем стандартный шаблон
@@ -636,18 +645,31 @@ def send_guide_for_existing_user(email, guide_type):
             )
         
         # Проверяем, что PDF создан
+        print(f"[DEBUG] Проверяем PDF: {full_pdf_path}")
+        print(f"[DEBUG] PDF существует: {os.path.exists(full_pdf_path)}")
+        if os.path.exists(full_pdf_path):
+            print(f"[DEBUG] Размер PDF: {os.path.getsize(full_pdf_path)} байт")
+        
         if os.path.exists(full_pdf_path) and os.path.getsize(full_pdf_path) > 10*1024:
+            print(f"[DEBUG] PDF готов к отправке, начинаем отправку email...")
             # Отправляем email с гайдом
             if guide_type == "color_guide":
+                print(f"[DEBUG] Вызываем send_guide_email для цветового гайда...")
                 success = send_guide_email(email, full_pdf_path)
             else:
+                print(f"[DEBUG] Вызываем send_kibbe_guide_email для гайда по Кибби...")
                 success = send_kibbe_guide_email(email, full_pdf_path)
             
+            print(f"[DEBUG] Результат отправки email: {success}")
+            
             if success:
+                print(f"[DEBUG] ✅ Гайд {guide_type} отправлен успешно для {email}")
                 return jsonify({'success': True, 'message': f'Гайд {guide_type} отправлен успешно'})
             else:
+                print(f"[DEBUG] ❌ Ошибка при отправке email для {email}")
                 return jsonify({'error': 'Failed to send email'}), 500
         else:
+            print(f"[DEBUG] ❌ PDF не создан или слишком маленький для {email}")
             # Если не удалось создать PDF, отправляем письмо с извинением
             if guide_type == "color_guide":
                 send_guide_email_apology(email)
@@ -669,12 +691,22 @@ def send_guide():
             return jsonify({'error': 'Email is required'}), 400
         
         # Проверяем, есть ли данные анализа в сессии
+        print(f"[DEBUG] send_guide: Проверяем сессию для {email}")
+        print(f"[DEBUG] last_analysis в сессии: {'last_analysis' in session}")
+        print(f"[DEBUG] last_image_path в сессии: {'last_image_path' in session}")
+        
         if 'last_analysis' not in session or 'last_image_path' not in session:
+            print(f"[DEBUG] Данных анализа нет в сессии, проверяем Google Sheets...")
             # Если данных нет в сессии, проверяем, есть ли пользователь в Google Sheets
-            if user_auth.can_send_guide(email, "color_guide"):
+            can_send = user_auth.can_send_guide(email, "color_guide")
+            print(f"[DEBUG] can_send_guide результат: {can_send}")
+            
+            if can_send:
+                print(f"[DEBUG] Пользователь найден в Google Sheets, вызываем send_guide_for_existing_user...")
                 # Пользователь найден в Google Sheets, отправляем гайд
                 return send_guide_for_existing_user(email, "color_guide")
             else:
+                print(f"[DEBUG] Пользователь не найден ни в сессии, ни в Google Sheets")
                 return jsonify({'error': 'No analysis found and user not in system'}), 400
         # Генерируем уникальное имя PDF
         filename = make_report_filename(email)

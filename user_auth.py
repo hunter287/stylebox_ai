@@ -803,6 +803,8 @@ class UserAuth:
     def can_send_guide(self, email, product_type):
         """Проверяет, можно ли отправить гайд"""
         try:
+            print(f"[DEBUG] can_send_guide: Проверяем для {email}, тип: {product_type}")
+            
             # Проверяем подключение к MongoDB
             if self.db is None or self.pre_subscriptions_collection is None:
                 logger.warning("MongoDB не подключена, пытаемся переподключиться...")
@@ -811,6 +813,7 @@ class UserAuth:
                     return False
             
             # Сначала проверяем MongoDB
+            print(f"[DEBUG] can_send_guide: Ищем покупку в MongoDB...")
             purchase = self.pre_subscriptions_collection.find_one({
                 "email": email,
                 "product_type": product_type,
@@ -819,15 +822,22 @@ class UserAuth:
                 "guide_data.sent": False
             })
             
+            print(f"[DEBUG] can_send_guide: Результат поиска в MongoDB: {purchase is not None}")
+            
             if purchase is not None:
+                print(f"[DEBUG] can_send_guide: Покупка найдена в MongoDB для {email}")
                 return True
             
             # Если в MongoDB нет покупки, проверяем Google Sheets
             # Это нужно для случаев, когда пользователь уже есть в системе
+            print(f"[DEBUG] can_send_guide: Покупки в MongoDB нет, проверяем Google Sheets...")
             try:
                 # Получаем настройки Google Sheets из переменных окружения
                 google_sheet_id = os.getenv('GOOGLE_SHEET_ID')
                 google_service_account_file = os.getenv('GOOGLE_SERVICE_ACCOUNT_FILE')
+                
+                print(f"[DEBUG] can_send_guide: GOOGLE_SHEET_ID: {google_sheet_id}")
+                print(f"[DEBUG] can_send_guide: GOOGLE_SERVICE_ACCOUNT_FILE: {google_service_account_file}")
                 
                 if google_sheet_id and google_service_account_file:
                     # Определяем, какой лист проверять в зависимости от типа гайда
@@ -838,7 +848,10 @@ class UserAuth:
                     else:
                         worksheet_name = os.getenv('GOOGLE_SHEET_WORKSHEET', 'Лист1')
                     
+                    print(f"[DEBUG] can_send_guide: Проверяем лист: {worksheet_name}")
+                    
                     # Подключаемся к Google Sheets
+                    print(f"[DEBUG] can_send_guide: Подключаемся к Google Sheets...")
                     creds = Credentials.from_service_account_file(
                         google_service_account_file, 
                         scopes=['https://www.googleapis.com/auth/spreadsheets.readonly']
@@ -848,18 +861,27 @@ class UserAuth:
                     worksheet = sh.worksheet(worksheet_name)
                     
                     # Получаем все email'ы из первой колонки
+                    print(f"[DEBUG] can_send_guide: Получаем email'ы из колонки A...")
                     emails = worksheet.col_values(1)
                     emails = [e.strip().lower() for e in emails if e.strip()]
+                    print(f"[DEBUG] can_send_guide: Найдено email'ов: {len(emails)}")
                     
                     # Проверяем, есть ли email в списке
-                    if email.lower() in emails:
+                    email_lower = email.lower()
+                    print(f"[DEBUG] can_send_guide: Ищем email: {email_lower}")
+                    if email_lower in emails:
+                        print(f"[DEBUG] can_send_guide: ✅ Email {email} найден в Google Sheets для гайда {product_type}")
                         logger.info(f"✅ Email {email} найден в Google Sheets для гайда {product_type}")
                         return True
+                    else:
+                        print(f"[DEBUG] can_send_guide: ❌ Email {email} НЕ найден в Google Sheets")
                         
             except Exception as e:
+                print(f"[DEBUG] can_send_guide: ❌ Ошибка при проверке Google Sheets для {email}: {e}")
                 logger.warning(f"Ошибка при проверке Google Sheets для {email}: {e}")
                 # Если не удалось проверить Google Sheets, продолжаем работу
             
+            print(f"[DEBUG] can_send_guide: ❌ Пользователь {email} не найден ни в MongoDB, ни в Google Sheets")
             return False
             
         except Exception as e:
