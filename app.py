@@ -719,18 +719,18 @@ def send_guide():
         print(f"[DEBUG] last_image_path в сессии: {'last_image_path' in session}")
         
         if 'last_analysis' not in session or 'last_image_path' not in session:
-            print(f"[DEBUG] Данных анализа нет в сессии, проверяем Google Sheets...")
-            # Если данных нет в сессии, проверяем, есть ли пользователь в Google Sheets
+            print(f"[DEBUG] Данных анализа нет в сессии, проверяем базу данных...")
+            # Если данных нет в сессии, проверяем, есть ли пользователь в базе данных
             try:
                 can_send = user_auth.can_send_guide(email, "color_guide")
                 print(f"[DEBUG] can_send_guide результат: {can_send}")
                 
                 if can_send:
-                    print(f"[DEBUG] Пользователь найден в Google Sheets, вызываем send_guide_for_existing_user...")
-                    # Пользователь найден в Google Sheets, отправляем гайд
+                    print(f"[DEBUG] Пользователь найден в базе данных, вызываем send_guide_for_existing_user...")
+                    # Пользователь найден в базе данных, отправляем гайд
                     return send_guide_for_existing_user(email, "color_guide")
                 else:
-                    print(f"[DEBUG] Пользователь не найден ни в сессии, ни в Google Sheets")
+                    print(f"[DEBUG] Пользователь не найден ни в сессии, ни в базе данных")
                     return jsonify({'error': 'No analysis found and user not in system'}), 400
             except Exception as e:
                 print(f"[DEBUG] ❌ Ошибка при проверке can_send_guide: {str(e)}")
@@ -786,9 +786,9 @@ def send_kibbe_guide():
         
         # Проверяем, есть ли данные анализа в сессии
         if 'last_kibbe_analysis' not in session or 'last_kibbe_image_path' not in session:
-            # Если данных нет в сессии, проверяем, есть ли пользователь в Google Sheets
+            # Если данных нет в сессии, проверяем, есть ли пользователь в базе данных
             if user_auth.can_send_guide(email, "kibbe_guide"):
-                # Пользователь найден в Google Sheets, отправляем гайд
+                # Пользователь найден в базе данных, отправляем гайд
                 return send_guide_for_existing_user(email, "kibbe_guide")
             else:
                 return jsonify({'error': 'No analysis found and user not in system'}), 400

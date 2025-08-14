@@ -6,8 +6,9 @@ from datetime import datetime, timedelta
 from pymongo import MongoClient
 from bson import ObjectId
 import logging
-import gspread
-from google.oauth2.service_account import Credentials
+# Убрали импорты Google Sheets - больше не нужны
+# import gspread
+# from google.oauth2.service_account import Credentials
 # Используем переменные окружения напрямую
 
 logger = logging.getLogger(__name__)
@@ -812,9 +813,9 @@ class UserAuth:
                     logger.error("Не удалось подключиться к MongoDB")
                     return False
             
-            # Сначала проверяем MongoDB
-            print(f"[DEBUG] can_send_guide: Ищем покупку в MongoDB...")
-            purchase = self.pre_subscriptions_collection.find_one({
+            # 1. Сначала проверяем, есть ли прямая покупка гайда
+            print(f"[DEBUG] can_send_guide: Ищем прямую покупку гайда в MongoDB...")
+            guide_purchase = self.pre_subscriptions_collection.find_one({
                 "email": email,
                 "product_type": product_type,
                 "subscription_end": None,  # У гайдов нет subscription_end
@@ -822,66 +823,68 @@ class UserAuth:
                 "guide_data.sent": False
             })
             
-            print(f"[DEBUG] can_send_guide: Результат поиска в MongoDB: {purchase is not None}")
-            
-            if purchase is not None:
-                print(f"[DEBUG] can_send_guide: Покупка найдена в MongoDB для {email}")
+            if guide_purchase is not None:
+                print(f"[DEBUG] can_send_guide: ✅ Прямая покупка гайда найдена в MongoDB для {email}")
                 return True
             
-            # Если в MongoDB нет покупки, проверяем Google Sheets
-            # Это нужно для случаев, когда пользователь уже есть в системе
-            print(f"[DEBUG] can_send_guide: Покупки в MongoDB нет, проверяем Google Sheets...")
-            try:
-                # Получаем настройки Google Sheets из переменных окружения
-                google_sheet_id = os.getenv('GOOGLE_SHEET_ID')
-                google_service_account_file = os.getenv('GOOGLE_SERVICE_ACCOUNT_FILE')
-                
-                print(f"[DEBUG] can_send_guide: GOOGLE_SHEET_ID: {google_sheet_id}")
-                print(f"[DEBUG] can_send_guide: GOOGLE_SERVICE_ACCOUNT_FILE: {google_service_account_file}")
-                
-                if google_sheet_id and google_service_account_file:
-                    # Определяем, какой лист проверять в зависимости от типа гайда
-                    if product_type == "color_guide":
-                        worksheet_name = os.getenv('GOOGLE_SHEET_WORKSHEET', 'Лист1')
-                    elif product_type == "kibbe_guide":
-                        worksheet_name = os.getenv('GOOGLE_SHEET_KIBBE_WORKSHEET', 'kibbe')
-                    else:
-                        worksheet_name = os.getenv('GOOGLE_SHEET_WORKSHEET', 'Лист1')
-                    
-                    print(f"[DEBUG] can_send_guide: Проверяем лист: {worksheet_name}")
-                    
-                    # Подключаемся к Google Sheets
-                    print(f"[DEBUG] can_send_guide: Подключаемся к Google Sheets...")
-                    creds = Credentials.from_service_account_file(
-                        google_service_account_file, 
-                        scopes=['https://www.googleapis.com/auth/spreadsheets.readonly']
-                    )
-                    gc = gspread.authorize(creds)
-                    sh = gc.open_by_key(google_sheet_id)
-                    worksheet = sh.worksheet(worksheet_name)
-                    
-                    # Получаем все email'ы из первой колонки
-                    print(f"[DEBUG] can_send_guide: Получаем email'ы из колонки A...")
-                    emails = worksheet.col_values(1)
-                    emails = [e.strip().lower() for e in emails if e.strip()]
-                    print(f"[DEBUG] can_send_guide: Найдено email'ов: {len(emails)}")
-                    
-                    # Проверяем, есть ли email в списке
-                    email_lower = email.lower()
-                    print(f"[DEBUG] can_send_guide: Ищем email: {email_lower}")
-                    if email_lower in emails:
-                        print(f"[DEBUG] can_send_guide: ✅ Email {email} найден в Google Sheets для гайда {product_type}")
-                        logger.info(f"✅ Email {email} найден в Google Sheets для гайда {product_type}")
-                        return True
-                    else:
-                        print(f"[DEBUG] can_send_guide: ❌ Email {email} НЕ найден в Google Sheets")
-                        
-            except Exception as e:
-                print(f"[DEBUG] can_send_guide: ❌ Ошибка при проверке Google Sheets для {email}: {e}")
-                logger.warning(f"Ошибка при проверке Google Sheets для {email}: {e}")
-                # Если не удалось проверить Google Sheets, продолжаем работу
+            # 2. Если прямой покупки нет, проверяем действующую подписку на ИИ-стилиста
+            print(f"[DEBUG] can_send_guide: Проверяем подписку на ИИ-стилиста для {email}...")
             
-            print(f"[DEBUG] can_send_guide: ❌ Пользователь {email} не найден ни в MongoDB, ни в Google Sheets")
+            # Ищем подписку с разными возможными product_type
+            subscription = None
+            possible_subscription_types = ["subscription", "ai_stylist", "premium", "stylist", "ai_subscription"]
+            possible_statuses = ["completed", "active", "paid", "confirmed"]
+            
+            for sub_type in possible_subscription_types:
+                for status in possible_statuses:
+                    print(f"[DEBUG] can_send_guide: Проверяем {sub_type} со статусом {status}...")
+                    
+                    # Ищем подписку с текущим статусом
+                    temp_sub = self.pre_subscriptions_collection.find_one({
+                        "email": email,
+                        "product_type": sub_type,
+                        "status": status
+                    })
+                    
+                    if temp_sub:
+                        print(f"[DEBUG] can_send_guide: Найдена запись {sub_type} со статусом {status}")
+                        
+                        # Проверяем, не истекла ли подписка
+                        subscription_end = temp_sub.get('subscription_end')
+                        if subscription_end:
+                            if subscription_end > datetime.utcnow():
+                                print(f"[DEBUG] can_send_guide: ✅ Подписка {sub_type} активна до {subscription_end}")
+                                subscription = temp_sub
+                                break
+                            else:
+                                print(f"[DEBUG] can_send_guide: ⚠️ Подписка {sub_type} истекла {subscription_end}")
+                        else:
+                            print(f"[DEBUG] can_send_guide: ✅ Подписка {sub_type} без срока окончания")
+                            subscription = temp_sub
+                            break
+                
+                if subscription:
+                    break
+            
+            if subscription is not None:
+                print(f"[DEBUG] can_send_guide: ✅ Действующая подписка на ИИ-стилиста найдена для {email}")
+                print(f"[DEBUG] can_send_guide: Подписка действует до: {subscription.get('subscription_end')}")
+                
+                # Проверяем, не был ли уже отправлен гайд этого типа
+                guide_sent_check = self.pre_subscriptions_collection.find_one({
+                    "email": email,
+                    "product_type": product_type,
+                    "guide_data.sent": True
+                })
+                
+                if guide_sent_check is None:
+                    print(f"[DEBUG] can_send_guide: ✅ Гайд {product_type} еще не был отправлен подписчику {email}")
+                    return True
+                else:
+                    print(f"[DEBUG] can_send_guide: ⚠️ Гайд {product_type} уже был отправлен подписчику {email}")
+                    return False
+            
+            print(f"[DEBUG] can_send_guide: ❌ Пользователь {email} не найден в MongoDB для гайда {product_type} и не имеет действующей подписки")
             return False
             
         except Exception as e:
@@ -919,74 +922,82 @@ class UserAuth:
                 logger.info(f"✅ Гайд {product_type} помечен как отправленный: {email}")
                 return {"success": True, "message": "Гайд помечен как отправленный"}
             
-            # Если покупка не найдена в MongoDB, но email есть в Google Sheets,
-            # создаем запись о том, что гайд был отправлен
-            try:
-                google_sheet_id = os.getenv('GOOGLE_SHEET_ID')
-                google_service_account_file = os.getenv('GOOGLE_SERVICE_ACCOUNT_FILE')
+            # Если покупка не найдена, проверяем, есть ли действующая подписка
+            print(f"[DEBUG] mark_guide_sent: Проверяем подписку для {email}...")
+            
+            # Ищем подписку с разными возможными product_type
+            subscription = None
+            possible_subscription_types = ["subscription", "ai_stylist", "premium", "stylist", "ai_subscription"]
+            possible_statuses = ["completed", "active", "paid", "confirmed"]
+            
+            for sub_type in possible_subscription_types:
+                for status in possible_statuses:
+                    print(f"[DEBUG] mark_guide_sent: Проверяем {sub_type} со статусом {status}...")
+                    
+                    # Ищем подписку с текущим статусом
+                    temp_sub = self.pre_subscriptions_collection.find_one({
+                        "email": email,
+                        "product_type": sub_type,
+                        "status": status
+                    })
+                    
+                    if temp_sub:
+                        print(f"[DEBUG] mark_guide_sent: Найдена запись {sub_type} со статусом {status}")
+                        
+                        # Проверяем, не истекла ли подписка
+                        subscription_end = temp_sub.get('subscription_end')
+                        if subscription_end:
+                            if subscription_end > datetime.utcnow():
+                                print(f"[DEBUG] mark_guide_sent: ✅ Подписка {sub_type} активна до {subscription_end}")
+                                subscription = temp_sub
+                                break
+                            else:
+                                print(f"[DEBUG] mark_guide_sent: ⚠️ Подписка {sub_type} истекла {subscription_end}")
+                        else:
+                            print(f"[DEBUG] mark_guide_sent: ✅ Подписка {sub_type} без срока окончания")
+                            subscription = temp_sub
+                            break
                 
-                if google_sheet_id and google_service_account_file:
-                    # Определяем, какой лист проверять
-                    if product_type == "color_guide":
-                        worksheet_name = os.getenv('GOOGLE_SHEET_WORKSHEET', 'Лист1')
-                    elif product_type == "kibbe_guide":
-                        worksheet_name = os.getenv('GOOGLE_SHEET_KIBBE_WORKSHEET', 'kibbe')
-                    else:
-                        worksheet_name = os.getenv('GOOGLE_SHEET_WORKSHEET', 'Лист1')
-                    
-                    # Подключаемся к Google Sheets
-                    creds = Credentials.from_service_account_file(
-                        google_service_account_file, 
-                        scopes=['https://www.googleapis.com/auth/spreadsheets.readonly']
-                    )
-                    gc = gspread.authorize(creds)
-                    sh = gc.open_by_key(google_sheet_id)
-                    worksheet = sh.worksheet(worksheet_name)
-                    
-                    # Получаем все email'ы из первой колонки
-                    emails = worksheet.col_values(1)
-                    emails = [e.strip().lower() for e in emails if e.strip()]
-                    
-                    # Проверяем, есть ли email в списке
-                    if email.lower() in emails:
-                        logger.info(f"✅ Email {email} найден в Google Sheets, создаем запись об отправке гайда {product_type}")
-                        
-                        # Создаем запись о том, что гайд был отправлен
-                        guide_data = {
-                            "email": email,
-                            "product_type": product_type,
-                            "subscription_end": None,
-                            "amount": 0,  # Бесплатно для существующих пользователей
-                            "currency": "RUB",
-                            "status": "completed",
-                            "payment_provider": "google_sheets",
-                            "transaction_id": f"gs_{int(time.time())}",
-                            "source": "google_sheets",
-                            "notes": f"Гайд отправлен пользователю из Google Sheets",
-                            "guide_data": {
-                                "sent": True,
-                                "sent_at": datetime.utcnow(),
-                                "pdf_path": pdf_path,
-                                "attempts": 1,
-                                "last_attempt": datetime.utcnow()
-                            },
-                            "metadata": {
-                                "user_agent": None,
-                                "ip": None,
-                                "utm_source": None
-                            },
-                            "created_at": datetime.utcnow(),
-                            "updated_at": datetime.utcnow()
-                        }
-                        
-                        result = self.pre_subscriptions_collection.insert_one(guide_data)
-                        logger.info(f"✅ Запись об отправке гайда {product_type} создана: {email}")
-                        return {"success": True, "message": "Гайд помечен как отправленный"}
+                if subscription:
+                    break
             
-            except Exception as e:
-                logger.warning(f"Ошибка при проверке Google Sheets для {email}: {e}")
+            if subscription is not None:
+                print(f"[DEBUG] mark_guide_sent: ✅ Действующая подписка найдена для {email}, создаем запись о гайде")
+                
+                # Создаем запись о том, что гайд был отправлен подписчику
+                guide_data = {
+                    "email": email,
+                    "product_type": product_type,
+                    "subscription_end": None,
+                    "amount": 0,  # Бесплатно для подписчиков
+                    "currency": "RUB",
+                    "status": "completed",
+                    "payment_provider": "subscription",
+                    "transaction_id": f"sub_{int(time.time())}",
+                    "source": "subscription_benefit",
+                    "notes": f"Гайд отправлен как бонус для подписчика ИИ-стилиста",
+                    "guide_data": {
+                        "sent": True,
+                        "sent_at": datetime.utcnow(),
+                        "pdf_path": pdf_path,
+                        "attempts": 1,
+                        "last_attempt": datetime.utcnow()
+                    },
+                    "metadata": {
+                        "user_agent": None,
+                        "ip": None,
+                        "utm_source": None
+                    },
+                    "created_at": datetime.utcnow(),
+                    "updated_at": datetime.utcnow()
+                }
+                
+                result = self.pre_subscriptions_collection.insert_one(guide_data)
+                logger.info(f"✅ Запись об отправке гайда {product_type} подписчику создана: {email}")
+                return {"success": True, "message": "Гайд помечен как отправленный подписчику"}
             
-            return {"success": False, "error": "Покупка гайда не найдена"}
+            # Если ни покупки, ни подписки нет, возвращаем ошибку
+            return {"success": False, "error": "Покупка гайда не найдена и нет действующей подписки"}
             
         except Exception as e:
             logger.error(f"Ошибка пометки гайда как отправленного: {e}")
