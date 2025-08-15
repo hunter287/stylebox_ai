@@ -438,6 +438,9 @@ def make_report_filename(email):
     return f"{prefix}_{rand}_report_{date}.pdf"
 
 def send_guide_email(email, pdf_path):
+    print(f"🚀 [DEBUG] send_guide_email: Начало функции для {email}")
+    print(f"🚀 [DEBUG] PDF путь: {pdf_path}")
+    
     # Убеждаемся, что подключение к MongoDB активно
     if user_auth.db is None or user_auth.pre_subscriptions_collection is None:
         logger.warning("MongoDB не подключена, пытаемся переподключиться...")
@@ -445,10 +448,14 @@ def send_guide_email(email, pdf_path):
             logger.error("Не удалось подключиться к MongoDB")
             return False
     
+    print(f"🚀 [DEBUG] MongoDB подключение проверено")
+    
     # Проверяем, купил ли пользователь гайд
     if not user_auth.can_send_guide(email, "color_guide"):
         print(f"❌ Попытка отправить цветовой гайд без покупки: {email}")
         return False
+    
+    print(f"🚀 [DEBUG] can_send_guide проверка пройдена")
     
     # Используем Web API Unisender Go для транзакционных писем
     api_key = UNISENDER_GO_API_KEY
@@ -485,6 +492,8 @@ def send_guide_email(email, pdf_path):
             }
         }
     }
+    
+    print(f"🚀 [DEBUG] Payload сформирован успешно")
 
     print("Отправка письма через Unisender Go Transactional API...")
     print(f"API URL: {api_url}")
@@ -492,6 +501,31 @@ def send_guide_email(email, pdf_path):
     print(f"To: {to_email}")
     print(f"PDF URL: {pdf_url}")
     print(f"Payload: {json.dumps(payload, ensure_ascii=False, indent=2)}")
+    
+    # Дополнительное логирование для диагностики
+    print(f"🔍 Проверяем переменные:")
+    print(f"   API Key: {'✅ Установлен' if api_key else '❌ Отсутствует'}")
+    print(f"   API Key length: {len(api_key) if api_key else 0}")
+    print(f"   From email: {from_email}")
+    print(f"   To email: {to_email}")
+    print(f"   PDF path: {pdf_path}")
+    print(f"   PDF exists: {os.path.exists(pdf_path)}")
+    print(f"   PDF size: {os.path.getsize(pdf_path) if os.path.exists(pdf_path) else 'N/A'} bytes")
+    
+    print(f"🔍 Проверяем импорты:")
+    try:
+        import urllib3
+        print(f"   urllib3: ✅ {urllib3.__version__}")
+    except ImportError as e:
+        print(f"   urllib3: ❌ {e}")
+    
+    try:
+        import requests
+        print(f"   requests: ✅ {requests.__version__}")
+    except ImportError as e:
+        print(f"   requests: ❌ {e}")
+    
+    print(f"🔍 Начинаем отправку...")
 
     try:
         headers = {
@@ -617,6 +651,31 @@ def send_kibbe_guide_email(email, pdf_path):
     print(f"To: {to_email}")
     print(f"PDF URL: {pdf_url}")
     print(f"Payload: {json.dumps(payload, ensure_ascii=False, indent=2)}")
+    
+    # Дополнительное логирование для диагностики
+    print(f"🔍 Проверяем переменные:")
+    print(f"   API Key: {'✅ Установлен' if api_key else '❌ Отсутствует'}")
+    print(f"   API Key length: {len(api_key) if api_key else 0}")
+    print(f"   From email: {from_email}")
+    print(f"   To email: {to_email}")
+    print(f"   PDF path: {pdf_path}")
+    print(f"   PDF exists: {os.path.exists(pdf_path)}")
+    print(f"   PDF size: {os.path.getsize(pdf_path) if os.path.exists(pdf_path) else 'N/A'} bytes")
+    
+    print(f"🔍 Проверяем импорты:")
+    try:
+        import urllib3
+        print(f"   urllib3: ✅ {urllib3.__version__}")
+    except ImportError as e:
+        print(f"   urllib3: ❌ {e}")
+    
+    try:
+        import requests
+        print(f"   requests: ✅ {requests.__version__}")
+    except ImportError as e:
+        print(f"   requests: ❌ {e}")
+    
+    print(f"🔍 Начинаем отправку...")
 
     try:
         headers = {
