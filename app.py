@@ -12,6 +12,7 @@ import random
 import string
 from datetime import datetime, timedelta
 import smtplib
+import urllib3
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
@@ -51,6 +52,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 logger.info("Приложение запущено")
+
+# Отключаем предупреждения о небезопасных HTTPS запросах
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Регистрация поддержки HEIF
 pillow_heif.register_heif_opener()
@@ -494,24 +498,67 @@ def send_guide_email(email, pdf_path):
             'Content-Type': 'application/json',
             'Accept': 'application/json'
         }
-        response = requests.post(api_url, json=payload, headers=headers, verify=False)
-        print(f"Response status: {response.status_code}")
-        print(f"Response headers: {response.headers}")
-        print(f"Response body: {response.text}")
-
+        
+        print(f"🔧 Отправляем POST запрос к {api_url}")
+        print(f"📧 Данные запроса: {json.dumps(payload, ensure_ascii=False, indent=2)}")
+        
+        # Отправляем запрос с таймаутом и отключенной проверкой SSL
+        response = requests.post(
+            api_url, 
+            json=payload, 
+            headers=headers, 
+            verify=False, 
+            timeout=30
+        )
+        
+        print(f"📡 Ответ получен:")
+        print(f"   Status Code: {response.status_code}")
+        print(f"   Headers: {dict(response.headers)}")
+        print(f"   Body: {response.text}")
+        
         if response.status_code == 200:
-            print("Письмо отправлено через Unisender Go Transactional API!")
-            # Помечаем гайд как отправленный
-            user_auth.mark_guide_sent(email, "color_guide", pdf_path)
-            return True
+            try:
+                result = response.json()
+                print(f"✅ JSON ответ: {json.dumps(result, ensure_ascii=False, indent=2)}")
+                
+                if result.get("result", {}).get("email_id"):
+                    print(f"🎉 Письмо успешно отправлено! Email ID: {result['result']['email_id']}")
+                    # Помечаем гайд как отправленный
+                    mark_result = user_auth.mark_guide_sent(email, "color_guide", pdf_path)
+                    if mark_result.get("success"):
+                        print(f"✅ Гайд помечен как отправленный: {mark_result.get('message')}")
+                    else:
+                        print(f"⚠️ Ошибка при пометке гайда: {mark_result.get('error')}")
+                    return True
+                else:
+                    print(f"❌ API вернул ошибку: {result}")
+                    return False
+                    
+            except json.JSONDecodeError as e:
+                print(f"❌ Ошибка парсинга JSON ответа: {e}")
+                print(f"📄 Raw ответ: {response.text}")
+                return False
         else:
-            print(f"Ошибка отправки письма: {response.text}")
+            print(f"❌ HTTP ошибка {response.status_code}: {response.text}")
             return False
+            
     except requests.exceptions.SSLError as e:
-        print(f"SSL ошибка: {str(e)}")
+        print(f"❌ SSL ошибка: {str(e)}")
+        return False
+    except requests.exceptions.Timeout as e:
+        print(f"❌ Таймаут запроса: {str(e)}")
+        return False
+    except requests.exceptions.ConnectionError as e:
+        print(f"❌ Ошибка соединения: {str(e)}")
+        return False
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Ошибка HTTP запроса: {str(e)}")
         return False
     except Exception as e:
-        print(f"Ошибка при отправке письма: {str(e)}")
+        print(f"❌ Неожиданная ошибка при отправке: {str(e)}")
+        print(f"📋 Тип ошибки: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -576,24 +623,67 @@ def send_kibbe_guide_email(email, pdf_path):
             'Content-Type': 'application/json',
             'Accept': 'application/json'
         }
-        response = requests.post(api_url, json=payload, headers=headers, verify=False)
-        print(f"Response status: {response.status_code}")
-        print(f"Response headers: {response.headers}")
-        print(f"Response body: {response.text}")
-
+        
+        print(f"🔧 Отправляем POST запрос к {api_url}")
+        print(f"📧 Данные запроса: {json.dumps(payload, ensure_ascii=False, indent=2)}")
+        
+        # Отправляем запрос с таймаутом и отключенной проверкой SSL
+        response = requests.post(
+            api_url, 
+            json=payload, 
+            headers=headers, 
+            verify=False, 
+            timeout=30
+        )
+        
+        print(f"📡 Ответ получен:")
+        print(f"   Status Code: {response.status_code}")
+        print(f"   Headers: {dict(response.headers)}")
+        print(f"   Body: {response.text}")
+        
         if response.status_code == 200:
-            print("Письмо с гайдом по Кибби отправлено через Unisender Go Transactional API!")
-            # Помечаем гайд как отправленный
-            user_auth.mark_guide_sent(email, "kibbe_guide", pdf_path)
-            return True
+            try:
+                result = response.json()
+                print(f"✅ JSON ответ: {json.dumps(result, ensure_ascii=False, indent=2)}")
+                
+                if result.get("result", {}).get("email_id"):
+                    print(f"🎉 Письмо с гайдом по Кибби успешно отправлено! Email ID: {result['result']['email_id']}")
+                    # Помечаем гайд как отправленный
+                    mark_result = user_auth.mark_guide_sent(email, "kibbe_guide", pdf_path)
+                    if mark_result.get("success"):
+                        print(f"✅ Гайд помечен как отправленный: {mark_result.get('message')}")
+                    else:
+                        print(f"⚠️ Ошибка при пометке гайда: {mark_result.get('error')}")
+                    return True
+                else:
+                    print(f"❌ API вернул ошибку: {result}")
+                    return False
+                    
+            except json.JSONDecodeError as e:
+                print(f"❌ Ошибка парсинга JSON ответа: {e}")
+                print(f"📄 Raw ответ: {response.text}")
+                return False
         else:
-            print(f"Ошибка отправки письма: {response.text}")
+            print(f"❌ HTTP ошибка {response.status_code}: {response.text}")
             return False
+            
     except requests.exceptions.SSLError as e:
-        print(f"SSL ошибка: {str(e)}")
+        print(f"❌ SSL ошибка: {str(e)}")
+        return False
+    except requests.exceptions.Timeout as e:
+        print(f"❌ Таймаут запроса: {str(e)}")
+        return False
+    except requests.exceptions.ConnectionError as e:
+        print(f"❌ Ошибка соединения: {str(e)}")
+        return False
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Ошибка HTTP запроса: {str(e)}")
         return False
     except Exception as e:
-        print(f"Ошибка при отправке письма: {str(e)}")
+        print(f"❌ Неожиданная ошибка при отправке: {str(e)}")
+        print(f"📋 Тип ошибки: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def wait_for_file_complete(filepath, min_size=10*1024, timeout=10):
