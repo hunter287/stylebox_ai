@@ -537,13 +537,21 @@ def send_guide_email(email, pdf_path):
     print(f"🚀 [DEBUG] From: {from_email}")
     print(f"🚀 [DEBUG] To: {to_email}")
     print(f"🚀 [DEBUG] PDF URL: {pdf_url}")
+    print(f"🚀 [DEBUG] PDF URL обработан успешно")
     
     print(f"🚀 [DEBUG] Проверяем payload...")
+    print(f"🚀 [DEBUG] Начинаем сериализацию payload...")
     try:
+        print(f"🚀 [DEBUG] Вызываем json.dumps...")
         payload_json = json.dumps(payload, ensure_ascii=False, indent=2)
+        print(f"🚀 [DEBUG] json.dumps выполнен успешно")
         print(f"🚀 [DEBUG] Payload JSON: {payload_json}")
+        print(f"🚀 [DEBUG] Payload JSON сериализован успешно")
     except Exception as e:
         print(f"🚀 [ERROR] Ошибка при сериализации payload: {e}")
+        print(f"🚀 [ERROR] Тип ошибки: {type(e).__name__}")
+        import traceback
+        print(f"🚀 [ERROR] Traceback: {traceback.format_exc()}")
         return False
     
     print(f"🚀 [DEBUG] API Key: {'Есть' if api_key else 'НЕТ!'}")
