@@ -632,8 +632,9 @@ def send_guide_email(email, pdf_path):
                 result = response.json()
                 print(f"✅ JSON ответ: {json.dumps(result, ensure_ascii=False, indent=2)}")
                 
-                if result.get("result", {}).get("email_id"):
-                    print(f"🎉 Письмо успешно отправлено! Email ID: {result['result']['email_id']}")
+                # Проверяем успешность отправки по статусу и наличию job_id
+                if result.get("status") == "success" and result.get("job_id"):
+                    print(f"🎉 Письмо успешно отправлено! Job ID: {result['job_id']}")
                     print(f"🚀 [DEBUG] Вызываем mark_guide_sent для {email}")
                     
                     # Помечаем гайд как отправленный
@@ -803,8 +804,9 @@ def send_kibbe_guide_email(email, pdf_path):
                 result = response.json()
                 print(f"✅ JSON ответ: {json.dumps(result, ensure_ascii=False, indent=2)}")
                 
-                if result.get("result", {}).get("email_id"):
-                    print(f"🎉 Письмо с гайдом по Кибби успешно отправлено! Email ID: {result['result']['email_id']}")
+                # Проверяем успешность отправки по статусу и наличию job_id
+                if result.get("status") == "success" and result.get("job_id"):
+                    print(f"🎉 Письмо с гайдом по Кибби успешно отправлено! Job ID: {result['job_id']}")
                     print(f"🚀 [DEBUG] Вызываем mark_guide_sent для {email}")
                     
                     # Помечаем гайд как отправленный
