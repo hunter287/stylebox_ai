@@ -495,43 +495,53 @@ def send_guide_email(email, pdf_path):
     
     print(f"🚀 [DEBUG] Payload сформирован успешно")
 
-    print("Отправка письма через Unisender Go Transactional API...")
-    print(f"API URL: {api_url}")
-    print(f"From: {from_email}")
-    print(f"To: {to_email}")
-    print(f"PDF URL: {pdf_url}")
-    print(f"Payload: {json.dumps(payload, ensure_ascii=False, indent=2)}")
+    print("🚀 [DEBUG] Отправка письма через Unisender Go Transactional API...")
+    print(f"🚀 [DEBUG] API URL: {api_url}")
+    print(f"🚀 [DEBUG] From: {from_email}")
+    print(f"🚀 [DEBUG] To: {to_email}")
+    print(f"🚀 [DEBUG] PDF URL: {pdf_url}")
     
-    # Простое логирование для диагностики
-    print(f"🔍 API Key: {'Есть' if api_key else 'НЕТ!'}")
-    print(f"🔍 PDF path: {pdf_path}")
-    print(f"🔍 PDF exists: {os.path.exists(pdf_path)}")
-    print(f"🔍 Начинаем отправку...")
+    print(f"🚀 [DEBUG] Проверяем payload...")
+    try:
+        payload_json = json.dumps(payload, ensure_ascii=False, indent=2)
+        print(f"🚀 [DEBUG] Payload JSON: {payload_json}")
+    except Exception as e:
+        print(f"🚀 [ERROR] Ошибка при сериализации payload: {e}")
+        return False
     
-    # Дополнительное логирование для диагностики
-    print(f"🔍 Проверяем переменные:")
-    print(f"   API Key: {'✅ Установлен' if api_key else '❌ Отсутствует'}")
-    print(f"   API Key length: {len(api_key) if api_key else 0}")
-    print(f"   From email: {from_email}")
-    print(f"   To email: {to_email}")
-    print(f"   PDF path: {pdf_path}")
-    print(f"   PDF exists: {os.path.exists(pdf_path)}")
-    print(f"   PDF size: {os.path.getsize(pdf_path) if os.path.exists(pdf_path) else 'N/A'} bytes")
+    print(f"🚀 [DEBUG] API Key: {'Есть' if api_key else 'НЕТ!'}")
+    print(f"🚀 [DEBUG] PDF path: {pdf_path}")
+    print(f"🚀 [DEBUG] PDF exists: {os.path.exists(pdf_path)}")
     
-    print(f"🔍 Проверяем импорты:")
+    print(f"🚀 [DEBUG] Проверяем переменные:")
+    print(f"   🚀 [DEBUG] API Key: {'✅ Установлен' if api_key else '❌ Отсутствует'}")
+    print(f"   🚀 [DEBUG] API Key length: {len(api_key) if api_key else 0}")
+    print(f"   🚀 [DEBUG] From email: {from_email}")
+    print(f"   🚀 [DEBUG] To email: {to_email}")
+    print(f"   🚀 [DEBUG] PDF path: {pdf_path}")
+    print(f"   🚀 [DEBUG] PDF exists: {os.path.exists(pdf_path)}")
+    print(f"   🚀 [DEBUG] PDF size: {os.path.getsize(pdf_path) if os.path.exists(pdf_path) else 'N/A'} bytes")
+    
+    print(f"🚀 [DEBUG] Проверяем импорты:")
     try:
         import urllib3
-        print(f"   urllib3: ✅ {urllib3.__version__}")
+        print(f"   🚀 [DEBUG] urllib3: ✅ {urllib3.__version__}")
     except ImportError as e:
-        print(f"   urllib3: ❌ {e}")
+        print(f"   🚀 [DEBUG] urllib3: ❌ {e}")
     
     try:
         import requests
-        print(f"   requests: ✅ {requests.__version__}")
+        print(f"   🚀 [DEBUG] requests: ✅ {requests.__version__}")
     except ImportError as e:
-        print(f"   requests: ❌ {e}")
+        print(f"   🚀 [DEBUG] requests: ❌ {e}")
     
-    print(f"🔍 Начинаем отправку...")
+    print(f"🚀 [DEBUG] Начинаем отправку email...")
+    print(f"🚀 [DEBUG] Проверяем все переменные перед отправкой:")
+    print(f"   🚀 [DEBUG] api_url: {api_url}")
+    print(f"   🚀 [DEBUG] api_key: {'Есть' if api_key else 'НЕТ!'}")
+    print(f"🚀 [DEBUG] Проверяем payload перед отправкой...")
+    print(f"🚀 [DEBUG] payload keys: {list(payload.keys())}")
+    print(f"🚀 [DEBUG] Входим в блок try...")
 
     try:
         headers = {
