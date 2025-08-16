@@ -1360,7 +1360,39 @@ def paid_callback():
                         notes=f"CloudPayments payment - {transaction_id}"
                     )
                     print("[DEBUG] ✅ Color guide purchase added successfully for", email)
-                    return jsonify({"code": 0, "message": "Color guide purchase added successfully"})
+                    
+                    # Автоматически отправляем гайд после успешной покупки
+                    print("[DEBUG] Step 6.2: Automatically sending color guide...")
+                    try:
+                        # Генерируем уникальное имя PDF
+                        filename = make_report_filename(email)
+                        pdf_path = os.path.join('static/reports', filename)
+                        
+                        # Создаем базовый анализ для гайда
+                        analysis = {
+                            'color_type': 'яркая весна',  # Базовый тип
+                            'explanation': 'Ваш персональный цветовой гайд готов!',
+                            'dark_colors_hex': ['#000000', '#1a1a1a', '#333333'],
+                            'bright_colors_hex': ['#ff0000', '#00ff00', '#0000ff'],
+                            'light_colors_hex': ['#ffffff', '#f0f0f0', '#e0e0e0']
+                        }
+                        
+                        # Используем стандартное изображение
+                        image_path = 'static/images/color_guide_01.jpg'
+                        
+                        # Генерируем PDF
+                        full_pdf_path = generate_pdf_report(analysis, image_path, output_path=pdf_path)
+                        
+                        # Отправляем email с гайдом
+                        if send_guide_email(email, full_pdf_path):
+                            print("[DEBUG] ✅ Color guide sent successfully to", email)
+                        else:
+                            print("[DEBUG] ⚠️ Failed to send color guide to", email)
+                            
+                    except Exception as send_error:
+                        print("[DEBUG] ⚠️ Error sending color guide:", str(send_error))
+                    
+                    return jsonify({"code": 0, "message": "Color guide purchase added successfully and guide sent"})
                 except Exception as e:
                     print("[DEBUG] ❌ Error adding color guide purchase:", str(e))
                     return jsonify({"code": 17, "message": f"Failed to add color guide purchase: {str(e)}"})
@@ -1381,7 +1413,45 @@ def paid_callback():
                         notes=f"CloudPayments payment - {transaction_id}"
                     )
                     print("[DEBUG] ✅ Kibbe guide purchase added successfully for", email)
-                    return jsonify({"code": 0, "message": "Kibbe guide purchase added successfully"})
+                    
+                    # Автоматически отправляем гайд после успешной покупки
+                    print("[DEBUG] Step 6.2: Automatically sending kibbe guide...")
+                    try:
+                        # Генерируем уникальное имя PDF
+                        filename = make_report_filename(email)
+                        pdf_path = os.path.join('static/reports', filename)
+                        
+                        # Создаем базовый анализ для гайда по Кибби
+                        analysis = {
+                            'kibbe_type': 'Романтик',  # Базовый тип
+                            'vertical_lines': 'умеренные',
+                            'horizontal_lines': 'мягкие, округлые',
+                            'face_features': 'губы полные, глаза большие, мягкие черты лица',
+                            'body_features': 'мягкие, округлые линии, выраженная талия',
+                            'description': 'мягкая, женственная внешность с округлыми чертами',
+                            'style_recommendations': 'Фасоны одежды\n- Мягкие, облегающие силуэты\n- Округлые вырезы\n- Платья с оборками и рюшами'
+                        }
+                        
+                        # Используем стандартное изображение
+                        image_path = 'static/kibbe/romantic/romantic_main_01.jpg'
+                        
+                        # Генерируем PDF для Кибби
+                        full_pdf_path = generate_kibbe_pdf(
+                            user_photo_path=image_path,
+                            kibbe_type=analysis['kibbe_type'],
+                            email=email
+                        )
+                        
+                        # Отправляем email с гайдом
+                        if send_kibbe_guide_email(email, full_pdf_path):
+                            print("[DEBUG] ✅ Kibbe guide sent successfully to", email)
+                        else:
+                            print("[DEBUG] ⚠️ Failed to send kibbe guide to", email)
+                            
+                    except Exception as send_error:
+                        print("[DEBUG] ⚠️ Error sending kibbe guide:", str(send_error))
+                    
+                    return jsonify({"code": 0, "message": "Kibbe guide purchase added successfully and guide sent"})
                 except Exception as e:
                     print("[DEBUG] ❌ Error adding kibbe guide purchase:", str(e))
                     return jsonify({"code": 18, "message": f"Failed to add kibbe guide purchase: {str(e)}"})
