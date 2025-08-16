@@ -495,11 +495,22 @@ def send_guide_email(email, pdf_path):
     
     print(f"🚀 [DEBUG] Payload сформирован успешно")
     print(f"🚀 [DEBUG] Payload содержимое:")
-    for key, value in payload.items():
-        if key == 'api_key':
-            print(f"   🚀 [DEBUG] {key}: {'Есть' if value else 'НЕТ!'}")
-        else:
-            print(f"   🚀 [DEBUG] {key}: {value}")
+    print(f"🚀 [DEBUG] Количество ключей в payload: {len(payload)}")
+    
+    for i, (key, value) in enumerate(payload.items()):
+        try:
+            print(f"🚀 [DEBUG] Обрабатываем ключ {i+1}/{len(payload)}: {key}")
+            if key == 'api_key':
+                print(f"   🚀 [DEBUG] {key}: {'Есть' if value else 'НЕТ!'}")
+            else:
+                print(f"   🚀 [DEBUG] {key}: {value}")
+            print(f"🚀 [DEBUG] Ключ {key} обработан успешно")
+        except Exception as e:
+            print(f"🚀 [ERROR] Ошибка при обработке ключа {key}: {e}")
+            print(f"🚀 [ERROR] Тип значения: {type(value)}")
+            import traceback
+            print(f"🚀 [ERROR] Traceback: {traceback.format_exc()}")
+            return False
     
     print("🚀 [DEBUG] Отправка письма через Unisender Go Transactional API...")
     print(f"🚀 [DEBUG] API URL: {api_url}")
