@@ -534,8 +534,11 @@ def send_guide_email(email, pdf_path):
     
     print("🚀 [DEBUG] Отправка письма через Unisender Go Transactional API...")
     print(f"🚀 [DEBUG] API URL: {api_url}")
+    print(f"🚀 [DEBUG] API URL обработан успешно")
     print(f"🚀 [DEBUG] From: {from_email}")
+    print(f"🚀 [DEBUG] From обработан успешно")
     print(f"🚀 [DEBUG] To: {to_email}")
+    print(f"🚀 [DEBUG] To обработан успешно")
     print(f"🚀 [DEBUG] PDF URL: {pdf_url}")
     print(f"🚀 [DEBUG] PDF URL обработан успешно")
     
