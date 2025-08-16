@@ -494,7 +494,13 @@ def send_guide_email(email, pdf_path):
     }
     
     print(f"🚀 [DEBUG] Payload сформирован успешно")
-
+    print(f"🚀 [DEBUG] Payload содержимое:")
+    for key, value in payload.items():
+        if key == 'api_key':
+            print(f"   🚀 [DEBUG] {key}: {'Есть' if value else 'НЕТ!'}")
+        else:
+            print(f"   🚀 [DEBUG] {key}: {value}")
+    
     print("🚀 [DEBUG] Отправка письма через Unisender Go Transactional API...")
     print(f"🚀 [DEBUG] API URL: {api_url}")
     print(f"🚀 [DEBUG] From: {from_email}")
@@ -541,6 +547,19 @@ def send_guide_email(email, pdf_path):
     print(f"   🚀 [DEBUG] api_key: {'Есть' if api_key else 'НЕТ!'}")
     print(f"🚀 [DEBUG] Проверяем payload перед отправкой...")
     print(f"🚀 [DEBUG] payload keys: {list(payload.keys())}")
+    print(f"🚀 [DEBUG] payload type: {type(payload)}")
+    
+    try:
+        print(f"🚀 [DEBUG] Пытаемся сериализовать payload в JSON...")
+        payload_json = json.dumps(payload, ensure_ascii=False, indent=2)
+        print(f"🚀 [DEBUG] Payload JSON сериализован успешно, длина: {len(payload_json)}")
+    except Exception as e:
+        print(f"🚀 [ERROR] Ошибка при сериализации payload: {e}")
+        print(f"🚀 [ERROR] Тип ошибки: {type(e).__name__}")
+        import traceback
+        print(f"🚀 [ERROR] Traceback: {traceback.format_exc()}")
+        return False
+    
     print(f"🚀 [DEBUG] Входим в блок try...")
 
     try:
