@@ -894,12 +894,18 @@ class UserAuth:
     def mark_guide_sent(self, email, product_type, pdf_path):
         """Помечает гайд как отправленный"""
         try:
+            print(f"🚀 [DEBUG] mark_guide_sent: Начало для {email}, {product_type}, {pdf_path}")
+            
             # Проверяем подключение к MongoDB
             if self.db is None or self.pre_subscriptions_collection is None:
+                print(f"🚀 [DEBUG] mark_guide_sent: MongoDB не подключена, пытаемся переподключиться...")
                 logger.warning("MongoDB не подключена, пытаемся переподключиться...")
                 if not self.connect():
+                    print(f"🚀 [ERROR] mark_guide_sent: Не удалось подключиться к MongoDB")
                     logger.error("Не удалось подключиться к MongoDB")
                     return {"success": False, "error": "Ошибка подключения к базе данных"}
+            
+            print(f"🚀 [DEBUG] mark_guide_sent: MongoDB подключение проверено")
             
             # Сначала пытаемся найти и обновить существующую покупку в MongoDB
             result = self.pre_subscriptions_collection.update_one(
@@ -919,11 +925,12 @@ class UserAuth:
             )
             
             if result.modified_count > 0:
+                print(f"🚀 [DEBUG] mark_guide_sent: ✅ Гайд {product_type} помечен как отправленный: {email}")
                 logger.info(f"✅ Гайд {product_type} помечен как отправленный: {email}")
                 return {"success": True, "message": "Гайд помечен как отправленный"}
             
             # Если покупка не найдена, проверяем, есть ли действующая подписка
-            print(f"[DEBUG] mark_guide_sent: Проверяем подписку для {email}...")
+            print(f"🚀 [DEBUG] mark_guide_sent: Проверяем подписку для {email}...")
             
             # Ищем подписку с разными возможными product_type
             subscription = None
@@ -993,13 +1000,19 @@ class UserAuth:
                 }
                 
                 result = self.pre_subscriptions_collection.insert_one(guide_data)
+                print(f"🚀 [DEBUG] mark_guide_sent: ✅ Запись об отправке гайда {product_type} подписчику создана: {email}")
                 logger.info(f"✅ Запись об отправке гайда {product_type} подписчику создана: {email}")
                 return {"success": True, "message": "Гайд помечен как отправленный подписчику"}
             
             # Если ни покупки, ни подписки нет, возвращаем ошибку
+            print(f"🚀 [DEBUG] mark_guide_sent: Ни покупки, ни подписки не найдено для {email}")
             return {"success": False, "error": "Покупка гайда не найдена и нет действующей подписки"}
             
         except Exception as e:
+            print(f"🚀 [ERROR] mark_guide_sent: Исключение: {e}")
+            print(f"🚀 [ERROR] mark_guide_sent: Тип исключения: {type(e).__name__}")
+            import traceback
+            print(f"🚀 [ERROR] mark_guide_sent: Traceback: {traceback.format_exc()}")
             logger.error(f"Ошибка пометки гайда как отправленного: {e}")
             return {"success": False, "error": "Внутренняя ошибка сервера"}
 

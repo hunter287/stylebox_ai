@@ -502,6 +502,12 @@ def send_guide_email(email, pdf_path):
     print(f"PDF URL: {pdf_url}")
     print(f"Payload: {json.dumps(payload, ensure_ascii=False, indent=2)}")
     
+    # Простое логирование для диагностики
+    print(f"🔍 API Key: {'Есть' if api_key else 'НЕТ!'}")
+    print(f"🔍 PDF path: {pdf_path}")
+    print(f"🔍 PDF exists: {os.path.exists(pdf_path)}")
+    print(f"🔍 Начинаем отправку...")
+    
     # Дополнительное логирование для диагностики
     print(f"🔍 Проверяем переменные:")
     print(f"   API Key: {'✅ Установлен' if api_key else '❌ Отсутствует'}")
@@ -557,13 +563,28 @@ def send_guide_email(email, pdf_path):
                 
                 if result.get("result", {}).get("email_id"):
                     print(f"🎉 Письмо успешно отправлено! Email ID: {result['result']['email_id']}")
+                    print(f"🚀 [DEBUG] Вызываем mark_guide_sent для {email}")
+                    
                     # Помечаем гайд как отправленный
-                    mark_result = user_auth.mark_guide_sent(email, "color_guide", pdf_path)
-                    if mark_result.get("success"):
-                        print(f"✅ Гайд помечен как отправленный: {mark_result.get('message')}")
-                    else:
-                        print(f"⚠️ Ошибка при пометке гайда: {mark_result.get('error')}")
-                    return True
+                    try:
+                        mark_result = user_auth.mark_guide_sent(email, "color_guide", pdf_path)
+                        print(f"🚀 [DEBUG] mark_guide_sent результат: {mark_result}")
+                        
+                        if mark_result.get("success"):
+                            print(f"✅ Гайд помечен как отправленный: {mark_result.get('message')}")
+                        else:
+                            print(f"⚠️ Ошибка при пометке гайда: {mark_result.get('error')}")
+                        
+                        print(f"🚀 [DEBUG] Возвращаем True")
+                        return True
+                        
+                    except Exception as mark_error:
+                        print(f"🚀 [ERROR] Исключение в mark_guide_sent: {mark_error}")
+                        import traceback
+                        print(f"🚀 [ERROR] Traceback mark_guide_sent: {traceback.format_exc()}")
+                        # Даже если mark_guide_sent упал, email отправлен, возвращаем True
+                        return True
+                        
                 else:
                     print(f"❌ API вернул ошибку: {result}")
                     return False
@@ -652,6 +673,12 @@ def send_kibbe_guide_email(email, pdf_path):
     print(f"PDF URL: {pdf_url}")
     print(f"Payload: {json.dumps(payload, ensure_ascii=False, indent=2)}")
     
+    # Простое логирование для диагностики
+    print(f"🔍 API Key: {'Есть' if api_key else 'НЕТ!'}")
+    print(f"🔍 PDF path: {pdf_path}")
+    print(f"🔍 PDF exists: {os.path.exists(pdf_path)}")
+    print(f"🔍 Начинаем отправку...")
+    
     # Дополнительное логирование для диагностики
     print(f"🔍 Проверяем переменные:")
     print(f"   API Key: {'✅ Установлен' if api_key else '❌ Отсутствует'}")
@@ -707,13 +734,27 @@ def send_kibbe_guide_email(email, pdf_path):
                 
                 if result.get("result", {}).get("email_id"):
                     print(f"🎉 Письмо с гайдом по Кибби успешно отправлено! Email ID: {result['result']['email_id']}")
+                    print(f"🚀 [DEBUG] Вызываем mark_guide_sent для {email}")
+                    
                     # Помечаем гайд как отправленный
-                    mark_result = user_auth.mark_guide_sent(email, "kibbe_guide", pdf_path)
-                    if mark_result.get("success"):
-                        print(f"✅ Гайд помечен как отправленный: {mark_result.get('message')}")
-                    else:
-                        print(f"⚠️ Ошибка при пометке гайда: {mark_result.get('error')}")
-                    return True
+                    try:
+                        mark_result = user_auth.mark_guide_sent(email, "kibbe_guide", pdf_path)
+                        print(f"🚀 [DEBUG] mark_guide_sent результат: {mark_result}")
+                        
+                        if mark_result.get("success"):
+                            print(f"✅ Гайд помечен как отправленный: {mark_result.get('message')}")
+                        else:
+                            print(f"⚠️ Ошибка при пометке гайда: {mark_result.get('error')}")
+                        
+                        print(f"🚀 [DEBUG] Возвращаем True")
+                        return True
+                        
+                    except Exception as mark_error:
+                        print(f"🚀 [ERROR] Исключение в mark_guide_sent: {mark_error}")
+                        import traceback
+                        print(f"🚀 [ERROR] Traceback mark_guide_sent: {traceback.format_exc()}")
+                        # Даже если mark_guide_sent упал, email отправлен, возвращаем True
+                        return True
                 else:
                     print(f"❌ API вернул ошибку: {result}")
                     return False
@@ -909,11 +950,15 @@ def send_guide():
             print("PDF не найден после merge!")
         if os.path.exists(full_pdf_path) and os.path.getsize(full_pdf_path) > 10*1024:
             # Отправляем email с вложением
-            if send_guide_email(email, full_pdf_path):
-                print("Email отправлен после успешного merge PDF!")
-                return jsonify({'success': True})
+            print(f"🚀 [DEBUG] send_guide endpoint: Вызываем send_guide_email для {email}")
+            email_result = send_guide_email(email, full_pdf_path)
+            print(f"🚀 [DEBUG] send_guide endpoint: send_guide_email вернул: {email_result}")
+            
+            if email_result:
+                print("🚀 [DEBUG] send_guide endpoint: Email отправлен успешно, возвращаем success")
+                return jsonify({'success': True, 'message': 'Гайд отправлен'})
             else:
-                print("Ошибка при отправке email после merge PDF!")
+                print("🚀 [DEBUG] send_guide endpoint: Ошибка при отправке email, возвращаем error")
                 return jsonify({'error': 'Failed to send email'}), 500
         else:
             # Если не удалось — письмо с извинением
@@ -980,11 +1025,15 @@ def send_kibbe_guide():
             
             if os.path.exists(full_pdf_path) and os.path.getsize(full_pdf_path) > 10*1024:
                 # Отправляем email с гайдом по Кибби
-                if send_kibbe_guide_email(email, full_pdf_path):
-                    print("Kibbe guide email sent successfully!")
-                    return jsonify({'success': True})
+                print(f"🚀 [DEBUG] send_kibbe_guide endpoint: Вызываем send_kibbe_guide_email для {email}")
+                email_result = send_kibbe_guide_email(email, full_pdf_path)
+                print(f"🚀 [DEBUG] send_kibbe_guide endpoint: send_kibbe_guide_email вернул: {email_result}")
+                
+                if email_result:
+                    print("🚀 [DEBUG] send_kibbe_guide endpoint: Kibbe guide email отправлен успешно, возвращаем success")
+                    return jsonify({'success': True, 'message': 'Гайд по Кибби отправлен'})
                 else:
-                    print("Error sending Kibbe guide email!")
+                    print("🚀 [DEBUG] send_kibbe_guide endpoint: Ошибка при отправке Kibbe guide email, возвращаем error")
                     return jsonify({'error': 'Failed to send Kibbe guide email'}), 500
             else:
                 # Если не удалось — письмо с извинением
