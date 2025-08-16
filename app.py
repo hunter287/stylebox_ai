@@ -500,10 +500,30 @@ def send_guide_email(email, pdf_path):
     for i, (key, value) in enumerate(payload.items()):
         try:
             print(f"🚀 [DEBUG] Обрабатываем ключ {i+1}/{len(payload)}: {key}")
+            print(f"🚀 [DEBUG] Тип значения для {key}: {type(value)}")
+            
             if key == 'api_key':
                 print(f"   🚀 [DEBUG] {key}: {'Есть' if value else 'НЕТ!'}")
+            elif key == 'message':
+                print(f"   🚀 [DEBUG] {key}: Это объект message")
+                print(f"   🚀 [DEBUG] message keys: {list(value.keys()) if hasattr(value, 'keys') else 'Нет ключей'}")
+                # Безопасно выводим содержимое message
+                try:
+                    for msg_key, msg_value in value.items():
+                        print(f"      🚀 [DEBUG] message.{msg_key}: {type(msg_value)}")
+                        if msg_key == 'body':
+                            print(f"      🚀 [DEBUG] message.body type: {type(msg_value)}")
+                            if hasattr(msg_value, 'keys'):
+                                print(f"      🚀 [DEBUG] message.body keys: {list(msg_value.keys())}")
+                        elif msg_key == 'recipients':
+                            print(f"      🚀 [DEBUG] message.recipients: {type(msg_value)}")
+                            if isinstance(msg_value, list):
+                                print(f"      🚀 [DEBUG] message.recipients count: {len(msg_value)}")
+                except Exception as msg_e:
+                    print(f"      🚀 [ERROR] Ошибка при обработке message: {msg_e}")
             else:
                 print(f"   🚀 [DEBUG] {key}: {value}")
+            
             print(f"🚀 [DEBUG] Ключ {key} обработан успешно")
         except Exception as e:
             print(f"🚀 [ERROR] Ошибка при обработке ключа {key}: {e}")
