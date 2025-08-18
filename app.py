@@ -479,18 +479,31 @@ def send_guide_email(email, pdf_path):
             "subject": "Ваш персональный цветовой гайд",
             "body": {
                 "html": (
-                    "<html><body>"
-                    "<p>Здравствуйте!<br><br>"
-                    "Спасибо за приобретение персонального цветового гайда.<br>"
-                    f"Скачать ваш гайд можно по <a href=\"{pdf_url}\">ссылке</a>.<br><br>"
-                    "Вы также можете оформить <b><a href=\"https://ai.stylebox.live/oto?utm_source=emai_guide\" style=\"color:#bb279b;\">подписку на ИИ-стилиста</a></b> с дополнительной скидкой 500 руб., т.к. вы купили персональный гайд.<br>"
-                    "Итого, для вас ИИ-стилист на целый год будет стоить <b>4490 руб.<br><br>"
-                    "С уважением,<br>"
-                    "Style Box AI<br><br>"
-                    "<a href=\"https://noreply.stylebox.live/ru/go2_unsubscribe\" style=\"color:#7C3AED;\">Отписаться от рассылки</a>"
-                    "</p></body></html>"
+                    "<html><body style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333;\">"
+                    "<div style=\"max-width: 600px; margin: 0 auto; padding: 20px;\">"
+                    "<div style=\"text-align: center; margin-bottom: 30px;\">"
+                    "<h2 style=\"color: #bb279b;\">Ваш персональный цветовой гайд готов!</h2>"
+                    "</div>"
+                    "<p>Здравствуйте!</p>"
+                    "<p>Спасибо за приобретение персонального цветового гайда. Ваш гайд успешно создан и готов к скачиванию.</p>"
+                    "<div style=\"text-align: center; margin: 30px 0;\">"
+                    f"<a href=\"{pdf_url}\" style=\"background-color: #bb279b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;\">Скачать гайд</a>"
+                    "</div>"
+                    "<p><strong>Дополнительное предложение:</strong></p>"
+                    "<p>Как покупатель гайда, вы можете оформить подписку на ИИ-стилиста со скидкой 500 руб. на целый год.</p>"
+                    "<div style=\"text-align: center; margin: 30px 0;\">"
+                    "<a href=\"https://ai.stylebox.live/oto?utm_source=email_guide\" style=\"background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;\">Оформить подписку</a>"
+                    "</div>"
+                    "<hr style=\"border: none; border-top: 1px solid #eee; margin: 30px 0;\">"
+                    "<div style=\"text-align: center; font-size: 12px; color: #666;\">"
+                    "<p>Style Box AI<br>"
+                    "Сервис персонального стиля</p>"
+                    "<p><a href=\"https://noreply.stylebox.live/ru/go2_unsubscribe\" style=\"color: #7C3AED;\">Отписаться от рассылки</a></p>"
+                    "</div>"
+                    "</div>"
+                    "</body></html>"
                 ),
-                "plaintext": "Здравствуйте! Спасибо за приобретение персонального цветового гайда. Ссылка на ваш гайд: {pdf_url}\n\nВы также можете оформить подписку на ИИ-стилиста со скидкой 500 руб. по ссылке: https://ai.stylebox.live/oto?utm_source=emai_guide\nИтого, для вас ИИ-стилист на целый год будет стоить 4490 руб.".format(pdf_url=pdf_url)
+                "plaintext": "Здравствуйте!\n\nСпасибо за приобретение персонального цветового гайда. Ваш гайд успешно создан и готов к скачиванию.\n\nСкачать гайд: {pdf_url}\n\nДополнительное предложение:\nКак покупатель гайда, вы можете оформить подписку на ИИ-стилиста со скидкой 500 руб. на целый год.\n\nОформить подписку: https://ai.stylebox.live/oto?utm_source=email_guide\n\n---\nStyle Box AI\nСервис персонального стиля\n\nОтписаться от рассылки: https://noreply.stylebox.live/ru/go2_unsubscribe".format(pdf_url=pdf_url)
             }
         }
     }
