@@ -1364,10 +1364,14 @@ def paid_callback():
                     # Автоматически отправляем гайд после успешной покупки
                     print("[DEBUG] Step 6.2: Automatically sending color guide...")
                     try:
+                        print("[DEBUG] Step 6.2.1: Generating filename...")
                         # Генерируем уникальное имя PDF
                         filename = make_report_filename(email)
                         pdf_path = os.path.join('static/reports', filename)
+                        print(f"[DEBUG] Filename: {filename}")
+                        print(f"[DEBUG] PDF path: {pdf_path}")
                         
+                        print("[DEBUG] Step 6.2.2: Creating analysis data...")
                         # Создаем базовый анализ для гайда
                         analysis = {
                             'color_type': 'яркая весна',  # Базовый тип
@@ -1376,21 +1380,38 @@ def paid_callback():
                             'bright_colors_hex': ['#ff0000', '#00ff00', '#0000ff'],
                             'light_colors_hex': ['#ffffff', '#f0f0f0', '#e0e0e0']
                         }
+                        print(f"[DEBUG] Analysis created: {analysis}")
                         
+                        print("[DEBUG] Step 6.2.3: Checking image path...")
                         # Используем стандартное изображение
                         image_path = 'static/images/color_guide_01.jpg'
+                        print(f"[DEBUG] Image path: {image_path}")
+                        print(f"[DEBUG] Image exists: {os.path.exists(image_path)}")
                         
+                        print("[DEBUG] Step 6.2.4: Generating PDF...")
                         # Генерируем PDF
                         full_pdf_path = generate_pdf_report(analysis, image_path, output_path=pdf_path)
+                        print(f"[DEBUG] PDF generated: {full_pdf_path}")
+                        print(f"[DEBUG] PDF exists: {os.path.exists(full_pdf_path)}")
+                        if os.path.exists(full_pdf_path):
+                            print(f"[DEBUG] PDF size: {os.path.getsize(full_pdf_path)} bytes")
                         
+                        print("[DEBUG] Step 6.2.5: Sending email...")
                         # Отправляем email с гайдом
-                        if send_guide_email(email, full_pdf_path):
+                        print(f"[DEBUG] Calling send_guide_email for {email} with {full_pdf_path}")
+                        email_result = send_guide_email(email, full_pdf_path)
+                        print(f"[DEBUG] send_guide_email returned: {email_result}")
+                        
+                        if email_result:
                             print("[DEBUG] ✅ Color guide sent successfully to", email)
                         else:
                             print("[DEBUG] ⚠️ Failed to send color guide to", email)
                             
                     except Exception as send_error:
                         print("[DEBUG] ⚠️ Error sending color guide:", str(send_error))
+                        print(f"[DEBUG] Error type: {type(send_error).__name__}")
+                        import traceback
+                        print(f"[DEBUG] Traceback: {traceback.format_exc()}")
                     
                     return jsonify({"code": 0, "message": "Color guide purchase added successfully and guide sent"})
                 except Exception as e:
@@ -1417,10 +1438,14 @@ def paid_callback():
                     # Автоматически отправляем гайд после успешной покупки
                     print("[DEBUG] Step 6.2: Automatically sending kibbe guide...")
                     try:
+                        print("[DEBUG] Step 6.2.1: Generating filename...")
                         # Генерируем уникальное имя PDF
                         filename = make_report_filename(email)
                         pdf_path = os.path.join('static/reports', filename)
+                        print(f"[DEBUG] Filename: {filename}")
+                        print(f"[DEBUG] PDF path: {pdf_path}")
                         
+                        print("[DEBUG] Step 6.2.2: Creating analysis data...")
                         # Создаем базовый анализ для гайда по Кибби
                         analysis = {
                             'kibbe_type': 'Романтик',  # Базовый тип
@@ -1431,25 +1456,42 @@ def paid_callback():
                             'description': 'мягкая, женственная внешность с округлыми чертами',
                             'style_recommendations': 'Фасоны одежды\n- Мягкие, облегающие силуэты\n- Округлые вырезы\n- Платья с оборками и рюшами'
                         }
+                        print(f"[DEBUG] Analysis created: {analysis}")
                         
+                        print("[DEBUG] Step 6.2.3: Checking image path...")
                         # Используем стандартное изображение
                         image_path = 'static/kibbe/romantic/romantic_main_01.jpg'
+                        print(f"[DEBUG] Image path: {image_path}")
+                        print(f"[DEBUG] Image exists: {os.path.exists(image_path)}")
                         
+                        print("[DEBUG] Step 6.2.4: Generating PDF...")
                         # Генерируем PDF для Кибби
                         full_pdf_path = generate_kibbe_pdf(
                             user_photo_path=image_path,
                             kibbe_type=analysis['kibbe_type'],
                             email=email
                         )
+                        print(f"[DEBUG] PDF generated: {full_pdf_path}")
+                        print(f"[DEBUG] PDF exists: {os.path.exists(full_pdf_path)}")
+                        if os.path.exists(full_pdf_path):
+                            print(f"[DEBUG] PDF size: {os.path.getsize(full_pdf_path)} bytes")
                         
+                        print("[DEBUG] Step 6.2.5: Sending email...")
                         # Отправляем email с гайдом
-                        if send_kibbe_guide_email(email, full_pdf_path):
+                        print(f"[DEBUG] Calling send_kibbe_guide_email for {email} with {full_pdf_path}")
+                        email_result = send_kibbe_guide_email(email, full_pdf_path)
+                        print(f"[DEBUG] send_kibbe_guide_email returned: {email_result}")
+                        
+                        if email_result:
                             print("[DEBUG] ✅ Kibbe guide sent successfully to", email)
                         else:
                             print("[DEBUG] ⚠️ Failed to send kibbe guide to", email)
                             
                     except Exception as send_error:
                         print("[DEBUG] ⚠️ Error sending kibbe guide:", str(send_error))
+                        print(f"[DEBUG] Error type: {type(send_error).__name__}")
+                        import traceback
+                        print(f"[DEBUG] Traceback: {traceback.format_exc()}")
                     
                     return jsonify({"code": 0, "message": "Kibbe guide purchase added successfully and guide sent"})
                 except Exception as e:
