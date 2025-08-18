@@ -833,7 +833,16 @@ class UserAuth:
             
             if guide_purchase is not None:
                 print(f"[DEBUG] can_send_guide: ✅ Прямая покупка гайда найдена в MongoDB для {email}")
+                print(f"[DEBUG] can_send_guide: Детали покупки: {guide_purchase}")
                 return True
+            else:
+                print(f"[DEBUG] can_send_guide: ❌ Прямая покупка гайда НЕ найдена")
+                print(f"[DEBUG] can_send_guide: Искали по критериям:")
+                print(f"[DEBUG] can_send_guide:   - email: {email}")
+                print(f"[DEBUG] can_send_guide:   - product_type: {product_type}")
+                print(f"[DEBUG] can_send_guide:   - subscription_end: None")
+                print(f"[DEBUG] can_send_guide:   - status: completed")
+                print(f"[DEBUG] can_send_guide:   - guide_data.sent: False")
             
             # 2. Если прямой покупки нет, проверяем действующую подписку на ИИ-стилиста
             print(f"[DEBUG] can_send_guide: Проверяем подписку на ИИ-стилиста для {email}...")
