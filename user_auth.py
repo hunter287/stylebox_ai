@@ -815,6 +815,14 @@ class UserAuth:
             
             # 1. Сначала проверяем, есть ли прямая покупка гайда
             print(f"[DEBUG] can_send_guide: Ищем прямую покупку гайда в MongoDB...")
+            
+            # Сначала найдем ВСЕ записи для этого email
+            all_records = list(self.pre_subscriptions_collection.find({"email": email}))
+            print(f"[DEBUG] can_send_guide: Найдено {len(all_records)} записей для {email}")
+            
+            for i, record in enumerate(all_records):
+                print(f"[DEBUG] can_send_guide: Запись {i+1}: {record}")
+            
             guide_purchase = self.pre_subscriptions_collection.find_one({
                 "email": email,
                 "product_type": product_type,
