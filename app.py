@@ -1232,13 +1232,16 @@ def get_guide_pdf():
 
 @app.route('/paid_callback', methods=['POST'])
 def paid_callback():
-    # Получаем данные из form-data или JSON
+    print("[DEBUG] 🚀🚀🚀 WEBHOOK FUNCTION CALLED! 🚀🚀🚀")
     print("[DEBUG] ===== WEBHOOK RECEIVED =====")
     print("[DEBUG] Request method:", request.method)
     print("[DEBUG] Request URL:", request.url)
     print("[DEBUG] Request headers:", dict(request.headers))
     print("[DEBUG] Request form data:", dict(request.form))
     print("[DEBUG] Content-Type:", request.headers.get('Content-Type'))
+    print("[DEBUG] Request body exists:", request.data is not None)
+    print("[DEBUG] Request body length:", len(request.data) if request.data else 0)
+    print("[DEBUG] Request body preview:", request.data[:200] if request.data else "None")
     
     # Безопасно получаем JSON данные
     try:
@@ -1256,12 +1259,23 @@ def paid_callback():
     print("[DEBUG] =========================")
     
     print("[DEBUG] Step 1: Starting data processing...")
+    print("[DEBUG] Data object type:", type(data))
+    print("[DEBUG] Data object keys:", list(data.keys()) if hasattr(data, 'keys') else "No keys")
+    
     try:
         print("[DEBUG] Step 2: Extracting status and email...")
-        status = str(data.get('Status', '')).lower()
+        print("[DEBUG] Looking for 'Status' key in data...")
+        status_raw = data.get('Status')
+        print("[DEBUG] Raw Status value:", status_raw)
+        print("[DEBUG] Status type:", type(status_raw))
+        
+        status = str(status_raw or '').lower()
+        print("[DEBUG] Processed Status:", status)
+        
+        print("[DEBUG] Looking for 'Email' key in data...")
         email = data.get('Email')
-        print("[DEBUG] Status:", status)
-        print("[DEBUG] Email:", email)
+        print("[DEBUG] Email value:", email)
+        print("[DEBUG] Email type:", type(email))
         
         print("[DEBUG] Step 3: Parsing Data field...")
         # Получаем Data и парсим его как JSON
@@ -1293,11 +1307,21 @@ def paid_callback():
         )
         
         # Проверяем, является ли это гайдом
+        print("[DEBUG] Checking if this is a color guide...")
+        print("[DEBUG] Description contains 'цветовой': {'цветовой' in description}")
+        print("[DEBUG] Description contains 'color': {'color' in description}")
+        print("[DEBUG] Payment type == 'color_guide': {payment_type == 'color_guide'}")
+        
         is_color_guide = (
             'цветовой' in description or 
             'color' in description or
             payment_type == 'color_guide'
         )
+        
+        print("[DEBUG] Checking if this is a kibbe guide...")
+        print("[DEBUG] Description contains 'типаж': {'типаж' in description}")
+        print("[DEBUG] Description contains 'kibbe': {'kibbe' in description}")
+        print("[DEBUG] Payment type == 'kibbe_guide': {payment_type == 'kibbe_guide'}")
         
         is_kibbe_guide = (
             'типаж' in description or 
@@ -1305,15 +1329,22 @@ def paid_callback():
             payment_type == 'kibbe_guide'
         )
         
+        print("[DEBUG] Final results:")
         print("[DEBUG] Is subscription:", is_subscription)
         print("[DEBUG] Is color guide:", is_color_guide)
         print("[DEBUG] Is kibbe guide:", is_kibbe_guide)
         print("[DEBUG] =================================")
         
         print("[DEBUG] Step 5: Checking payment status...")
+        print("[DEBUG] Status check: status == 'completed' and email")
+        print("[DEBUG] Status comparison: '{status}' == 'completed' -> {status == 'completed'}")
+        print("[DEBUG] Email check: email exists -> {email is not None}")
+        print("[DEBUG] Combined condition: {status == 'completed' and email is not None}")
+        
         if status == 'completed' and email:
             print("[DEBUG] ===== PROCESSING PAYMENT =====")
             print("[DEBUG] Email:", email)
+            print("[DEBUG] Status:", status)
             
             # Подключаемся к MongoDB
             if not user_auth.connect():
