@@ -438,13 +438,15 @@ def make_report_filename(email):
     return f"{prefix}_{rand}_report_{date}.pdf"
 
 def send_guide_email(email, pdf_path):
-    print(f"🚀 [DEBUG] send_guide_email: Начало функции для {email}")
-    print(f"🚀 [DEBUG] PDF путь: {pdf_path}")
+    print(f"🚀 [DEBUG] COLOR GUIDE: Функция send_guide_email вызвана для {email}")
+    print(f"🚀 [DEBUG] COLOR GUIDE: PDF путь: {pdf_path}")
     
     # Убеждаемся, что подключение к MongoDB активно
     if user_auth.db is None or user_auth.pre_subscriptions_collection is None:
+        print(f"🚀 [DEBUG] COLOR GUIDE: MongoDB не подключена, пытаемся переподключиться...")
         logger.warning("MongoDB не подключена, пытаемся переподключиться...")
         if not user_auth.connect():
+            print(f"🚀 [DEBUG] COLOR GUIDE: Не удалось подключиться к MongoDB")
             logger.error("Не удалось подключиться к MongoDB")
             return False
     
@@ -605,10 +607,12 @@ def send_guide_email(email, pdf_path):
     print(f"🚀 [DEBUG] Входим в блок try...")
 
     try:
+        print(f"🚀 [DEBUG] Создаем заголовки...")
         headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
         }
+        print(f"🚀 [DEBUG] Заголовки созданы: {headers}")
         
         print(f"🔧 Отправляем POST запрос к {api_url}")
         print(f"📧 Данные запроса: {json.dumps(payload, ensure_ascii=False, indent=2)}")
