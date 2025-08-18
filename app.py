@@ -1340,8 +1340,10 @@ def paid_callback():
         print("[DEBUG] Status comparison: '{status}' == 'completed' -> {status == 'completed'}")
         print("[DEBUG] Email check: email exists -> {email is not None}")
         print("[DEBUG] Combined condition: {status == 'completed' and email is not None}")
+        print("[DEBUG] About to enter if block...")
         
         if status == 'completed' and email:
+            print("[DEBUG] 🚀 ENTERED IF BLOCK SUCCESSFULLY! 🚀")
             print("[DEBUG] ===== PROCESSING PAYMENT =====")
             print("[DEBUG] Email:", email)
             print("[DEBUG] Status:", status)
