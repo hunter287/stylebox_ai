@@ -893,7 +893,7 @@ def send_guide_for_existing_user(email, guide_type):
             print(f"[DEBUG] Анализ создан: {analysis}")
             
             # Создаем временное изображение (можно использовать стандартное)
-            image_path = 'static/images/color_guide_01.jpg'  # Используем стандартное изображение
+            image_path = 'static/color_guide_01.jpg'  # Используем стандартное изображение
             print(f"[DEBUG] Путь к изображению: {image_path}")
             print(f"[DEBUG] Изображение существует: {os.path.exists(image_path)}")
             
@@ -1417,7 +1417,7 @@ def paid_callback():
                         
                         print("[DEBUG] Step 6.2.3: Checking image path...")
                         # Используем стандартное изображение
-                        image_path = 'static/images/color_guide_01.jpg'
+                        image_path = 'static/color_guide_01.jpg'
                         print(f"[DEBUG] Image path: {image_path}")
                         print(f"[DEBUG] Image exists: {os.path.exists(image_path)}")
                         
